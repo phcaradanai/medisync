@@ -1,0 +1,12 @@
+{
+  "name": "@medisync/proto",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/gen/*.ts"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.2.0"
+  }
+}

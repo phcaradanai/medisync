@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package medisync.identity.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1;identityv1";
+
+// Roles are coarse; fine-grained access is ward-scoped via User.ward_ids.
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_ADMIN = 1;
+  ROLE_PHARMACIST = 2;
+  ROLE_NURSE = 3;
+  ROLE_REFILLER = 4;
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  string display_name = 3;
+  Role role = 4;
+  // Wards this user may act in. Empty for ROLE_ADMIN means all wards.
+  repeated string ward_ids = 5;
+  bool active = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  User user = 3;
+}
+
+// Authenticate by QR/NFC card scanned at the kiosk.
+message CardLoginRequest {
+  string card_token = 1;
+}
+
+message CardLoginResponse {
+  string access_token = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  User user = 3;
+}
+
+message WhoAmIRequest {}
+
+message WhoAmIResponse {
+  User user = 1;
+}
+
+service IdentityService {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc CardLogin(CardLoginRequest) returns (CardLoginResponse);
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
+}

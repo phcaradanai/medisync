@@ -1,0 +1,33 @@
+# Event Registry
+
+Wire format: **protojson** of the messages in `proto/medisync/events/v1/events.proto`. Every payload carries `trace_id`; it must be threaded into audit logs and downstream events.
+
+## Streams
+
+| Stream | Subjects | Retention | Notes |
+|---|---|---|---|
+| `RX` | `rx.>` | WorkQueue | Inbound from the hospital feeder. Exactly one consumer group (`core-dispensing`) drains it. |
+| `MEDISYNC` | `medisync.>` | Limits, 7 days | Internal domain events + DLQ. |
+
+## Subjects
+
+| Subject | Message | Producer | Consumer | Status |
+|---|---|---|---|---|
+| `rx.prescription.created` | `PrescriptionCreated` | hospital feeder (external team); `cmd/feeder` mock in dev | core/dispensing | **live (M1)** |
+| `medisync.dispense.requested` | `DispenseRequested` | core/dispensing | core/fulfillment | M3 |
+| `medisync.dispense.completed` | `DispenseCompleted` | core/fulfillment | core/dispensing | M3 |
+| `medisync.dispense.failed` | `DispenseFailed` | core/fulfillment | core/dispensing | M3 |
+| `medisync.print.requested` | `PrintRequested` | core/dispensing | core/printing | M3 |
+| `medisync.print.completed` | `PrintCompleted` | core/printing | core/dispensing | M3 |
+| `medisync.stock.changed` | `StockChanged` | core/inventory | admin app, audit | M2 |
+| `medisync.stock.low` | `StockLow` | core/inventory | admin app | M2 |
+| `medisync.dlq.<original>` | raw bytes of the rejected message | any consumer | operators (manual) | **live (M1)** |
+
+## Contract for the external feeder team
+
+- Subject: `rx.prescription.created` on the shared NATS (JetStream enabled)
+- Payload: protojson of `medisync.events.v1.PrescriptionCreated` — schema file: `proto/medisync/events/v1/events.proto` (self-contained; only imports `google/protobuf/timestamp.proto`)
+- Required fields: `prescription_id`, `source_system`, at least one item with `drug_code` and positive `quantity`
+- Idempotency: `(prescription_id, source_system)` — replays are safe and ignored; additionally set the `Nats-Msg-Id` header to `<source_system>/<prescription_id>` for broker-level dedupe
+- Invalid payloads are terminated to `medisync.dlq.rx.prescription.created` with an audit record — they are **not** retried
+- Reference implementation: `services/core/cmd/feeder`

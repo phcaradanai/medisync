@@ -1,0 +1,122 @@
+name: medisync
+
+# Required variables — must be set in the env file or environment.
+# docker compose --env-file .env.production -f infra/docker-compose.prod.yml config
+# will fail if any of these are missing or empty.
+
+x-common-core: &common-core
+  restart: unless-stopped
+  networks:
+    - medisync-backend
+    - medisync-frontend
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks:
+      - medisync-backend
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  nats:
+    image: nats:2.10-alpine
+    restart: unless-stopped
+    networks:
+      - medisync-backend
+    command: ["-c", "/etc/nats/nats.conf"]
+    volumes:
+      - nats-data:/data
+      - ./nats/nats.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8222/healthz | grep -q ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  core:
+    <<: *common-core
+    build:
+      context: ../services/core
+      dockerfile: Dockerfile
+    image: medisync-core:${CORE_TAG:-latest}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      NATS_URL: ${NATS_URL:?NATS_URL is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRY_SECONDS: ${JWT_EXPIRY_SECONDS:-3600}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:?ADMIN_BOOTSTRAP_PASSWORD is required}
+      CARD_TOKEN_HMAC_KEY: ${CARD_TOKEN_HMAC_KEY:?CARD_TOKEN_HMAC_KEY is required}
+      HTTP_ADDR: ${HTTP_ADDR:-:8080}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      STARTUP_TIMEOUT_SECONDS: ${STARTUP_TIMEOUT_SECONDS:-120}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    # Expose only on internal network; nginx apps proxy through it.
+    # No public port exposed — traffic goes through admin/kiosk nginx proxies.
+
+  admin:
+    build:
+      context: ..
+      dockerfile: apps/admin/Dockerfile
+    image: medisync-admin:${ADMIN_TAG:-latest}
+    restart: unless-stopped
+    networks:
+      - medisync-frontend
+    ports:
+      - "${ADMIN_PORT:-8081}:80"
+    depends_on:
+      - core
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:80/ | grep -q 'html'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  kiosk:
+    build:
+      context: ..
+      dockerfile: apps/kiosk/Dockerfile
+    image: medisync-kiosk:${KIOSK_TAG:-latest}
+    restart: unless-stopped
+    networks:
+      - medisync-frontend
+    ports:
+      - "${KIOSK_PORT:-8082}:80"
+    depends_on:
+      - core
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:80/ | grep -q 'html'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  medisync-backend:
+    driver: bridge
+    internal: true
+  medisync-frontend:
+    driver: bridge
+    internal: false
+
+volumes:
+  postgres-data:
+    name: medisync-postgres-data
+  nats-data:
+    name: medisync-nats-data

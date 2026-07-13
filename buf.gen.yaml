@@ -1,0 +1,15 @@
+version: v2
+clean: true
+plugins:
+  # Go message types
+  - remote: buf.build/protocolbuffers/go
+    out: services/core/internal/gen
+    opt: paths=source_relative
+  # Connect-RPC handlers/clients for Go
+  - remote: buf.build/connectrpc/go
+    out: services/core/internal/gen
+    opt: paths=source_relative
+  # TypeScript message types + service descriptors (Connect-Web consumes these)
+  - remote: buf.build/bufbuild/es
+    out: packages/proto-ts/src/gen
+    opt: target=ts

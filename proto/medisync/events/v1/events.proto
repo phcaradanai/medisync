@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package medisync.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1;eventsv1";
+
+// Payloads for NATS JetStream subjects. Wire format is protojson.
+// Subject registry lives in docs/EVENTS.md. Event messages are deliberately
+// self-contained (no imports from service protos) so external producers,
+// like the hospital prescription feeder, depend only on this file.
+
+message PrescriptionItem {
+  string drug_code = 1;
+  string drug_name = 2;
+  int32 quantity = 3;
+  string dosage_text = 4;
+}
+
+// Subject: rx.prescription.created
+// Producer: hospital prescription feeder (external team).
+// prescription_id + source_system is the idempotency key.
+message PrescriptionCreated {
+  string prescription_id = 1;
+  string source_system = 2;
+  string hn = 3;
+  string patient_name = 4;
+  string ward_id = 5;
+  repeated PrescriptionItem items = 6;
+  google.protobuf.Timestamp issued_at = 7;
+  string trace_id = 8;
+}
+
+// Subject: medisync.dispense.requested
+message DispenseRequested {
+  string dispense_id = 1;
+  string prescription_id = 2;
+  string slot_code = 3;
+  int32 quantity = 4;
+  string trace_id = 5;
+}
+
+// Subject: medisync.dispense.completed
+// Emitted only on hardware-confirmed success.
+message DispenseCompleted {
+  string dispense_id = 1;
+  string prescription_id = 2;
+  string slot_code = 3;
+  int32 quantity = 4;
+  google.protobuf.Timestamp completed_at = 5;
+  string trace_id = 6;
+}
+
+// Subject: medisync.dispense.failed
+message DispenseFailed {
+  string dispense_id = 1;
+  string prescription_id = 2;
+  string slot_code = 3;
+  // Machine-readable reason: "timeout", "jam", "agent_unreachable", ...
+  string reason = 4;
+  // Raw detail from the vending agent for diagnostics.
+  string detail = 5;
+  string trace_id = 6;
+}
+
+// Subject: medisync.print.requested
+message PrintRequested {
+  string print_id = 1;
+  string prescription_id = 2;
+  string trace_id = 3;
+}
+
+// Subject: medisync.print.completed
+message PrintCompleted {
+  string print_id = 1;
+  string prescription_id = 2;
+  bool success = 3;
+  string detail = 4;
+  string trace_id = 5;
+}
+
+enum StockChangeReason {
+  STOCK_CHANGE_REASON_UNSPECIFIED = 0;
+  STOCK_CHANGE_REASON_DISPENSE = 1;
+  STOCK_CHANGE_REASON_REFILL = 2;
+  STOCK_CHANGE_REASON_ADJUST = 3;
+}
+
+// Subject: medisync.stock.changed
+message StockChanged {
+  string slot_code = 1;
+  string drug_code = 2;
+  int32 delta = 3;
+  int32 quantity_after = 4;
+  StockChangeReason reason = 5;
+  string trace_id = 6;
+}
+
+// Subject: medisync.stock.low
+message StockLow {
+  string slot_code = 1;
+  string drug_code = 2;
+  int32 quantity = 3;
+  int32 threshold = 4;
+}

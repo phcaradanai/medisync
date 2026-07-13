@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package medisync.dispensing.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1;dispensingv1";
+
+// Lifecycle: RECEIVED -> READY -> DISPENSING -> DISPENSED | FAILED.
+// CANCELLED and EXPIRED are terminal states reachable from RECEIVED/READY.
+enum PrescriptionState {
+  PRESCRIPTION_STATE_UNSPECIFIED = 0;
+  PRESCRIPTION_STATE_RECEIVED = 1;
+  PRESCRIPTION_STATE_READY = 2;
+  PRESCRIPTION_STATE_DISPENSING = 3;
+  PRESCRIPTION_STATE_DISPENSED = 4;
+  PRESCRIPTION_STATE_FAILED = 5;
+  PRESCRIPTION_STATE_CANCELLED = 6;
+  PRESCRIPTION_STATE_EXPIRED = 7;
+}
+
+message PrescriptionItem {
+  string drug_code = 1;
+  string drug_name = 2;
+  int32 quantity = 3;
+  // Human-readable dosage instruction printed on the sticker.
+  string dosage_text = 4;
+}
+
+message Prescription {
+  // Internal id.
+  string id = 1;
+  // External id from the hospital; idempotency key with source_system.
+  string prescription_id = 2;
+  string source_system = 3;
+  // Hospital number of the patient.
+  string hn = 4;
+  string patient_name = 5;
+  string ward_id = 6;
+  repeated PrescriptionItem items = 7;
+  PrescriptionState state = 8;
+  // Populated only in FAILED state; hardware truth, e.g. "slot A01 timeout".
+  string failure_reason = 9;
+  google.protobuf.Timestamp issued_at = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message ListPrescriptionsRequest {
+  string ward_id = 1;
+  // Empty means all non-terminal states.
+  repeated PrescriptionState states = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListPrescriptionsResponse {
+  repeated Prescription prescriptions = 1;
+  string next_page_token = 2;
+}
+
+message GetPrescriptionRequest {
+  string id = 1;
+}
+
+message GetPrescriptionResponse {
+  Prescription prescription = 1;
+}
+
+// Kiosk-confirmed withdraw. Transitions READY -> DISPENSING and starts
+// the fulfillment flow; progress is observed via GetPrescription.
+message DispenseRequest {
+  string prescription_id = 1;
+  string trace_id = 2;
+}
+
+message DispenseResponse {
+  Prescription prescription = 1;
+}
+
+service DispensingService {
+  rpc ListPrescriptions(ListPrescriptionsRequest) returns (ListPrescriptionsResponse);
+  rpc GetPrescription(GetPrescriptionRequest) returns (GetPrescriptionResponse);
+  rpc Dispense(DispenseRequest) returns (DispenseResponse);
+}

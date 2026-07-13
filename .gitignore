@@ -1,0 +1,17 @@
+node_modules/
+dist/
+*.log
+# Real environment files — NEVER tracked, NEVER committed.
+.env
+.env.*
+# Allow the public example templates that contain no secrets.
+!.env.example
+!.env.production.example
+services/core/bin/
+.omc/
+.impeccable/
+*.exe
+*.tsbuildinfo
+/test-write.txt
+/worker-reports/
+/scripts/env/.test-tmp/
