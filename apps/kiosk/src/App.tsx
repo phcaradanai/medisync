@@ -1,11 +1,51 @@
-// M1 scaffold. The real kiosk flows (withdraw, refill) are M4 and will be
-// shaped with /impeccable before implementation. Keep this shell free of
-// throwaway UI so M4 starts clean.
+import { AuthProvider, useAuth } from "./auth.tsx";
+import LoginScreen from "./LoginScreen.tsx";
+import WithdrawFlow from "./WithdrawFlow.tsx";
+
+function AppShell() {
+  const { state, loading, logout } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="kiosk-screen">
+        <div className="kiosk-panel" style={{ alignItems: "center" }}>
+          <div className="spinner" />
+          <p className="kiosk-panel-subtitle">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!state) {
+    return <LoginScreen />;
+  }
+
+  return (
+    <>
+      <header className="kiosk-header">
+        <div className="kiosk-header__user">
+          <span>{state.user.displayName}</span>
+          <span style={{ fontSize: "0.8rem", opacity: 0.6 }}>
+            {state.user.wardIds?.join(", ")}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="kiosk-header__logout"
+          onClick={logout}
+        >
+          ออกจากระบบ
+        </button>
+      </header>
+      <WithdrawFlow />
+    </>
+  );
+}
+
 export default function App() {
   return (
-    <main className="scaffold">
-      <h1>MediSync — ตู้จ่ายยา</h1>
-      <p>โครงระบบพร้อมแล้ว หน้าจอเบิกยา/เติมยาจะพัฒนาใน M4</p>
-    </main>
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   );
 }

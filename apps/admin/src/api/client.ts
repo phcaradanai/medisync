@@ -1,0 +1,71 @@
+// Connect-RPC v2 client factory.
+// Uses createClient against exported service descriptors from _pb.ts files.
+import { createClient, type Transport } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
+import {
+  IdentityService,
+} from "@medisync/proto/medisync/identity/v1/identity_pb";
+import {
+  CatalogService,
+} from "@medisync/proto/medisync/catalog/v1/catalog_pb";
+
+// ── Transport ──────────────────────────────────────────────────────
+
+let tokenStore: (() => string | null) = () => null;
+
+/** Register a function that returns the current Bearer token. */
+export function setTokenProvider(fn: () => string | null) {
+  tokenStore = fn;
+}
+
+function makeTransport(): Transport {
+  return createConnectTransport({
+    // Empty baseUrl — Vite dev server proxies /medisync.* to core.
+    baseUrl: "",
+    fetch: (input, init) => {
+      const token = tokenStore();
+      if (token) {
+        init = {
+          ...init,
+          headers: {
+            ...(init?.headers as Record<string, string>),
+            Authorization: `Bearer ${token}`,
+          },
+        };
+      }
+      return fetch(input, init);
+    },
+  });
+}
+
+// ── Singleton clients ──────────────────────────────────────────────
+
+let transport: Transport;
+
+function getTransport(): Transport {
+  if (!transport) transport = makeTransport();
+  return transport;
+}
+
+/** Clears the cached transport so a new one picks up the latest token. */
+export function resetTransport() {
+  transport = makeTransport();
+}
+
+export const identityClient = createClient(IdentityService, getTransport());
+
+export const catalogClient = createClient(CatalogService, getTransport());
+
+// Re-export types that pages use.
+export type {
+  LoginRequest,
+  WhoAmIRequest,
+} from "@medisync/proto/medisync/identity/v1/identity_pb";
+
+export type {
+  CreateDrugRequest,
+  GetDrugRequest,
+  ListDrugsRequest,
+  UpdateDrugRequest,
+  DeactivateDrugRequest,
+} from "@medisync/proto/medisync/catalog/v1/catalog_pb";

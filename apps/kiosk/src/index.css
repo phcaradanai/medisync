@@ -1,37 +1,540 @@
-/* Token base per DESIGN.md — full system lands with the M4 kiosk build. */
+/* ═══════════════════════════════════════════════════════════════
+   MediSync Kiosk — Design Tokens per DESIGN.md
+   "The Lab Notebook, at arm's length."
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Color tokens ──────────────────────────────────────────── */
 :root {
-  --page: #f5f5f5;
-  --surface: #ffffff;
-  --ink: #1e1e2e;
-  --text: #374151;
-  font-family: system-ui, "Noto Sans Thai", sans-serif;
+  --primary: #1e66f5;
+  --neutral-deep: #1e1e2e;
+  --neutral-page: #f5f5f5;
+  --neutral-surface: #ffffff;
+  --neutral-subtle: #f0f0f0;
+  --neutral-border: #e5e7eb;
+  --neutral-border-strong: #d1d5db;
+  --neutral-text: #374151;
+  --neutral-text-muted: #6b7280;
+  --neutral-inverse: #111827;
+  --semantic-success: #a6e3a1;
+  --semantic-warning: #f9e2af;
+  --semantic-error: #f38ba8;
+  --semantic-info: #89b4fa;
+  --semantic-neutral: #9399b2;
+  --semantic-progress: #fab387;
+  --nav-bg: #1e1e2e;
+  --nav-text: #cdd6f4;
+  --nav-active: #89b4fa;
+  --nav-button: #313244;
+
+  /* Semantic status text — computed to achieve WCAG AA (≥4.5:1 normal, ≥3:1 large)
+     against the corresponding semantic pastel background. */
+  --text-on-success: #0d6b0d;
+  --text-on-warning: #6b5500;
+  --text-on-error: #7a001e;
+  --text-on-info: #003399;
+  --text-on-neutral: #2d313b;
+  --text-on-progress: #7a3d00;
+
+  /* ── Typography ────────────────────────────────────────── */
+  --font-family: system-ui, "Noto Sans Thai", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Kiosk scale (arm's length) */
+  --type-kiosk-title: 700 2rem / 1.25 var(--font-family);
+  --type-kiosk-body: 400 1.25rem / 1.45 var(--font-family);
+  --type-kiosk-action: 700 1.5rem / 1.2 var(--font-family);
+  --type-kiosk-stat: 700 2.5rem / 1.15 var(--font-family);
+
+  /* ── Spacing ────────────────────────────────────────────── */
+  --space-xs: 0.35rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.25rem;
+  --space-2xl: 1.5rem;
+  --space-3xl: 2rem;
+
+  /* ── Rounded corners ────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* ── Elevation ──────────────────────────────────────────── */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-popover: 0 10px 24px rgba(0, 0, 0, 0.18);
+
+  /* ── Kiosk dimensions ───────────────────────────────────── */
+  --kiosk-max-width: 720px;
+  --touch-target-min: 48px;
+  --kiosk-action-height: 64px;
 }
 
-* {
+/* ── Reset ────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--page);
-  color: var(--text);
+  background: var(--neutral-page);
+  color: var(--neutral-text);
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.scaffold {
+/* ── Kiosk step screen ─────────────────────────────────────── */
+.kiosk-screen {
   min-height: 100vh;
-  display: grid;
-  place-content: center;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: var(--neutral-page);
+}
+
+.kiosk-panel {
+  width: 100%;
+  max-width: var(--kiosk-max-width);
+  background: var(--neutral-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  padding: var(--space-3xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+}
+
+.kiosk-panel-title {
+  font: var(--type-kiosk-title);
+  color: var(--neutral-deep);
   text-align: center;
-  gap: 0.5rem;
 }
 
-.scaffold h1 {
-  color: var(--ink);
-  font-size: 2rem;
-  margin: 0;
+.kiosk-panel-subtitle {
+  font: var(--type-kiosk-body);
+  color: var(--neutral-text-muted);
+  text-align: center;
 }
 
-.scaffold p {
-  font-size: 1.25rem;
-  margin: 0;
+/* ── Kiosk action button ───────────────────────────────────── */
+.kiosk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--kiosk-action-height);
+  padding: var(--space-xl) var(--space-3xl);
+  font: var(--type-kiosk-action);
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  transition: opacity 200ms ease;
+  min-width: 200px;
+}
+
+.kiosk-btn:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.kiosk-btn:active {
+  opacity: 0.7;
+}
+
+.kiosk-btn-primary {
+  background: var(--neutral-deep);
+  color: var(--neutral-surface);
+}
+
+.kiosk-btn-outline {
+  background: transparent;
+  color: var(--neutral-deep);
+  border: 1px solid var(--neutral-border-strong);
+}
+
+.kiosk-btn-danger {
+  background: #c41e3a;
+  color: var(--neutral-surface);
+}
+
+.kiosk-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ── Form inputs (kiosk scale) ─────────────────────────────── */
+.kiosk-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.kiosk-label {
+  font: 600 0.875rem / 1.4 var(--font-family);
+  color: var(--neutral-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kiosk-input {
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-md) var(--space-lg);
+  font: var(--type-kiosk-body);
+  border: 1px solid var(--neutral-border);
+  border-radius: var(--radius-md);
+  background: var(--neutral-surface);
+  color: var(--neutral-deep);
+  outline: none;
+  transition: border-color 200ms;
+}
+
+.kiosk-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(30, 102, 245, 0.15);
+}
+
+.kiosk-input::placeholder {
+  color: var(--neutral-text-muted);
+}
+
+/* ── Status badge ──────────────────────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font: 600 0.875rem / 1.4 var(--font-family);
+}
+
+.status-badge--info {
+  background: var(--semantic-info);
+  color: var(--text-on-info);
+}
+
+.status-badge--success {
+  background: var(--semantic-success);
+  color: var(--text-on-success);
+}
+
+.status-badge--progress {
+  background: var(--semantic-progress);
+  color: var(--text-on-progress);
+}
+
+.status-badge--warning {
+  background: var(--semantic-warning);
+  color: var(--text-on-warning);
+}
+
+.status-badge--error {
+  background: var(--semantic-error);
+  color: var(--text-on-error);
+}
+
+.status-badge--neutral {
+  background: var(--semantic-neutral);
+  color: var(--text-on-neutral);
+}
+
+/* ── Prescription list (touch rows) ────────────────────────── */
+.rx-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.rx-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  border: 1px solid var(--neutral-border);
+  border-radius: var(--radius-lg);
+  background: var(--neutral-surface);
+  cursor: pointer;
+  transition: border-color 200ms, box-shadow 200ms;
+  min-height: 80px;
+  touch-action: manipulation;
+}
+
+.rx-card:hover,
+.rx-card:focus-visible {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-card);
+}
+
+.rx-card:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.rx-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.rx-card__patient {
+  font: 700 1.25rem / 1.3 var(--font-family);
+  color: var(--neutral-deep);
+}
+
+.rx-card__hn {
+  font: 400 0.875rem / 1.4 var(--font-mono);
+  color: var(--neutral-text-muted);
+}
+
+.rx-card__drugs {
+  font: 400 1rem / 1.4 var(--font-family);
+  color: var(--neutral-text);
+}
+
+.rx-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font: 400 0.875rem / 1.4 var(--font-family);
+  color: var(--neutral-text-muted);
+}
+
+/* ── Confirm screen ────────────────────────────────────────── */
+.rx-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.rx-detail__section {
+  padding: var(--space-lg);
+  background: var(--neutral-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.rx-detail__heading {
+  font: 600 0.875rem / 1.4 var(--font-family);
+  color: var(--neutral-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rx-detail__value {
+  font: var(--type-kiosk-body);
+  color: var(--neutral-deep);
+}
+
+.rx-detail__items {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.rx-detail__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--neutral-border);
+}
+
+.rx-detail__item:last-child {
+  border-bottom: none;
+}
+
+.rx-detail__item-name {
+  font: 600 1.25rem / 1.4 var(--font-family);
+  color: var(--neutral-deep);
+}
+
+.rx-detail__item-qty {
+  font: var(--type-kiosk-body);
+  color: var(--neutral-text);
+}
+
+.rx-detail__item-dosage {
+  font: 400 1rem / 1.4 var(--font-family);
+  color: var(--neutral-text-muted);
+}
+
+/* ── Dispense status screen ────────────────────────────────── */
+.dispense-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xl);
+  text-align: center;
+}
+
+.dispense-status__icon {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.dispense-status__verdict {
+  font: var(--type-kiosk-title);
+  color: var(--neutral-deep);
+}
+
+.dispense-status__detail {
+  font: var(--type-kiosk-body);
+  color: var(--neutral-text);
+}
+
+.dispense-status--success .dispense-status__verdict {
+  color: var(--text-on-success);
+}
+
+.dispense-status--failed .dispense-status__verdict {
+  color: var(--text-on-error);
+}
+
+.dispense-status--dispensing .dispense-status__verdict {
+  color: var(--text-on-progress);
+}
+
+/* ── Spinner ───────────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--neutral-border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Card login stub ───────────────────────────────────────── */
+.card-scan-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-3xl);
+  border: 2px dashed var(--neutral-border);
+  border-radius: var(--radius-lg);
+  background: var(--neutral-subtle);
+  color: var(--neutral-text-muted);
+  font: var(--type-kiosk-body);
+  text-align: center;
+  min-height: 160px;
+  justify-content: center;
+}
+
+.card-scan-area__icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+/* ── Header / session bar ──────────────────────────────────── */
+.kiosk-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-xl);
+  background: var(--neutral-deep);
+  color: var(--nav-text);
+  font: 600 1rem / 1.4 var(--font-family);
+  min-height: 56px;
+}
+
+.kiosk-header__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.kiosk-header__logout {
+  padding: var(--space-sm) var(--space-lg);
+  font: 600 0.875rem / 1.4 var(--font-family);
+  background: var(--nav-button);
+  color: var(--nav-text);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 40px;
+}
+
+/* ── Step indicator ────────────────────────────────────────── */
+.step-indicator {
+  font: 400 1rem / 1.4 var(--font-family);
+  color: var(--neutral-text-muted);
+  text-align: center;
+}
+
+/* ── Login divider ─────────────────────────────────────────── */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  color: var(--neutral-text-muted);
+  font: 400 0.875rem / 1.4 var(--font-family);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--neutral-border);
+}
+
+/* ── Error / message ───────────────────────────────────────── */
+.kiosk-error {
+  padding: var(--space-md) var(--space-lg);
+  background: var(--semantic-error);
+  color: var(--text-on-error);
+  border-radius: var(--radius-md);
+  font: 600 1rem / 1.4 var(--font-family);
+  text-align: center;
+}
+
+.kiosk-message {
+  padding: var(--space-md) var(--space-lg);
+  background: var(--semantic-info);
+  color: var(--text-on-info);
+  border-radius: var(--radius-md);
+  font: 400 1rem / 1.4 var(--font-family);
+  text-align: center;
+}
+
+/* ── Reduced motion ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
