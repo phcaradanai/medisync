@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -13,18 +14,35 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// LoginRateLimiter is the interface IdentityServer uses to check login rate
+// limits. It is a subset of the real ratelimit.Limiter so tests can inject
+// deterministic behaviour without importing the full ratelimit package.
+type LoginRateLimiter interface {
+	Allow(key string) bool
+	Reset()
+}
+
 // Compile-time check: IdentityServer implements the generated handler interface.
 var _ identityv1connect.IdentityServiceHandler = (*IdentityServer)(nil)
 
 // IdentityServer is the Connect-RPC handler for IdentityService.
 // It owns no HTTP server startup logic — just the RPC mapping.
 type IdentityServer struct {
-	auth *AuthService
+	auth         *AuthService
+	idLimiter    LoginRateLimiter // per-identifier (username / card_token)
+	ipLimiter    LoginRateLimiter // per-remote-IP
 }
 
-// NewIdentityServer creates an IdentityServer.
+// NewIdentityServer creates an IdentityServer without rate limiting.
 func NewIdentityServer(auth *AuthService) *IdentityServer {
 	return &IdentityServer{auth: auth}
+}
+
+// NewIdentityServerWithRateLimit creates an IdentityServer with rate
+// limiting on login endpoints. Both idLimiter and ipLimiter may be nil
+// (or a noop limiter) to disable the corresponding check.
+func NewIdentityServerWithRateLimit(auth *AuthService, idLimiter, ipLimiter LoginRateLimiter) *IdentityServer {
+	return &IdentityServer{auth: auth, idLimiter: idLimiter, ipLimiter: ipLimiter}
 }
 
 // Login handles password-based login. It maps domain errors to safe Connect
@@ -39,6 +57,12 @@ func (s *IdentityServer) Login(
 	}
 	if msg.Password == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrMissingPassword)
+	}
+
+	// Rate-limit check: per-identifier and per-IP. Both must pass.
+	// The same error is returned regardless of which limit triggered.
+	if err := s.checkLoginRateLimit(req.Peer().Addr, msg.Username); err != nil {
+		return nil, err
 	}
 
 	token, expiresAt, user, err := s.auth.LoginPassword(ctx, msg.Username, msg.Password)
@@ -64,6 +88,11 @@ func (s *IdentityServer) CardLogin(
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrMissingCardToken)
 	}
 
+	// Rate-limit check: per-identifier (card token) and per-IP.
+	if err := s.checkLoginRateLimit(req.Peer().Addr, msg.CardToken); err != nil {
+		return nil, err
+	}
+
 	token, expiresAt, user, err := s.auth.LoginCard(ctx, msg.CardToken)
 	if err != nil {
 		return nil, authErrorToConnect(err)
@@ -74,6 +103,38 @@ func (s *IdentityServer) CardLogin(
 		ExpiresAt:   timestamppb.New(expiresAt),
 		User:        toProtoUser(user),
 	}), nil
+}
+
+// checkLoginRateLimit checks both the per-identifier and per-IP rate
+// limiters. It returns a uniform connect.Error (CodeResourceExhausted)
+// with a safe message when either limit is exceeded.
+// peerAddr is the raw address string from Connect's req.Peer().Addr.
+func (s *IdentityServer) checkLoginRateLimit(peerAddr, identifier string) *connect.Error {
+	// Per-identifier limit.
+	if s.idLimiter != nil && !s.idLimiter.Allow(identifier) {
+		return connect.NewError(connect.CodeResourceExhausted, ErrRateLimitExceeded)
+	}
+
+	// Per-IP limit.
+	ip := extractIP(peerAddr)
+	if ip != "" && s.ipLimiter != nil && !s.ipLimiter.Allow(ip) {
+		return connect.NewError(connect.CodeResourceExhausted, ErrRateLimitExceeded)
+	}
+
+	return nil
+}
+
+// extractIP strips the port from an addr string if present.
+func extractIP(addr string) string {
+	if addr == "" {
+		return ""
+	}
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		// No port — use the raw address.
+		return addr
+	}
+	return host
 }
 
 // WhoAmI returns the current user from the JWT in the Authorization header.

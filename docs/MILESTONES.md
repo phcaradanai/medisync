@@ -34,11 +34,11 @@
 - **Test design corrected:** Store and audit.Writer accept a narrow `testutil.Execer` interface; unit tests inject `FakeExecer`; integration tests use `//go:build integration` with tx rollback. No `t.Skip` anywhere — database-dependent tests fail clearly (not silently) when infrastructure is missing.
 - **Decision:** Project owner accepted the current event schema as canonical v1. Producer-team confirmation remains integration follow-up, not an M1 blocker.
 
-### M2 — Core domain (Day 2–4)
+### M2 — Core domain (Day 2–4) ✅ COMPLETE (2026-07-14)
 - [x] identity: users, roles, ward permissions, login (JWT), seed admin, hashed card-token storage (Review R2 PASS)
-- [ ] catalog: drug CRUD
-- [ ] inventory: slots, drug↔slot mapping, stock counts, refill command, `stock.changed`/`stock.low` events
-- [ ] dispensing: prescription aggregate + state machine, JetStream consumer with idempotent upsert, outbox publisher
+- [x] catalog: drug CRUD, pg_trgm search (Team 10 PASS WITH FINDINGS)
+- [x] inventory: slots, drug↔slot mapping, stock counts, refill command, `stock.changed`/`stock.low` events (Team 11 PASS WITH FINDINGS)
+- [x] dispensing: prescription aggregate + state machine, JetStream consumer with idempotent upsert, outbox publisher, ward-scoped auth (Team 12 PASS WITH FINDINGS — 294 tests, 49 state edges, zero races)
 - Exit: prescription event → `READY` prescription queryable via Connect-RPC; unit tests on state machine + authorization
 
 ### M3 — Hardware & printing bridges (Day 4–5)

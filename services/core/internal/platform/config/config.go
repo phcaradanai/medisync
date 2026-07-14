@@ -22,6 +22,10 @@ const (
 	devCardTokenHMACKeyDefault = "medisync-dev-card-hmac-change-in-prod"
 	// minCardTokenHMACKeyBytes is the floor for an acceptable card-token HMAC key.
 	minCardTokenHMACKeyBytes = 32
+	// defaultLoginRateLimitMax is the requests-per-window cap when unset.
+	defaultLoginRateLimitMax = 10
+	// defaultLoginRateLimitWindowSeconds is the window size when unset.
+	defaultLoginRateLimitWindowSeconds = 60
 )
 
 type Config struct {
@@ -44,6 +48,12 @@ type Config struct {
 	CardTokenHMACKey string
 	// StartupTimeoutSeconds bounds dependency retries (DB ping, NATS connect).
 	StartupTimeoutSeconds int
+	// LoginRateLimitMax is the maximum login attempts per window per identifier
+	// (username or card token) and per remote IP. A value of 0 disables rate limiting.
+	LoginRateLimitMax int
+	// LoginRateLimitWindowSeconds is the sliding-window size in seconds for login
+	// rate limiting. Must be positive when LoginRateLimitMax > 0.
+	LoginRateLimitWindowSeconds int
 }
 
 // Load reads configuration from environment variables. It rejects missing,
@@ -95,6 +105,25 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("STARTUP_TIMEOUT_SECONDS must be a positive integer, got %q", raw)
 		}
 		cfg.StartupTimeoutSeconds = n
+	}
+
+	// ── Login rate limit ─────────────────────────────────────────────
+	cfg.LoginRateLimitMax = defaultLoginRateLimitMax
+	if raw := os.Getenv("LOGIN_RATE_LIMIT_MAX"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			return Config{}, fmt.Errorf("LOGIN_RATE_LIMIT_MAX must be a non-negative integer, got %q", raw)
+		}
+		cfg.LoginRateLimitMax = n
+	}
+
+	cfg.LoginRateLimitWindowSeconds = defaultLoginRateLimitWindowSeconds
+	if raw := os.Getenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 {
+			return Config{}, fmt.Errorf("LOGIN_RATE_LIMIT_WINDOW_SECONDS must be a positive integer, got %q", raw)
+		}
+		cfg.LoginRateLimitWindowSeconds = n
 	}
 
 	return cfg, nil

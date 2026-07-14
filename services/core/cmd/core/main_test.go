@@ -13,8 +13,15 @@ import (
 	identityv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1"
 	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
 	"github.com/adm-chura3inter/medisync/services/core/internal/identity"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/config"
 	"github.com/golang-jwt/jwt/v5"
 )
+
+// testConfig is a config that disables rate limiting for tests.
+var testConfig = config.Config{
+	LoginRateLimitMax:           0, // disabled
+	LoginRateLimitWindowSeconds: 60,
+}
 
 // setupAuthenticatedServer creates a test HTTP server that has the Identity
 // Connect handler mounted. It returns the server and a connected client.
@@ -23,7 +30,7 @@ func setupAuthenticatedServer(t *testing.T, store *fakeUserStore, tm *fakeTokenM
 	t.Helper()
 
 	mux := http.NewServeMux()
-	path, handler := newIdentityHandler(store, tm)
+	path, handler := newIdentityHandler(store, tm, testConfig)
 	mux.Handle(path, handler)
 
 	ts := httptest.NewServer(mux)
@@ -255,7 +262,7 @@ func TestConnectWhoAmIInvalidToken(t *testing.T) {
 // ── Mux path registration test ─────────────────────────────────────────
 
 func TestMuxPathRegistration(t *testing.T) {
-	path, handler := newIdentityHandler(&fakeUserStore{}, &fakeTokenManager{})
+	path, handler := newIdentityHandler(&fakeUserStore{}, &fakeTokenManager{}, testConfig)
 
 	// Verify the handler is not nil.
 	if handler == nil {

@@ -431,3 +431,122 @@ func TestLoadCardTokenHMACKeyChangeMe(t *testing.T) {
 		t.Fatal("expected error for 'change-me' card-token HMAC key")
 	}
 }
+
+// ── Login rate limit tests ──────────────────────────────────────────
+
+func TestLoadLoginRateLimitDefaults(t *testing.T) {
+	os.Unsetenv("LOGIN_RATE_LIMIT_MAX")
+	os.Unsetenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS")
+	os.Setenv("ADMIN_BOOTSTRAP_PASSWORD", "test-password-enough")
+	defer func() {
+		os.Unsetenv("LOGIN_RATE_LIMIT_MAX")
+		os.Unsetenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS")
+		os.Unsetenv("ADMIN_BOOTSTRAP_PASSWORD")
+	}()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	if cfg.LoginRateLimitMax != 10 {
+		t.Errorf("LoginRateLimitMax default = %d, want 10", cfg.LoginRateLimitMax)
+	}
+	if cfg.LoginRateLimitWindowSeconds != 60 {
+		t.Errorf("LoginRateLimitWindowSeconds default = %d, want 60", cfg.LoginRateLimitWindowSeconds)
+	}
+}
+
+func TestLoadLoginRateLimitOverride(t *testing.T) {
+	os.Setenv("LOGIN_RATE_LIMIT_MAX", "5")
+	os.Setenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS", "30")
+	os.Setenv("ADMIN_BOOTSTRAP_PASSWORD", "test-password-enough")
+	defer func() {
+		os.Unsetenv("LOGIN_RATE_LIMIT_MAX")
+		os.Unsetenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS")
+		os.Unsetenv("ADMIN_BOOTSTRAP_PASSWORD")
+	}()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	if cfg.LoginRateLimitMax != 5 {
+		t.Errorf("LoginRateLimitMax = %d, want 5", cfg.LoginRateLimitMax)
+	}
+	if cfg.LoginRateLimitWindowSeconds != 30 {
+		t.Errorf("LoginRateLimitWindowSeconds = %d, want 30", cfg.LoginRateLimitWindowSeconds)
+	}
+}
+
+func TestLoadLoginRateLimitMaxDisable(t *testing.T) {
+	os.Setenv("LOGIN_RATE_LIMIT_MAX", "0")
+	os.Setenv("ADMIN_BOOTSTRAP_PASSWORD", "test-password-enough")
+	defer func() {
+		os.Unsetenv("LOGIN_RATE_LIMIT_MAX")
+		os.Unsetenv("ADMIN_BOOTSTRAP_PASSWORD")
+	}()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	if cfg.LoginRateLimitMax != 0 {
+		t.Errorf("LoginRateLimitMax = %d, want 0 (disabled)", cfg.LoginRateLimitMax)
+	}
+}
+
+func TestLoadLoginRateLimitMaxNegative(t *testing.T) {
+	os.Setenv("LOGIN_RATE_LIMIT_MAX", "-1")
+	os.Setenv("ADMIN_BOOTSTRAP_PASSWORD", "test-password-enough")
+	defer func() {
+		os.Unsetenv("LOGIN_RATE_LIMIT_MAX")
+		os.Unsetenv("ADMIN_BOOTSTRAP_PASSWORD")
+	}()
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for negative LOGIN_RATE_LIMIT_MAX")
+	}
+}
+
+func TestLoadLoginRateLimitMaxNonNumeric(t *testing.T) {
+	os.Setenv("LOGIN_RATE_LIMIT_MAX", "abc")
+	os.Setenv("ADMIN_BOOTSTRAP_PASSWORD", "test-password-enough")
+	defer func() {
+		os.Unsetenv("LOGIN_RATE_LIMIT_MAX")
+		os.Unsetenv("ADMIN_BOOTSTRAP_PASSWORD")
+	}()
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for non-numeric LOGIN_RATE_LIMIT_MAX")
+	}
+}
+
+func TestLoadLoginRateLimitWindowZero(t *testing.T) {
+	os.Setenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS", "0")
+	os.Setenv("ADMIN_BOOTSTRAP_PASSWORD", "test-password-enough")
+	defer func() {
+		os.Unsetenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS")
+		os.Unsetenv("ADMIN_BOOTSTRAP_PASSWORD")
+	}()
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for zero LOGIN_RATE_LIMIT_WINDOW_SECONDS")
+	}
+}
+
+func TestLoadLoginRateLimitWindowNonNumeric(t *testing.T) {
+	os.Setenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS", "xyz")
+	os.Setenv("ADMIN_BOOTSTRAP_PASSWORD", "test-password-enough")
+	defer func() {
+		os.Unsetenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS")
+		os.Unsetenv("ADMIN_BOOTSTRAP_PASSWORD")
+	}()
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for non-numeric LOGIN_RATE_LIMIT_WINDOW_SECONDS")
+	}
+}

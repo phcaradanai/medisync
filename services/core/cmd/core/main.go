@@ -16,14 +16,20 @@ import (
 
 	"github.com/nats-io/nats.go/jetstream"
 
+	"github.com/adm-chura3inter/medisync/services/core/internal/catalog"
 	"github.com/adm-chura3inter/medisync/services/core/internal/dispensing"
+	catalogv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/catalog/v1/catalogv1connect"
+	dispensingv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1/dispensingv1connect"
 	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
+	inventoryv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/inventory/v1/inventoryv1connect"
 	"github.com/adm-chura3inter/medisync/services/core/internal/identity"
+	"github.com/adm-chura3inter/medisync/services/core/internal/inventory"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/config"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/logging"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/postgres"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/ratelimit"
 	"github.com/adm-chura3inter/medisync/services/core/migrations"
 )
 
@@ -49,6 +55,8 @@ func run() (runErr error) {
 		"jwt_secret_configured", cfg.JWTSecret != "",
 		"admin_password_configured", cfg.AdminBootstrapPassword != "",
 		"card_token_hmac_configured", cfg.CardTokenHMACKey != "",
+		"login_rate_limit_max", cfg.LoginRateLimitMax,
+		"login_rate_limit_window_seconds", cfg.LoginRateLimitWindowSeconds,
 	)
 
 	startupCtx, cancelStartup := context.WithTimeout(context.Background(),
@@ -125,8 +133,37 @@ func run() (runErr error) {
 	}
 
 	mux := http.NewServeMux()
-	path, handler := newIdentityHandler(identityStore, jwtMgr)
+	path, handler := newIdentityHandler(identityStore, jwtMgr, cfg)
 	mux.Handle(path, handler)
+
+	// ── Catalog ─────────────────────────────────────────────────────
+	catalogStore := catalog.NewStore(pool, auditw)
+	catalogServer := catalog.NewCatalogServer(catalogStore, auditw)
+	catalogPath, catalogHandler := catalogv1connect.NewCatalogServiceHandler(catalogServer)
+	mux.Handle(catalogPath, catalogHandler)
+
+	// ── Inventory ──────────────────────────────────────────────────
+	inventoryStore := inventory.NewStore(pool, auditw)
+	inventoryServer := inventory.NewInventoryServer(inventoryStore, auditw, js)
+	inventoryPath, inventoryHandler := inventoryv1connect.NewInventoryServiceHandler(inventoryServer)
+	mux.Handle(inventoryPath, inventoryHandler)
+
+	// ── Dispensing ────────────────────────────────────────────────
+	dispensingStore := dispensing.NewStore(pool)
+	dispensingServer := dispensing.NewDispensingServer(
+		dispensingStore, pool,
+		newDispensingTokenParser(jwtMgr),
+		auditw,
+	)
+	dispensingPath, dispensingHandler := dispensingv1connect.NewDispensingServiceHandler(dispensingServer)
+	mux.Handle(dispensingPath, dispensingHandler)
+
+	// Outbox publisher: polls dispensing.outbox and publishes to NATS.
+	// Runs in its own goroutine; stopped before NATS drain on shutdown.
+	publisherCtx, cancelPublisher := context.WithCancel(context.Background())
+	defer cancelPublisher()
+	outboxPub := dispensing.NewOutboxPublisher(pool, js, log)
+	go outboxPub.Start(publisherCtx)
 
 	// ── HTTP server ──────────────────────────────────────────────────
 	srv := &http.Server{
@@ -187,8 +224,37 @@ func bootstrapAdmin(ctx context.Context, store adminSeeder, password string) (bo
 	return store.SeedAdmin(ctx, passwordHash)
 }
 
-func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager) (string, http.Handler) {
+func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, cfg config.Config) (string, http.Handler) {
 	authService := identity.NewAuthService(store, tokens)
-	server := identity.NewIdentityServer(authService)
+
+	// Create rate limiters for login endpoints.
+	window := time.Duration(cfg.LoginRateLimitWindowSeconds) * time.Second
+	idLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
+	ipLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
+
+	server := identity.NewIdentityServerWithRateLimit(authService, idLimiter, ipLimiter)
 	return identityv1connect.NewIdentityServiceHandler(server)
+}
+
+// newDispensingTokenParser adapts identity.JWTManager to dispensing.TokenParser.
+// The dispensing handler defines its own TokenClaims type to avoid a circular
+// dependency on package identity.
+func newDispensingTokenParser(mgr *identity.JWTManager) *dispensingTokenParser {
+	return &dispensingTokenParser{mgr: mgr}
+}
+
+type dispensingTokenParser struct {
+	mgr *identity.JWTManager
+}
+
+func (p *dispensingTokenParser) Parse(tokenString string) (*dispensing.TokenClaims, error) {
+	claims, err := p.mgr.Parse(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	return &dispensing.TokenClaims{
+		Subject: claims.Subject,
+		Role:    claims.Role,
+		WardIDs: claims.WardIDs,
+	}, nil
 }

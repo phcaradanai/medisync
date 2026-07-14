@@ -32,6 +32,8 @@ All six core-service variables read by the Go core, plus three new ones for Iden
 | `JWT_EXPIRY_SECONDS` | No | `3600` | Access-token lifetime in seconds (positive integer). |
 | `ADMIN_BOOTSTRAP_PASSWORD` | Yes | (none - must be set) | Bootstrap admin password. Hashed with bcrypt before storage; only used on first startup. Minimum 12 bytes; empty, short, and placeholder values are rejected. |
 | `CARD_TOKEN_HMAC_KEY` | Yes (prod) | `medisync-dev-card-hmac-change-in-prod` | HMAC key for deterministic card-token hashing. Cards are stored as HMAC-SHA256(key, token) in a BYTEA column. Minimum 32 bytes; the dev default is rejected in production. |
+| `LOGIN_RATE_LIMIT_MAX` | No | `10` | Maximum login attempts (Login + CardLogin) per window per identifier (username or card token) and per remote IP. Set to 0 to disable rate limiting. |
+| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Sliding-window size in seconds for login rate limiting. Must be positive. |
 
 ### Compose-Only Variables (production)
 
@@ -65,6 +67,8 @@ These are used in `infra/docker-compose.prod.yml` and not read by the Go core.
 | `JWT_EXPIRY_SECONDS` | `3600` | `3600` or shorter for high-security environments |
 | `ADMIN_BOOTSTRAP_PASSWORD` | Known local-only value in `.env.example` | Strong unique password (minimum 12 bytes) |
 | `CARD_TOKEN_HMAC_KEY` | `medisync-dev-card-hmac-change-in-prod` | Strong random string (minimum 32 bytes) |
+| `LOGIN_RATE_LIMIT_MAX` | `10` | `5` - `20` (tighter for kiosk-facing deployments) |
+| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | `60` | `60` - `300` (wider window = fewer lockouts) |
 | `POSTGRES_*` vars | Not used (hardcoded in dev compose) | Required; set in `.env.production` |
 | Placeholder detection | Not enforced | Rejected with error |
 
@@ -73,7 +77,7 @@ These are used in `infra/docker-compose.prod.yml` and not read by the Go core.
 ### Classification
 
 - **Secret:** `DATABASE_URL` (contains password), `POSTGRES_PASSWORD`, `JWT_SECRET`, `ADMIN_BOOTSTRAP_PASSWORD`, `CARD_TOKEN_HMAC_KEY`. Never print, log, or commit these values.
-- **Public:** `NATS_URL`, `HTTP_ADDR`, `LOG_LEVEL`, `STARTUP_TIMEOUT_SECONDS`, `POSTGRES_USER`, `POSTGRES_DB`, `JWT_EXPIRY_SECONDS`.
+- **Public:** `NATS_URL`, `HTTP_ADDR`, `LOG_LEVEL`, `STARTUP_TIMEOUT_SECONDS`, `POSTGRES_USER`, `POSTGRES_DB`, `JWT_EXPIRY_SECONDS`, `LOGIN_RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS`.
 
 ### Rules
 

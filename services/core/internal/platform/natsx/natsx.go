@@ -19,6 +19,9 @@ const (
 	StreamMedisync = "MEDISYNC"
 
 	SubjectPrescriptionCreated = "rx.prescription.created"
+	SubjectDispenseRequested   = "medisync.dispense.requested"
+	SubjectStockChanged        = "medisync.stock.changed"
+	SubjectStockLow            = "medisync.stock.low"
 	SubjectDLQPrefix           = "medisync.dlq."
 )
 

@@ -1,0 +1,592 @@
+package inventory
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+// ── Test fakes ──────────────────────────────────────────────────────
+
+// fakeDB implements dbConn for unit tests.
+type fakeDB struct {
+	execCalls     []execCall
+	execTag       pgconn.CommandTag
+	execErr       error
+	queryRowCalls []queryRowCall
+	queryRow      pgx.Row
+	queryCalls    []queryCall
+	queryRows     *fakeRows
+	queryErr      error
+}
+
+type execCall struct {
+	sql  string
+	args []any
+}
+
+type queryRowCall struct {
+	sql  string
+	args []any
+}
+
+type queryCall struct {
+	sql  string
+	args []any
+}
+
+func (f *fakeDB) Exec(_ context.Context, sql string, arguments ...any) (pgconn.CommandTag, error) {
+	f.execCalls = append(f.execCalls, execCall{sql: sql, args: arguments})
+	return f.execTag, f.execErr
+}
+
+func (f *fakeDB) Query(_ context.Context, sql string, args ...any) (pgx.Rows, error) {
+	f.queryCalls = append(f.queryCalls, queryCall{sql: sql, args: args})
+	if f.queryRows != nil {
+		return f.queryRows, f.queryErr
+	}
+	return nil, f.queryErr
+}
+
+func (f *fakeDB) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
+	f.queryRowCalls = append(f.queryRowCalls, queryRowCall{sql: sql, args: args})
+	return f.queryRow
+}
+
+func (f *fakeDB) lastExec() execCall {
+	if len(f.execCalls) == 0 {
+		return execCall{}
+	}
+	return f.execCalls[len(f.execCalls)-1]
+}
+
+func (f *fakeDB) lastQueryRow() queryRowCall {
+	if len(f.queryRowCalls) == 0 {
+		return queryRowCall{}
+	}
+	return f.queryRowCalls[len(f.queryRowCalls)-1]
+}
+
+func (f *fakeDB) lastQuery() queryCall {
+	if len(f.queryCalls) == 0 {
+		return queryCall{}
+	}
+	return f.queryCalls[len(f.queryCalls)-1]
+}
+
+// ── fakeRow ─────────────────────────────────────────────────────────
+
+type fakeRow struct {
+	scanErr error
+	scanFn  func(dest ...any) error
+}
+
+func (r *fakeRow) Scan(dest ...any) error {
+	if r.scanFn != nil {
+		return r.scanFn(dest...)
+	}
+	return r.scanErr
+}
+
+// rowWithSlot returns a fakeRow that fills dest with a sample slot.
+// Matches the 10-column scan used by inventory queries.
+func rowWithSlot(sl Slot) *fakeRow {
+	return &fakeRow{
+		scanFn: func(dest ...any) error {
+			if len(dest) != 10 {
+				return fmt.Errorf("expected 10 dests, got %d", len(dest))
+			}
+			*(dest[0].(*string)) = sl.ID
+			*(dest[1].(*string)) = sl.CabinetID
+			*(dest[2].(*string)) = sl.Code
+			*(dest[3].(*string)) = sl.DrugID
+			*(dest[4].(*string)) = sl.DrugCode
+			*(dest[5].(*string)) = sl.DrugName
+			*(dest[6].(*int32)) = sl.Capacity
+			*(dest[7].(*int32)) = sl.Quantity
+			*(dest[8].(*int32)) = sl.LowThreshold
+			// dest[9] and dest[10] are created_at and updated_at (time.Time)
+			if dt, ok := dest[9].(*time.Time); ok {
+				*dt = sl.CreatedAt
+			}
+			// Wait — the scanSlot reads 10 fields? No, it's 10 fields + 2 timestamps from db = 12
+			// Actually looking at scanSlot: Scan(&slot.ID, &slot.CabinetID, &slot.Code,
+			//   &slot.DrugID, &slot.DrugCode, &slot.DrugName,
+			//   &slot.Capacity, &slot.Quantity, &slot.LowThreshold,
+			//   &createdAt, &updatedAt) → 11 dests
+			return fmt.Errorf("rowWithSlot needs 11 dests")
+		},
+	}
+}
+
+// rowWithNoRows returns a fakeRow that returns pgx.ErrNoRows.
+func rowWithNoRows() *fakeRow {
+	return &fakeRow{scanErr: pgx.ErrNoRows}
+}
+
+// rowWithError returns a fakeRow that returns an arbitrary error.
+func rowWithError(err error) *fakeRow {
+	return &fakeRow{scanErr: err}
+}
+
+// ── fakeRows ────────────────────────────────────────────────────────
+
+type fakeRows struct {
+	slots   []*Slot
+	current int
+	closed  bool
+	scanErr error
+}
+
+func (r *fakeRows) Close() {
+	r.closed = true
+}
+
+func (r *fakeRows) Err() error {
+	return nil
+}
+
+func (r *fakeRows) Next() bool {
+	r.current++
+	return r.current <= len(r.slots)
+}
+
+func (r *fakeRows) Scan(dest ...any) error {
+	if r.scanErr != nil {
+		return r.scanErr
+	}
+	if r.current < 1 || r.current > len(r.slots) {
+		return errors.New("no row to scan")
+	}
+	sl := r.slots[r.current-1]
+	if len(dest) != 11 {
+		return fmt.Errorf("expected 11 dests, got %d", len(dest))
+	}
+	*(dest[0].(*string)) = sl.ID
+	*(dest[1].(*string)) = sl.CabinetID
+	*(dest[2].(*string)) = sl.Code
+	*(dest[3].(*string)) = sl.DrugID
+	*(dest[4].(*string)) = sl.DrugCode
+	*(dest[5].(*string)) = sl.DrugName
+	*(dest[6].(*int32)) = sl.Capacity
+	*(dest[7].(*int32)) = sl.Quantity
+	*(dest[8].(*int32)) = sl.LowThreshold
+	if dt, ok := dest[9].(*time.Time); ok {
+		*dt = sl.CreatedAt
+	}
+	if dt, ok := dest[10].(*time.Time); ok {
+		*dt = sl.UpdatedAt
+	}
+	return nil
+}
+
+func (r *fakeRows) CommandTag() pgconn.CommandTag { return pgconn.CommandTag{} }
+func (r *fakeRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
+func (r *fakeRows) Values() ([]any, error) { return nil, nil }
+func (r *fakeRows) RawValues() [][]byte { return nil }
+func (r *fakeRows) Conn() *pgx.Conn { return nil }
+
+// ── rowWithSlot11 ───────────────────────────────────────────────────
+
+// rowWithSlot11 returns a fakeRow matching the 11-column scan.
+func rowWithSlot11(sl Slot) *fakeRow {
+	return &fakeRow{
+		scanFn: func(dest ...any) error {
+			if len(dest) != 11 {
+				return fmt.Errorf("expected 11 dests, got %d", len(dest))
+			}
+			*(dest[0].(*string)) = sl.ID
+			*(dest[1].(*string)) = sl.CabinetID
+			*(dest[2].(*string)) = sl.Code
+			*(dest[3].(*string)) = sl.DrugID
+			*(dest[4].(*string)) = sl.DrugCode
+			*(dest[5].(*string)) = sl.DrugName
+			*(dest[6].(*int32)) = sl.Capacity
+			*(dest[7].(*int32)) = sl.Quantity
+			*(dest[8].(*int32)) = sl.LowThreshold
+			if dt, ok := dest[9].(*time.Time); ok {
+				*dt = sl.CreatedAt
+			}
+			if dt, ok := dest[10].(*time.Time); ok {
+				*dt = sl.UpdatedAt
+			}
+			return nil
+		},
+	}
+}
+
+// ── scanSlot tests ──────────────────────────────────────────────────
+
+func TestScanSlotSuccess(t *testing.T) {
+	now := time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)
+	expected := Slot{
+		ID:        "slot-1",
+		CabinetID: "cab-1",
+		Code:      "A01",
+		DrugID:    "drug-1",
+		DrugCode:  "PARA-500",
+		DrugName:  "Paracetamol",
+		Capacity:  100,
+		Quantity:  50,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	row := &fakeRow{
+		scanFn: func(dest ...any) error {
+			if len(dest) != 11 {
+				return fmt.Errorf("expected 11 dests, got %d", len(dest))
+			}
+			*(dest[0].(*string)) = expected.ID
+			*(dest[1].(*string)) = expected.CabinetID
+			*(dest[2].(*string)) = expected.Code
+			*(dest[3].(*string)) = expected.DrugID
+			*(dest[4].(*string)) = expected.DrugCode
+			*(dest[5].(*string)) = expected.DrugName
+			*(dest[6].(*int32)) = expected.Capacity
+			*(dest[7].(*int32)) = expected.Quantity
+			*(dest[8].(*int32)) = expected.LowThreshold
+			if dt, ok := dest[9].(*time.Time); ok {
+				*dt = expected.CreatedAt
+			}
+			if dt, ok := dest[10].(*time.Time); ok {
+				*dt = expected.UpdatedAt
+			}
+			return nil
+		},
+	}
+
+	slot, err := scanSlot(row)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if slot == nil {
+		t.Fatal("expected slot, got nil")
+	}
+	if slot.ID != expected.ID {
+		t.Errorf("ID = %q, want %q", slot.ID, expected.ID)
+	}
+	if slot.Code != expected.Code {
+		t.Errorf("Code = %q, want %q", slot.Code, expected.Code)
+	}
+	if slot.Quantity != expected.Quantity {
+		t.Errorf("Quantity = %d, want %d", slot.Quantity, expected.Quantity)
+	}
+}
+
+func TestScanSlotNoRows(t *testing.T) {
+	slot, err := scanSlot(rowWithNoRows())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if slot != nil {
+		t.Errorf("expected nil slot for no rows, got %+v", slot)
+	}
+}
+
+func TestScanSlotError(t *testing.T) {
+	scanErr := errors.New("connection lost")
+	slot, err := scanSlot(rowWithError(scanErr))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "scan slot") {
+		t.Errorf("error should wrap with 'scan slot': %v", err)
+	}
+	if slot != nil {
+		t.Errorf("expected nil slot on error, got %+v", slot)
+	}
+}
+
+// ── Store.GetByID tests ─────────────────────────────────────────────
+
+func TestGetByIDSuccess(t *testing.T) {
+	now := time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)
+	expected := Slot{ID: "slot-1", CabinetID: "cab-1", Code: "A01", Quantity: 50,
+		CreatedAt: now, UpdatedAt: now}
+	db := &fakeDB{queryRow: rowWithSlot11(expected)}
+	store := NewStoreWithDB(db, nil)
+
+	slot, err := store.GetByID(context.Background(), "slot-1")
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if slot == nil {
+		t.Fatal("expected slot, got nil")
+	}
+	if slot.ID != "slot-1" {
+		t.Errorf("ID = %q, want slot-1", slot.ID)
+	}
+
+	call := db.lastQueryRow()
+	if !strings.Contains(call.sql, "FROM inventory.slot") {
+		t.Error("SQL should reference inventory.slot")
+	}
+}
+
+func TestGetByIDNotFound(t *testing.T) {
+	db := &fakeDB{queryRow: rowWithNoRows()}
+	store := NewStoreWithDB(db, nil)
+
+	slot, err := store.GetByID(context.Background(), "nonexistent")
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if slot != nil {
+		t.Errorf("expected nil for unknown id, got %+v", slot)
+	}
+}
+
+// ── Store.ListSlots tests ───────────────────────────────────────────
+
+func TestListSlotsEmpty(t *testing.T) {
+	db := &fakeDB{queryRows: &fakeRows{}, queryErr: nil}
+	store := NewStoreWithDB(db, nil)
+
+	slots, err := store.ListSlots(context.Background(), "", false)
+	if err != nil {
+		t.Fatalf("ListSlots: %v", err)
+	}
+	if len(slots) != 0 {
+		t.Errorf("expected 0 slots, got %d", len(slots))
+	}
+}
+
+func TestListSlotsWithResults(t *testing.T) {
+	now := time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)
+	slots := []*Slot{
+		{ID: "s1", CabinetID: "cab-1", Code: "A01", Quantity: 10, CreatedAt: now, UpdatedAt: now},
+		{ID: "s2", CabinetID: "cab-1", Code: "A02", Quantity: 20, CreatedAt: now, UpdatedAt: now},
+	}
+	db := &fakeDB{queryRows: &fakeRows{slots: slots}}
+	store := NewStoreWithDB(db, nil)
+
+	result, err := store.ListSlots(context.Background(), "", false)
+	if err != nil {
+		t.Fatalf("ListSlots: %v", err)
+	}
+	if len(result) != 2 {
+		t.Errorf("expected 2 slots, got %d", len(result))
+	}
+}
+
+func TestListSlotsFilterByCabinet(t *testing.T) {
+	db := &fakeDB{queryRows: &fakeRows{}}
+	store := NewStoreWithDB(db, nil)
+
+	_, err := store.ListSlots(context.Background(), "cab-1", false)
+	if err != nil {
+		t.Fatalf("ListSlots: %v", err)
+	}
+
+	call := db.lastQuery()
+	if !strings.Contains(call.sql, "cabinet_id = $1") {
+		t.Error("SQL should filter by cabinet_id")
+	}
+}
+
+func TestListSlotsLowOnly(t *testing.T) {
+	db := &fakeDB{queryRows: &fakeRows{}}
+	store := NewStoreWithDB(db, nil)
+
+	_, err := store.ListSlots(context.Background(), "", true)
+	if err != nil {
+		t.Fatalf("ListSlots: %v", err)
+	}
+
+	call := db.lastQuery()
+	if !strings.Contains(call.sql, "quantity <= low_threshold") {
+		t.Error("SQL should filter by low threshold")
+	}
+}
+
+// ── Store.AssignDrug tests ──────────────────────────────────────────
+
+func TestAssignDrugSuccess(t *testing.T) {
+	now := time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)
+	expected := Slot{
+		ID: "slot-1", CabinetID: "cab-1", Code: "A01",
+		DrugID: "drug-1", DrugCode: "PARA-500", DrugName: "Paracetamol",
+		Capacity: 100, Quantity: 50, LowThreshold: 10,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	db := &fakeDB{queryRow: rowWithSlot11(expected)}
+	store := NewStoreWithDB(db, nil)
+
+	slot, err := store.AssignDrug(context.Background(), "slot-1", "drug-1", "PARA-500", "Paracetamol", 100, 10)
+	if err != nil {
+		t.Fatalf("AssignDrug: %v", err)
+	}
+	if slot == nil {
+		t.Fatal("expected slot, got nil")
+	}
+	if slot.DrugID != "drug-1" {
+		t.Errorf("DrugID = %q, want drug-1", slot.DrugID)
+	}
+
+	call := db.lastQueryRow()
+	if !strings.Contains(call.sql, "UPDATE inventory.slot") {
+		t.Error("SQL should be UPDATE inventory.slot")
+	}
+}
+
+func TestAssignDrugNotFound(t *testing.T) {
+	db := &fakeDB{queryRow: rowWithNoRows()}
+	store := NewStoreWithDB(db, nil)
+
+	slot, err := store.AssignDrug(context.Background(), "ghost", "drug-1", "", "", 100, 10)
+	if err != nil {
+		t.Fatalf("AssignDrug: %v", err)
+	}
+	if slot != nil {
+		t.Errorf("expected nil for unknown id, got %+v", slot)
+	}
+}
+
+// ── Store.Refill tests ──────────────────────────────────────────────
+
+func TestRefillSuccess(t *testing.T) {
+	now := time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)
+	expected := Slot{
+		ID: "slot-1", CabinetID: "cab-1", Code: "A01",
+		DrugID: "drug-1", DrugCode: "PARA-500",
+		Capacity: 100, Quantity: 60, LowThreshold: 10,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	db := &fakeDB{queryRow: rowWithSlot11(expected)}
+	store := NewStoreWithDB(db, nil)
+
+	slot, err := store.Refill(context.Background(), "slot-1", 10)
+	if err != nil {
+		t.Fatalf("Refill: %v", err)
+	}
+	if slot == nil {
+		t.Fatal("expected slot, got nil")
+	}
+	if slot.Quantity != 60 {
+		t.Errorf("Quantity = %d, want 60", slot.Quantity)
+	}
+
+	call := db.lastQueryRow()
+	if !strings.Contains(call.sql, "quantity = quantity + $1") {
+		t.Error("SQL should use atomic increment")
+	}
+}
+
+func TestRefillInsufficientStock(t *testing.T) {
+	// Simulate: slot exists but refill would go negative.
+	// First QueryRow: UPDATE returns no rows (WHERE fails).
+	// Second QueryRow: existence check returns the slot id.
+	callCount := 0
+	db := &fakeDB{
+		queryRow: &fakeRow{
+			scanFn: func(dest ...any) error {
+				callCount++
+				if callCount == 1 {
+					return pgx.ErrNoRows // Refill returned no rows
+				}
+				// Existence check: slot exists
+				*(dest[0].(*string)) = "slot-1"
+				return nil
+			},
+		},
+	}
+	store := NewStoreWithDB(db, nil)
+
+	_, err := store.Refill(context.Background(), "slot-1", -100)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrInsufficientStock) {
+		t.Errorf("expected ErrInsufficientStock, got %v", err)
+	}
+}
+
+func TestRefillNotFound(t *testing.T) {
+	// Both the refill and the existence check return no rows.
+	db := &fakeDB{queryRow: rowWithNoRows()}
+	store := NewStoreWithDB(db, nil)
+
+	slot, err := store.Refill(context.Background(), "ghost", 10)
+	if err != nil {
+		t.Fatalf("Refill: %v", err)
+	}
+	if slot != nil {
+		t.Errorf("expected nil for unknown id, got %+v", slot)
+	}
+}
+
+// ── Store.AdjustStock tests ─────────────────────────────────────────
+
+func TestAdjustStockSuccess(t *testing.T) {
+	now := time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)
+	expected := Slot{
+		ID: "slot-1", CabinetID: "cab-1", Code: "A01",
+		DrugID: "drug-1", DrugCode: "PARA-500",
+		Capacity: 100, Quantity: 42, LowThreshold: 10,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	db := &fakeDB{queryRow: rowWithSlot11(expected)}
+	store := NewStoreWithDB(db, nil)
+
+	slot, err := store.AdjustStock(context.Background(), "slot-1", 42)
+	if err != nil {
+		t.Fatalf("AdjustStock: %v", err)
+	}
+	if slot == nil {
+		t.Fatal("expected slot, got nil")
+	}
+	if slot.Quantity != 42 {
+		t.Errorf("Quantity = %d, want 42", slot.Quantity)
+	}
+
+	call := db.lastQueryRow()
+	if !strings.Contains(call.sql, "UPDATE inventory.slot") {
+		t.Error("SQL should be UPDATE inventory.slot")
+	}
+	if !strings.Contains(call.sql, "quantity = $1") {
+		t.Error("SQL should SET quantity directly")
+	}
+}
+
+func TestAdjustStockNotFound(t *testing.T) {
+	db := &fakeDB{queryRow: rowWithNoRows()}
+	store := NewStoreWithDB(db, nil)
+
+	slot, err := store.AdjustStock(context.Background(), "ghost", 10)
+	if err != nil {
+		t.Fatalf("AdjustStock: %v", err)
+	}
+	if slot != nil {
+		t.Errorf("expected nil for unknown id, got %+v", slot)
+	}
+}
+
+// ── Interface compliance ────────────────────────────────────────────
+
+func TestStoreImplementsSlotStore(t *testing.T) {
+	var _ SlotStore = (*Store)(nil)
+}
+
+// ── toJSON tests ────────────────────────────────────────────────────
+
+func TestToJSONNil(t *testing.T) {
+	result := toJSON(nil)
+	if string(result) != "{}" {
+		t.Errorf("expected {}, got %s", string(result))
+	}
+}
+
+func TestToJSONValue(t *testing.T) {
+	d := auditDetail{SlotCode: "A01", DrugCode: "PARA-500"}
+	result := toJSON(d)
+	if !strings.Contains(string(result), `"slot_code":"A01"`) {
+		t.Errorf("expected slot_code in JSON, got %s", string(result))
+	}
+}

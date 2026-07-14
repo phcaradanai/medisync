@@ -1,10 +1,10 @@
 # Project Status
 
-**Last updated:** 2026-07-13
+**Last updated:** 2026-07-14
 
 ## Current Milestone
 
-**M2 - Core domain (Day 2-4)** - In progress. M1 accepted complete on 2026-07-13.
+**M3 — Hardware & printing bridges (Day 4–5)** — Next. M2 Core Domain fully complete 2026-07-14.
 
 ## Completed Work
 
@@ -40,18 +40,35 @@
 - `Nats-Msg-Id` header for broker-level dedupe
 - Configurable count, ward, source, fixed ID
 
-### Identity (M2 - complete)
+### Identity (M2 — complete)
 - bcrypt password hashing and verification with input limits
 - JWT issue/parse with exact HS256 enforcement and required expiry
 - Password login, card login, and `WhoAmI` service flows
 - Connect-RPC handlers with safe error mapping and secret-free responses
 - Core HTTP wiring: Connect handler mounted, admin seeded with bcrypt from `ADMIN_BOOTSTRAP_PASSWORD`
 - Graceful shutdown: signal handling, 10s deadline, NATS drain, DB pool close
+- Login rate limiting (Team 9 PASS WITH FINDINGS)
 - Live Docker smoke: Login→JWT, WhoAmI validates, restart idempotent, all error codes safe and uniform
 - Card tokens stored only as HMAC-SHA256 raw 32-byte `BYTEA`; plaintext column and raw-token fallback removed
 - Card lookup and enrollment fail closed without hashing configuration; normal reads never expose hashes
 - Production environment validation rejects missing, placeholder, and short card-token keys without printing secrets
 - Review R2 PASS; fresh-database migrations, PostgreSQL integration, Linux race, Compose, and Login/WhoAmI restart smoke verified
+
+### Catalog (M2 — complete)
+- Drug master CRUD: create, activate, deactivate, search with pg_trgm trigram fuzzy match
+- `CREATE EXTENSION pg_trgm` in migration for fresh-DB compatibility
+- Team 10 PASS WITH FINDINGS (`t_45f16032`)
+
+### Inventory (M2 — complete)
+- Cabinet slots, drug↔slot mapping, stock counts, low-stock thresholds
+- Stock adjustments, refill commands, `stock.changed` and `stock.low` domain events
+- Team 11 PASS WITH FINDINGS (`t_ff729106`)
+
+### Dispensing (M2 — complete)
+- Prescription aggregate + state machine (49 validated edges): `RECEIVED → READY → DISPENSING → DISPENSED | FAILED | CANCELLED | EXPIRED`
+- JetStream consumer with idempotent upsert, outbox publisher (atomic DB row + outbox in one tx)
+- Ward-scoped authorization enforced server-side on all queries/commands
+- Team 12 PASS WITH FINDINGS (`t_cbed18c6`) — 294 tests on PG16, zero races. Findings: F2 MEDIUM (404 vs 403 ward enum leak), F1/F3 LOW
 
 ## Tests
 
@@ -141,8 +158,8 @@ Current integration tests use transactions with explicit rollback and do not add
 
 ## Next Actions
 
-1. Implement catalog drug CRUD with unit and PostgreSQL integration tests
-2. Continue inventory slots, mapping, stock counts, refill, and stock events
-3. Wire ward-scoped authorization from JWT claims into downstream handlers
-4. Add login rate limiting before production exposure
+1. **M3 — Fulfillment bridge:** vending-3d-ctl-agent client (health check, dispense write, timeout/504 handling), fake mode for dev
+2. **M3 — Print bridge:** print_ops client (idempotent `request_id`, `X-Api-Key`), sticker payload from prescription
+3. **M3 — Full happy path:** wire `READY → DISPENSING → DISPENSED` + sticker against fake hardware
+4. Address Team 12 F2 finding (404 vs 403 ward enum leak) before production hardening
 5. Give the producer team the canonical v1 event contract and run a real-payload contract test before production

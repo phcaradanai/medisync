@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
 	identityv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1"
+	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
 	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -369,3 +371,254 @@ func TestToProtoTimestampValid(t *testing.T) {
 
 // Ensure unused timestamp import is used in tests.
 var _ = timestamppb.Now
+
+// ── extractIP tests ────────────────────────────────────────────────
+
+func TestExtractIPWithPort(t *testing.T) {
+	ip := extractIP("192.168.1.1:54321")
+	if ip != "192.168.1.1" {
+		t.Errorf("extractIP = %q, want 192.168.1.1", ip)
+	}
+}
+
+func TestExtractIPWithoutPort(t *testing.T) {
+	ip := extractIP("10.0.0.1")
+	if ip != "10.0.0.1" {
+		t.Errorf("extractIP = %q, want 10.0.0.1", ip)
+	}
+}
+
+func TestExtractIPEmpty(t *testing.T) {
+	ip := extractIP("")
+	if ip != "" {
+		t.Errorf("extractIP should return empty for empty input, got %q", ip)
+	}
+}
+
+func TestExtractIPIPv6(t *testing.T) {
+	ip := extractIP("[::1]:12345")
+	if ip != "::1" {
+		t.Errorf("extractIP = %q, want ::1", ip)
+	}
+}
+
+// ── Rate-limit handler tests ───────────────────────────────────────
+
+// fakeLimiter is a deterministic rate limiter for tests.
+type fakeLimiter struct {
+	allow bool
+	calls []string
+}
+
+func (f *fakeLimiter) Allow(key string) bool {
+	f.calls = append(f.calls, key)
+	return f.allow
+}
+
+func (f *fakeLimiter) Reset() {
+	f.calls = nil
+}
+
+func setupHandlerWithRateLimit(t *testing.T, store *fakeUserStore, tm *fakeTokenManager, idLim, ipLim LoginRateLimiter) *IdentityServer {
+	t.Helper()
+	svc := &AuthService{
+		store:  store,
+		passwd: &passwordHelper{Hash: HashPassword, Verify: VerifyPassword},
+		jwt:    tm,
+	}
+	return NewIdentityServerWithRateLimit(svc, idLim, ipLim)
+}
+
+func TestHandlerLoginRateLimitedByIdentifier(t *testing.T) {
+	pwHash := makeHash(t, "secret123")
+	store := &fakeUserStore{
+		usersByUsername: map[string]*User{
+			"nurse1": {ID: "u1", Username: "nurse1", PasswordHash: pwHash, Role: RoleNurse, Active: true},
+		},
+	}
+	tm := &fakeTokenManager{
+		fixedToken:     "jwt-token",
+		fixedExpiresAt: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+	}
+	idLim := &fakeLimiter{allow: false} // Always deny
+	h := setupHandlerWithRateLimit(t, store, tm, idLim, nil)
+
+	req := connect.NewRequest(&identityv1.LoginRequest{
+		Username: "nurse1",
+		Password: "secret123",
+	})
+	_, err := h.Login(context.Background(), req)
+	assertConnectCode(t, err, connect.CodeResourceExhausted)
+
+	// Verify the limiter was called with the username.
+	if len(idLim.calls) != 1 || idLim.calls[0] != "nurse1" {
+		t.Errorf("id limiter calls = %v, want [nurse1]", idLim.calls)
+	}
+}
+
+func TestHandlerLoginRateLimitedByIP(t *testing.T) {
+	// IP rate limiting is tested via HTTP round-trip because
+	// connect.NewRequest doesn't expose peer address in unit tests.
+	pwHash := makeHash(t, "secret123")
+	store := &fakeUserStore{
+		usersByUsername: map[string]*User{
+			"nurse1": {ID: "u1", Username: "nurse1", PasswordHash: pwHash, Role: RoleNurse, Active: true, CreatedAt: time.Now()},
+		},
+	}
+	tm := &fakeTokenManager{
+		fixedToken:     "jwt-ip-test",
+		fixedExpiresAt: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	// Create a server with a limiter that blocks the IP "127.0.0.1".
+	svc := &AuthService{
+		store:  store,
+		passwd: &passwordHelper{Hash: HashPassword, Verify: VerifyPassword},
+		jwt:    tm,
+	}
+	ipLim := &fakeLimiter{allow: false}
+	server := NewIdentityServerWithRateLimit(svc, &fakeLimiter{allow: true}, ipLim)
+	mux := http.NewServeMux()
+	path, handler := identityv1connect.NewIdentityServiceHandler(server)
+	mux.Handle(path, handler)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	client := identityv1connect.NewIdentityServiceClient(http.DefaultClient, ts.URL)
+	_, err := client.Login(context.Background(),
+		connect.NewRequest(&identityv1.LoginRequest{Username: "nurse1", Password: "secret123"}))
+	assertConnectCode(t, err, connect.CodeResourceExhausted)
+
+	// Verify IP was checked.
+	if len(ipLim.calls) != 1 || ipLim.calls[0] != "127.0.0.1" {
+		t.Errorf("ip limiter calls = %v, want [127.0.0.1]", ipLim.calls)
+	}
+}
+
+func TestHandlerCardLoginRateLimitedByIdentifier(t *testing.T) {
+	store := &fakeUserStore{
+		usersByCardToken: map[string]*User{
+			"card-ok": {ID: "cu1", Username: "carduser", Role: RolePharmacist, Active: true},
+		},
+	}
+	tm := &fakeTokenManager{
+		fixedToken:     "jwt-card",
+		fixedExpiresAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
+	}
+	idLim := &fakeLimiter{allow: false}
+	h := setupHandlerWithRateLimit(t, store, tm, idLim, nil)
+
+	req := connect.NewRequest(&identityv1.CardLoginRequest{CardToken: "card-ok"})
+	_, err := h.CardLogin(context.Background(), req)
+	assertConnectCode(t, err, connect.CodeResourceExhausted)
+}
+
+func TestHandlerLoginNoLimitersPassThrough(t *testing.T) {
+	// When no limiters are set (nil, nil), login should work normally.
+	pwHash := makeHash(t, "secret123")
+	store := &fakeUserStore{
+		usersByUsername: map[string]*User{
+			"nurse1": {ID: "u1", Username: "nurse1", PasswordHash: pwHash, Role: RoleNurse, Active: true},
+		},
+	}
+	tm := &fakeTokenManager{
+		fixedToken:     "jwt-no-lim",
+		fixedExpiresAt: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+	}
+	h := setupHandlerWithRateLimit(t, store, tm, nil, nil)
+
+	req := connect.NewRequest(&identityv1.LoginRequest{
+		Username: "nurse1",
+		Password: "secret123",
+	})
+	resp, err := h.Login(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error with nil limiters: %v", err)
+	}
+	if resp.Msg.AccessToken != "jwt-no-lim" {
+		t.Errorf("AccessToken = %q", resp.Msg.AccessToken)
+	}
+}
+
+func TestHandlerCardLoginNoLimitersPassThrough(t *testing.T) {
+	store := &fakeUserStore{
+		usersByCardToken: map[string]*User{
+			"card-ok": {ID: "cu1", Username: "carduser", Role: RolePharmacist, Active: true},
+		},
+	}
+	tm := &fakeTokenManager{
+		fixedToken:     "jwt-card",
+		fixedExpiresAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
+	}
+	h := setupHandlerWithRateLimit(t, store, tm, nil, nil)
+
+	req := connect.NewRequest(&identityv1.CardLoginRequest{CardToken: "card-ok"})
+	resp, err := h.CardLogin(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error with nil limiters: %v", err)
+	}
+	if resp.Msg.AccessToken != "jwt-card" {
+		t.Errorf("AccessToken = %q", resp.Msg.AccessToken)
+	}
+}
+
+func TestHandlerLoginRateLimitedUniformError(t *testing.T) {
+	// Both identifier and IP produce the same error — clients can't distinguish.
+	// Tested via HTTP round-trips so peer addresses are present.
+
+	// Block by identifier (allow IP).
+	idBlockStore := &fakeUserStore{
+		usersByUsername: map[string]*User{
+			"nurse1": {ID: "u1", Username: "nurse1", PasswordHash: makeHash(t, "pw"), Role: RoleNurse, Active: true, CreatedAt: time.Now()},
+		},
+	}
+	idBlockSvc := &AuthService{
+		store:  idBlockStore,
+		passwd: &passwordHelper{Hash: HashPassword, Verify: VerifyPassword},
+		jwt:    &fakeTokenManager{fixedToken: "t", fixedExpiresAt: time.Now()},
+	}
+	idBlockServer := NewIdentityServerWithRateLimit(idBlockSvc, &fakeLimiter{allow: false}, &fakeLimiter{allow: true})
+
+	mux1 := http.NewServeMux()
+	p1, h1 := identityv1connect.NewIdentityServiceHandler(idBlockServer)
+	mux1.Handle(p1, h1)
+	ts1 := httptest.NewServer(mux1)
+	defer ts1.Close()
+	c1 := identityv1connect.NewIdentityServiceClient(http.DefaultClient, ts1.URL)
+	_, err1 := c1.Login(context.Background(),
+		connect.NewRequest(&identityv1.LoginRequest{Username: "nurse1", Password: "pw"}))
+
+	// Block by IP (allow identifier).
+	ipBlockStore := &fakeUserStore{
+		usersByUsername: map[string]*User{
+			"nurse1": {ID: "u1", Username: "nurse1", PasswordHash: makeHash(t, "pw"), Role: RoleNurse, Active: true, CreatedAt: time.Now()},
+		},
+	}
+	ipBlockSvc := &AuthService{
+		store:  ipBlockStore,
+		passwd: &passwordHelper{Hash: HashPassword, Verify: VerifyPassword},
+		jwt:    &fakeTokenManager{fixedToken: "t", fixedExpiresAt: time.Now()},
+	}
+	ipBlockServer := NewIdentityServerWithRateLimit(ipBlockSvc, &fakeLimiter{allow: true}, &fakeLimiter{allow: false})
+
+	mux2 := http.NewServeMux()
+	p2, h2 := identityv1connect.NewIdentityServiceHandler(ipBlockServer)
+	mux2.Handle(p2, h2)
+	ts2 := httptest.NewServer(mux2)
+	defer ts2.Close()
+	c2 := identityv1connect.NewIdentityServiceClient(http.DefaultClient, ts2.URL)
+	_, err2 := c2.Login(context.Background(),
+		connect.NewRequest(&identityv1.LoginRequest{Username: "nurse1", Password: "pw"}))
+
+	ce1 := new(connect.Error)
+	ce2 := new(connect.Error)
+	if !errors.As(err1, &ce1) || !errors.As(err2, &ce2) {
+		t.Fatal("both errors should be *connect.Error")
+	}
+	if ce1.Code() != ce2.Code() {
+		t.Errorf("codes differ: id-limit=%v ip-limit=%v", ce1.Code(), ce2.Code())
+	}
+	if ce1.Message() != ce2.Message() {
+		t.Errorf("messages differ: id-limit=%q ip-limit=%q", ce1.Message(), ce2.Message())
+	}
+}

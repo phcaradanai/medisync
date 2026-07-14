@@ -28,6 +28,10 @@ var (
 	ErrMissingUsername    = errors.New("username is required")
 	ErrMissingPassword    = errors.New("password is required")
 	ErrMissingToken       = errors.New("access token is required")
+	// ErrRateLimitExceeded is returned when login attempts exceed the
+	// configured rate limit. The same error is used for both
+	// per-identifier and per-IP limits so clients cannot distinguish.
+	ErrRateLimitExceeded = errors.New("rate limit exceeded")
 )
 
 // AuthService handles authentication flows. It depends on the narrow
