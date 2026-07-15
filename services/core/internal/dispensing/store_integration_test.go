@@ -288,9 +288,15 @@ func TestTransitionState_Integration(t *testing.T) {
 		t.Errorf("state = %q, want DISPENSING", updated.State)
 	}
 
-	// Verify outbox row was inserted.
+	// Verify outbox row was inserted (scoped to this test's prescription to avoid
+	// cross-test contamination under parallel execution).
 	var outboxCount int
-	err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM dispensing.outbox WHERE subject = 'medisync.dispense.requested'`).Scan(&outboxCount)
+	err = tx.QueryRow(ctx,
+		`SELECT COUNT(*) FROM dispensing.outbox
+		 WHERE subject = 'medisync.dispense.requested'
+		 AND payload ->> 'prescriptionId' = $1`,
+		p.PrescriptionID,
+	).Scan(&outboxCount)
 	if err != nil {
 		t.Fatalf("count outbox: %v", err)
 	}
@@ -298,10 +304,14 @@ func TestTransitionState_Integration(t *testing.T) {
 		t.Errorf("expected 1 outbox row, got %d", outboxCount)
 	}
 
-	// Verify outbox payload is valid JSON.
+	// Verify outbox payload is valid JSON (scoped to this test's prescription).
 	var payloadRaw []byte
 	err = tx.QueryRow(ctx,
-		`SELECT payload FROM dispensing.outbox WHERE subject = 'medisync.dispense.requested' LIMIT 1`,
+		`SELECT payload FROM dispensing.outbox
+		 WHERE subject = 'medisync.dispense.requested'
+		 AND payload ->> 'prescriptionId' = $1
+		 LIMIT 1`,
+		p.PrescriptionID,
 	).Scan(&payloadRaw)
 	if err != nil {
 		t.Fatalf("read outbox payload: %v", err)
