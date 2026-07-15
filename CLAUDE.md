@@ -28,3 +28,10 @@ Read before making changes:
 - **claude** — advisor: guide hermes, review against ARCHITECTURE.md/DESIGN.md, unblock decisions
 - **hermes** — worker: implement milestone tasks; every task lands with tests + verifiable exit criterion
 - No lane self-approves its own work; milestone exit = demo + review.
+
+## Demo / Local Development
+
+- `docs/DEMO_SEED.md` — deterministic demo seed data: credentials, drugs, slots, prescription
+- `npm run seed:demo` — seed demo data (idempotent, safe to re-run)
+- `npm run seed:demo-reset` — clear and re-seed
+- `npm run smoke:demo` — verify seed data integrity (requires running postgres + core)
