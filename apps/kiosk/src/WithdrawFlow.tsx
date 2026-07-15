@@ -247,7 +247,7 @@ export default function WithdrawFlow() {
 
       try {
         const req = create(DispenseRequestSchema, {
-          prescriptionId: selected.prescriptionId,
+          prescriptionId: selected.id,
           traceId,
         });
         const res = await dispensingClient.dispense(req);

@@ -98,7 +98,7 @@ The PIN is hashed with bcrypt before storage. The plaintext is never persisted â
 
 All inserts use `ON CONFLICT DO NOTHING` (or `ON CONFLICT ... DO UPDATE` for drugs/slots to refresh fields). Re-running the seed multiple times will not duplicate rows.
 
-- `DEMO-RX-001` uses the `prescription_external_key` constraint `(prescription_id, source_system)`
+- `DEMO-RX-001` is the external hospital ID; the Dispense/Get RPC uses the internal `id` returned by ListPrescriptions. It uses the `prescription_external_key` constraint `(prescription_id, source_system)`
 - Users use the `username` unique constraint
 - Kiosk uses the `code` unique constraint
 - Drugs use the `code` unique constraint
@@ -158,7 +158,7 @@ curl -s -X POST http://localhost:8080/medisync.kiosk.v1.KioskService/KioskLogin 
 curl -s -X POST http://localhost:8080/medisync.dispensing.v1.DispensingService/Dispense \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <kiosk_token>" \
-  -d '{"prescription_id":"DEMO-RX-001","source_system":"demo-seed","trace_id":"smoke-test-001"}'
+  -d '{"prescription_id":"<internal-id-from-list>","trace_id":"smoke-test-001"}'
 ```
 
 ## Cleanup
