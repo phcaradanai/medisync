@@ -118,7 +118,7 @@ describe("WithdrawFlow", () => {
   it("renders prescription list from mocked ListPrescriptions", async () => {
     mockListPrescriptions.mockResolvedValueOnce({
       prescriptions: [
-        makePrescription({ id: "p1", prescriptionId: "p1", patientName: "สมชาย ใจดี", hn: "HN-0001" }),
+        makePrescription({ id: "p1", prescriptionId: "RX-001", patientName: "สมชาย ใจดี", hn: "HN-0001" }),
         makePrescription({ id: "p2", prescriptionId: "RX-002", patientName: "สมหญิง รักดี", hn: "HN-0002" }),
       ],
     });
@@ -236,7 +236,7 @@ describe("WithdrawFlow", () => {
     await waitFor(() => {
       expect(mockDispense).toHaveBeenCalledWith(
         expect.objectContaining({
-          prescriptionId: "p1",
+          prescriptionId: "RX-001",
           traceId: expect.any(String),
         }),
       );
