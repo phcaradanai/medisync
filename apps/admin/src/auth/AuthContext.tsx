@@ -51,6 +51,11 @@ function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
+/** Strip createdAt (Timestamp with bigint) before JSON.stringify or setState. */
+function normalizeUser(u: User): User {
+  return { ...u, createdAt: undefined };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .whoAmI({})
       .then((res) => {
         if (res.user) {
-          setUser(res.user);
+          const safe = normalizeUser(res.user);
+          setUser(safe);
+          saveSession({ ...session, user: safe });
         } else {
           clearSession();
         }
@@ -92,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.accessToken || !res.user) {
         throw new Error("Invalid response from server");
       }
+      const safeUser = normalizeUser(res.user);
       const session: Session = {
         accessToken: res.accessToken,
         expiresAt: res.expiresAt
@@ -100,12 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 Number(res.expiresAt.nanos) / 1e6,
             ).toISOString()
           : new Date(Date.now() + 3600_000).toISOString(),
-        user: res.user,
+        user: safeUser,
       };
       saveSession(session);
       setTokenProvider(() => session.accessToken);
       resetTransport();
-      setUser(res.user);
+      setUser(safeUser);
     } catch (e: unknown) {
       const msg =
         e instanceof Error ? e.message : "Login failed";

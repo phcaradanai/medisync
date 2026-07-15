@@ -33,7 +33,15 @@ All six core-service variables read by the Go core, plus three new ones for Iden
 | `ADMIN_BOOTSTRAP_PASSWORD` | Yes | (none - must be set) | Bootstrap admin password. Hashed with bcrypt before storage; only used on first startup. Minimum 12 bytes; empty, short, and placeholder values are rejected. |
 | `CARD_TOKEN_HMAC_KEY` | Yes (prod) | `medisync-dev-card-hmac-change-in-prod` | HMAC key for deterministic card-token hashing. Cards are stored as HMAC-SHA256(key, token) in a BYTEA column. Minimum 32 bytes; the dev default is rejected in production. |
 | `LOGIN_RATE_LIMIT_MAX` | No | `10` | Maximum login attempts (Login + CardLogin) per window per identifier (username or card token) and per remote IP. Set to 0 to disable rate limiting. |
-| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Sliding-window size in seconds for login rate limiting. Must be positive. |
+|| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Sliding-window size in seconds for login rate limiting. Must be positive. |
+
+### Printing Module Variables
+
+|| Variable | Required | Default (dev) | Purpose |
+||---|---|---|---|
+|| `PRINT_OPS_URL` | No | `http://localhost:3000` | Base URL of the print_ops API |
+|| `PRINT_OPS_API_KEY` | Yes (when PRINT_OPS_FAKE=false) | (none) | `X-Api-Key` header sent to print_ops |
+|| `PRINT_OPS_FAKE` | No | `false` | Set to `true` to use a no-op fake print_ops client (dev/testing) |
 
 ### Compose-Only Variables (production)
 

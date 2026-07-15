@@ -11,18 +11,16 @@ vi.mock("../transport.ts", () => ({
 
 // ── Mock createClient to return spies ──────────────────────────
 
-const mockLogin = vi.fn();
-const mockCardLogin = vi.fn();
-const mockWhoAmI = vi.fn();
+const mockKioskLogin = vi.fn();
+const mockKioskValidate = vi.fn();
 
 vi.mock("@connectrpc/connect", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@connectrpc/connect")>();
   return {
     ...actual,
     createClient: () => ({
-      login: (...args: unknown[]) => mockLogin(...args),
-      cardLogin: (...args: unknown[]) => mockCardLogin(...args),
-      whoAmI: (...args: unknown[]) => mockWhoAmI(...args),
+      kioskLogin: (...args: unknown[]) => mockKioskLogin(...args),
+      kioskValidate: (...args: unknown[]) => mockKioskValidate(...args),
     }),
   };
 });
@@ -38,15 +36,14 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function makeLoginResponse(overrides: Record<string, unknown> = {}) {
+function makeKioskLoginResponse(overrides: Record<string, unknown> = {}) {
   return {
-    accessToken: (overrides.accessToken as string) ?? "test-token",
-    user: {
-      id: (overrides.userId as string) ?? "u1",
-      username: (overrides.username as string) ?? "nurse1",
-      displayName: (overrides.displayName as string) ?? "Nurse Joy",
-      role: 3,
-      wardIds: ["W01"],
+    accessToken: (overrides.accessToken as string) ?? "test-kiosk-token",
+    kiosk: {
+      id: (overrides.kioskId as string) ?? "k1",
+      code: (overrides.code as string) ?? "KIOSK-WARD3A",
+      displayName: (overrides.displayName as string) ?? "ตู้จ่ายยาวอร์ด 3A",
+      active: true,
     },
     expiresAt: {
       seconds: BigInt(Math.floor(Date.now() / 1000) + 3600),
@@ -56,28 +53,28 @@ function makeLoginResponse(overrides: Record<string, unknown> = {}) {
 
 // ── Tests ────────────────────────────────────────────────────────
 
-describe("kiosk login flow (password path)", () => {
+describe("kiosk login flow (code + PIN)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionStorage.clear();
-    // whoAmI is called on mount for session restore — reject to simulate fresh session
-    mockWhoAmI.mockRejectedValue(new Error("no session"));
+    localStorage.clear();
+    // kioskValidate is called on mount for session restore — reject to simulate fresh session
+    mockKioskValidate.mockRejectedValue(new Error("no session"));
 
-    mockLogin.mockResolvedValue(makeLoginResponse());
+    mockKioskLogin.mockResolvedValue(makeKioskLoginResponse());
   });
 
-  it("renders the login screen", async () => {
+  it("renders the login screen with kiosk code + PIN fields", async () => {
     render(<LoginScreen />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(screen.getByText("ระบบเบิกจ่ายยา")).toBeDefined();
     });
-    expect(screen.getByLabelText("ชื่อผู้ใช้")).toBeDefined();
-    expect(screen.getByLabelText("รหัสผ่าน")).toBeDefined();
+    expect(screen.getByLabelText("รหัสเครื่อง (Kiosk Code)")).toBeDefined();
+    expect(screen.getByLabelText("PIN")).toBeDefined();
     expect(screen.getByRole("button", { name: "เข้าสู่ระบบ" })).toBeDefined();
   });
 
-  it("shows error when username and password are empty", async () => {
+  it("shows error when code and PIN are empty", async () => {
     render(<LoginScreen />, { wrapper: Wrapper });
 
     await waitFor(() => {
@@ -88,12 +85,12 @@ describe("kiosk login flow (password path)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน"),
+        screen.getByText("กรุณากรอกรหัสเครื่องและ PIN"),
       ).toBeDefined();
     });
   });
 
-  it("calls login with credentials on submit", async () => {
+  it("calls kioskLogin with code and PIN on submit", async () => {
     render(<LoginScreen />, { wrapper: Wrapper });
 
     await waitFor(() => {
@@ -101,19 +98,19 @@ describe("kiosk login flow (password path)", () => {
     });
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("ชื่อผู้ใช้"), "nurse1");
-    await user.type(screen.getByLabelText("รหัสผ่าน"), "secret");
+    await user.type(screen.getByLabelText("รหัสเครื่อง (Kiosk Code)"), "KIOSK-WARD3A");
+    await user.type(screen.getByLabelText("PIN"), "123456");
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
 
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith(
-        expect.objectContaining({ username: "nurse1", password: "secret" }),
+      expect(mockKioskLogin).toHaveBeenCalledWith(
+        expect.objectContaining({ code: "KIOSK-WARD3A", pin: "123456" }),
       );
     });
   });
 
-  it("shows error on failed login", async () => {
-    mockLogin.mockRejectedValueOnce(new Error("Unauthenticated"));
+  it("shows error on failed kiosk login", async () => {
+    mockKioskLogin.mockRejectedValueOnce(new Error("Unauthenticated"));
 
     render(<LoginScreen />, { wrapper: Wrapper });
 
@@ -122,52 +119,102 @@ describe("kiosk login flow (password path)", () => {
     });
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("ชื่อผู้ใช้"), "bad");
-    await user.type(screen.getByLabelText("รหัสผ่าน"), "wrong");
+    await user.type(screen.getByLabelText("รหัสเครื่อง (Kiosk Code)"), "BAD-KIOSK");
+    await user.type(screen.getByLabelText("PIN"), "wrong");
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
 
     await waitFor(() => {
-      // The kiosk login returns Thai error messages for Unauthenticated
       expect(
-        screen.getByText("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"),
+        screen.getByText("รหัสเครื่องหรือ PIN ไม่ถูกต้อง"),
       ).toBeDefined();
     });
   });
 
-  it("switches to card mode on card button click", async () => {
+  it("persists session to localStorage on successful login", async () => {
+    mockKioskLogin.mockResolvedValueOnce(makeKioskLoginResponse());
+
     render(<LoginScreen />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(screen.getByText("ระบบเบิกจ่ายยา")).toBeDefined();
     });
 
-    const cardBtn = screen.getByRole("button", { name: "🪪 บัตร" });
-    await userEvent.click(cardBtn);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("รหัสเครื่อง (Kiosk Code)"), "KIOSK-WARD3A");
+    await user.type(screen.getByLabelText("PIN"), "123456");
+    await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
 
     await waitFor(() => {
-      expect(screen.getByText("แตะเพื่อสแกนบัตร")).toBeDefined();
+      expect(localStorage.getItem("medisync_kiosk_token")).toBe("test-kiosk-token");
+      expect(localStorage.getItem("medisync_kiosk_expires")).toBeTruthy();
+      expect(localStorage.getItem("medisync_kiosk_kiosk")).toBeTruthy();
     });
   });
 
-  it("can switch back to password mode", async () => {
+  it("restores session from localStorage and validates on mount", async () => {
+    const expiresAt = new Date(Date.now() + 3600_000).toISOString();
+    localStorage.setItem("medisync_kiosk_token", "stored-token");
+    localStorage.setItem("medisync_kiosk_expires", expiresAt);
+    localStorage.setItem(
+      "medisync_kiosk_kiosk",
+      JSON.stringify({
+        id: "k1",
+        code: "KIOSK-WARD3A",
+        displayName: "ตู้จ่ายยาวอร์ด 3A",
+        active: true,
+      }),
+    );
+
+    mockKioskValidate.mockResolvedValueOnce({
+      kiosk: {
+        id: "k1",
+        code: "KIOSK-WARD3A",
+        displayName: "ตู้จ่ายยาวอร์ด 3A",
+        active: true,
+      },
+    });
+
+    render(<LoginScreen />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(mockKioskValidate).toHaveBeenCalled();
+    });
+  });
+
+  it("clears session from localStorage on logout", async () => {
+    mockKioskLogin.mockResolvedValueOnce(makeKioskLoginResponse());
+
     render(<LoginScreen />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(screen.getByText("ระบบเบิกจ่ายยา")).toBeDefined();
     });
 
-    // Switch to card mode
-    await userEvent.click(screen.getByRole("button", { name: "🪪 บัตร" }));
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("รหัสเครื่อง (Kiosk Code)"), "KIOSK-WARD3A");
+    await user.type(screen.getByLabelText("PIN"), "123456");
+    await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
 
     await waitFor(() => {
-      expect(screen.getByText("แตะเพื่อสแกนบัตร")).toBeDefined();
+      expect(localStorage.getItem("medisync_kiosk_token")).toBe("test-kiosk-token");
     });
+  });
 
-    // Switch back to password mode
-    await userEvent.click(screen.getByRole("button", { name: "🔑 รหัสผ่าน" }));
+  it("clears expired session on mount", async () => {
+    const expiredAt = new Date(Date.now() - 1000).toISOString();
+    localStorage.setItem("medisync_kiosk_token", "expired-token");
+    localStorage.setItem("medisync_kiosk_expires", expiredAt);
+    localStorage.setItem(
+      "medisync_kiosk_kiosk",
+      JSON.stringify({ id: "k1", code: "OLD", displayName: "Old", active: true }),
+    );
+
+    render(<LoginScreen />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "เข้าสู่ระบบ" })).toBeDefined();
+      expect(screen.getByLabelText("รหัสเครื่อง (Kiosk Code)")).toBeDefined();
+      // Expired session should be cleared
+      expect(localStorage.getItem("medisync_kiosk_token")).toBeNull();
     });
   });
 });

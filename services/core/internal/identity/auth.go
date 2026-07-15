@@ -23,11 +23,13 @@ var dummyPasswordHash = func() string {
 // unknown user and a wrong password so that callers cannot enumerate.
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrInactiveUser       = errors.New("user is inactive")
+	ErrInactiveUser       = errors.New("user account is inactive")
 	ErrMissingCardToken   = errors.New("card token is required")
 	ErrMissingUsername    = errors.New("username is required")
 	ErrMissingPassword    = errors.New("password is required")
 	ErrMissingToken       = errors.New("access token is required")
+	ErrUsernameTaken      = errors.New("username is already taken")
+	ErrNotAdmin           = errors.New("admin role required")
 	// ErrRateLimitExceeded is returned when login attempts exceed the
 	// configured rate limit. The same error is used for both
 	// per-identifier and per-IP limits so clients cannot distinguish.

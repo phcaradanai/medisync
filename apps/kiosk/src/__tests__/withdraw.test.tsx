@@ -9,7 +9,7 @@ vi.mock("../transport.ts", () => ({
   transport: Symbol("mock-transport"),
 }));
 
-// ── Mock auth: return a logged-in nurse ────────────────────────
+// ── Mock auth: return a logged-in kiosk ────────────────────────
 
 const mockLogout = vi.fn();
 
@@ -19,19 +19,17 @@ vi.mock("../auth.tsx", async (importOriginal) => {
     ...actual,
     useAuth: () => ({
       state: {
-        user: {
-          id: "u1",
-          username: "nurse1",
-          displayName: "พยาบาลใจดี",
-          role: 3,
-          wardIds: ["W01"],
+        kiosk: {
+          id: "k1",
+          code: "KIOSK-WARD3A",
+          displayName: "ตู้จ่ายยาวอร์ด 3A",
+          active: true,
         },
         token: "test-token",
         expiresAt: new Date(Date.now() + 3600_000),
       },
       loading: false,
       login: vi.fn(),
-      cardLogin: vi.fn(),
       logout: mockLogout,
     }),
   };

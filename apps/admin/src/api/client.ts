@@ -8,6 +8,12 @@ import {
 import {
   CatalogService,
 } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
+import {
+  InventoryService,
+} from "@medisync/proto/medisync/inventory/v1/inventory_pb";
+import {
+  KioskService,
+} from "@medisync/proto/medisync/kiosk/v1/kiosk_pb";
 
 // ── Transport ──────────────────────────────────────────────────────
 
@@ -55,6 +61,10 @@ export function resetTransport() {
 export const identityClient = createClient(IdentityService, getTransport());
 
 export const catalogClient = createClient(CatalogService, getTransport());
+
+export const inventoryClient = createClient(InventoryService, getTransport());
+
+export const kioskClient = createClient(KioskService, getTransport());
 
 // Re-export types that pages use.
 export type {

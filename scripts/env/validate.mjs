@@ -84,6 +84,25 @@ const VARIABLES = {
     secret: true,
     minBytes: 32,
   },
+  // Printing module (print_ops anti-corruption layer).
+  PRINT_OPS_URL: {
+    purpose: "Base URL of the print_ops API",
+    service: "core/printing",
+    required: false,
+    secret: false,
+  },
+  PRINT_OPS_API_KEY: {
+    purpose: "X-Api-Key header sent to print_ops (required when PRINT_OPS_FAKE=false)",
+    service: "core/printing",
+    required: false,
+    secret: true,
+  },
+  PRINT_OPS_FAKE: {
+    purpose: "Set to 'true' or '1' to use a no-op fake print_ops client (dev/testing)",
+    service: "core/printing",
+    required: false,
+    secret: false,
+  },
   // Production Compose secrets (used by docker-compose.prod.yml, not the Go core).
   POSTGRES_USER: {
     purpose: "PostgreSQL superuser name (Compose only)",
@@ -250,7 +269,7 @@ function validate(filePath, mode) {
     }
 
     // URL validation — skip if value looks like a placeholder (dev mode)
-    if ((key === "DATABASE_URL" || key === "NATS_URL") && !isPlaceholder(value)) {
+    if ((key === "DATABASE_URL" || key === "NATS_URL" || key === "PRINT_OPS_URL") && !isPlaceholder(value)) {
       const err = validateUrl(value, key, line);
       if (err) errors.push(err);
     }

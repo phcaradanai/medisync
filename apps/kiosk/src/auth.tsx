@@ -1,7 +1,8 @@
 /**
  * Auth context and session management for the kiosk.
- * Token stored in sessionStorage (cleared on tab close = auto logout).
- * Session expires based on JWT expiry.
+ * Stores kiosk session in localStorage (persists across tab closes).
+ * Session is restored on boot and validated via KioskValidate.
+ * Cleared on logout or invalid/expired token.
  */
 import {
   createContext,
@@ -12,108 +13,110 @@ import {
   type ReactNode,
 } from "react";
 import { createClient } from "@connectrpc/connect";
-import { IdentityService, LoginRequestSchema, CardLoginRequestSchema, WhoAmIRequestSchema } from "@medisync/proto/medisync/identity/v1/identity_pb";
+import {
+  KioskService,
+  KioskLoginRequestSchema,
+  KioskValidateRequestSchema,
+} from "@medisync/proto/medisync/kiosk/v1/kiosk_pb";
 import { create } from "@bufbuild/protobuf";
-import type { User } from "@medisync/proto/medisync/identity/v1/identity_pb";
+import type { Kiosk } from "@medisync/proto/medisync/kiosk/v1/kiosk_pb";
 import { transport } from "./transport.ts";
 
-const identityClient = createClient(IdentityService, transport);
+const kioskClient = createClient(KioskService, transport);
 
-export interface AuthState {
-  user: User;
+const STORAGE_PREFIX = "medisync_kiosk_";
+
+export interface KioskAuthState {
+  kiosk: Kiosk;
   token: string;
   expiresAt: Date;
 }
 
 interface AuthContextValue {
-  state: AuthState | null;
+  state: KioskAuthState | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<string | null>;
-  cardLogin: (cardToken: string) => Promise<string | null>;
+  login: (code: string, pin: string) => Promise<string | null>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState | null>(null);
+  const [state, setState] = useState<KioskAuthState | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Attempt to restore session from sessionStorage on mount.
+  // Attempt to restore session from localStorage on mount.
   useEffect(() => {
-    const token = sessionStorage.getItem("medisync_token");
-    const expiresAt = sessionStorage.getItem("medisync_expires");
-    if (token && expiresAt) {
+    const token = localStorage.getItem(`${STORAGE_PREFIX}token`);
+    const expiresAt = localStorage.getItem(`${STORAGE_PREFIX}expires`);
+    const kioskJson = localStorage.getItem(`${STORAGE_PREFIX}kiosk`);
+
+    if (token && expiresAt && kioskJson) {
       const expiry = new Date(expiresAt);
       if (expiry > new Date()) {
-        // Restore session: validate token with WhoAmI.
-        validateToken(token).then((user) => {
-          if (user) {
-            setState({ user, token, expiresAt: expiry });
-          } else {
-            clearSession();
-          }
+        try {
+          const kiosk = JSON.parse(kioskJson) as Kiosk;
+          // Restore from cache, validate in background.
+          setState({ kiosk, token, expiresAt: expiry });
           setLoading(false);
-        });
-        return;
+          validateKioskToken(token).then((valid) => {
+            if (!valid) {
+              clearKioskSession();
+              setState(null);
+            }
+          });
+          return;
+        } catch {
+          clearKioskSession();
+        }
+      } else {
+        clearKioskSession();
       }
-      clearSession();
     }
     setLoading(false);
   }, []);
 
-  const persistSession = useCallback((token: string, expiresAt: Date, user: User) => {
-    sessionStorage.setItem("medisync_token", token);
-    sessionStorage.setItem("medisync_expires", expiresAt.toISOString());
-    setState({ user, token, expiresAt });
-  }, []);
+  const persistSession = useCallback(
+    (token: string, expiresAt: Date, kiosk: Kiosk) => {
+      localStorage.setItem(`${STORAGE_PREFIX}token`, token);
+      localStorage.setItem(`${STORAGE_PREFIX}expires`, expiresAt.toISOString());
+      localStorage.setItem(`${STORAGE_PREFIX}kiosk`, JSON.stringify(kiosk));
+      setState({ kiosk, token, expiresAt });
+    },
+    [],
+  );
 
-  const login = useCallback(async (username: string, password: string): Promise<string | null> => {
-    try {
-      const req = create(LoginRequestSchema, { username, password });
-      const res = await identityClient.login(req);
-      if (!res.user || !res.accessToken) {
-        return "เข้าสู่ระบบไม่สำเร็จ กรุณาลองอีกครั้ง";
+  const login = useCallback(
+    async (code: string, pin: string): Promise<string | null> => {
+      try {
+        const req = create(KioskLoginRequestSchema, { code, pin });
+        const res = await kioskClient.kioskLogin(req);
+        if (!res.kiosk || !res.accessToken) {
+          return "เข้าสู่ระบบไม่สำเร็จ กรุณาลองอีกครั้ง";
+        }
+        const expiresAt = res.expiresAt?.seconds
+          ? new Date(Number(res.expiresAt.seconds) * 1000)
+          : new Date(Date.now() + 3600_000);
+        persistSession(res.accessToken, expiresAt, res.kiosk);
+        return null;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
+        if (msg.includes("Unauthenticated") || msg.includes("401")) {
+          return "รหัสเครื่องหรือ PIN ไม่ถูกต้อง";
+        }
+        return `ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ${msg}`;
       }
-      const expiresAt = res.expiresAt?.seconds
-        ? new Date(Number(res.expiresAt.seconds) * 1000)
-        : new Date(Date.now() + 3600_000);
-      persistSession(res.accessToken, expiresAt, res.user);
-      return null;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
-      if (msg.includes("Unauthenticated") || msg.includes("401")) {
-        return "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
-      }
-      return `ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ${msg}`;
-    }
-  }, [persistSession]);
-
-  const cardLogin = useCallback(async (cardToken: string): Promise<string | null> => {
-    try {
-      const req = create(CardLoginRequestSchema, { cardToken });
-      const res = await identityClient.cardLogin(req);
-      if (!res.user || !res.accessToken) {
-        return "ไม่รู้จักบัตร กรุณาลองอีกครั้ง";
-      }
-      const expiresAt = res.expiresAt?.seconds
-        ? new Date(Number(res.expiresAt.seconds) * 1000)
-        : new Date(Date.now() + 3600_000);
-      persistSession(res.accessToken, expiresAt, res.user);
-      return null;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
-      return `ไม่รู้จักบัตร: ${msg}`;
-    }
-  }, [persistSession]);
+    },
+    [persistSession],
+  );
 
   const logout = useCallback(() => {
-    clearSession();
+    clearKioskSession();
     setState(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ state, loading, login, cardLogin, logout }}>
+    <AuthContext.Provider value={{ state, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -125,10 +128,8 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-async function validateToken(token: string): Promise<User | null> {
+async function validateKioskToken(token: string): Promise<boolean> {
   try {
-    const req = create(WhoAmIRequestSchema, {});
-    // Create a client that uses the stored token.
     const { createConnectTransport } = await import("@connectrpc/connect-web");
     const t = createConnectTransport({
       baseUrl: "/",
@@ -139,15 +140,17 @@ async function validateToken(token: string): Promise<User | null> {
         },
       ],
     });
-    const client = createClient(IdentityService, t);
-    const res = await client.whoAmI(req);
-    return res.user ?? null;
+    const client = createClient(KioskService, t);
+    const req = create(KioskValidateRequestSchema, {});
+    await client.kioskValidate(req);
+    return true;
   } catch {
-    return null;
+    return false;
   }
 }
 
-function clearSession(): void {
-  sessionStorage.removeItem("medisync_token");
-  sessionStorage.removeItem("medisync_expires");
+function clearKioskSession(): void {
+  localStorage.removeItem(`${STORAGE_PREFIX}token`);
+  localStorage.removeItem(`${STORAGE_PREFIX}expires`);
+  localStorage.removeItem(`${STORAGE_PREFIX}kiosk`);
 }

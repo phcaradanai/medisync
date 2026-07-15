@@ -4,6 +4,7 @@ import { LoginPage } from "./components/LoginPage";
 import { NavSidebar } from "./components/NavSidebar";
 import { DrugsPage } from "./pages/DrugsPage";
 import { InventoryPage } from "./pages/InventoryPage";
+import { KiosksPage } from "./pages/KiosksPage";
 import { UsersPage } from "./pages/UsersPage";
 import { checkContrast } from "./utils/contrast";
 
@@ -93,9 +94,11 @@ function AppShell() {
       ? DrugsPage
       : page === "inventory"
         ? InventoryPage
-        : page === "users"
-          ? UsersPage
-          : DrugsPage;
+        : page === "kiosks"
+          ? KiosksPage
+          : page === "users"
+            ? UsersPage
+            : DrugsPage;
 
   return (
     <div className="app-shell">

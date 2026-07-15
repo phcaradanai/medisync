@@ -25,6 +25,13 @@ type TokenClaims struct {
 	WardIDs []string `json:"ward_ids"`
 }
 
+// KioskTokenClaims carries the kiosk JWT payload.
+type KioskTokenClaims struct {
+	jwt.RegisteredClaims
+	Code        string `json:"code"`
+	DisplayName string `json:"display_name"`
+}
+
 // JWTManager issues and validates HS256 JWTs. All operations reject
 // unexpected signing algorithms, malformed tokens, and expired tokens.
 type JWTManager struct {
@@ -100,6 +107,59 @@ func (m *JWTManager) Parse(tokenString string) (*TokenClaims, error) {
 	claims, ok := token.Claims.(*TokenClaims)
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
+}
+
+// IssueKiosk creates a signed HS256 token for the given kiosk.
+func (m *JWTManager) IssueKiosk(k *Kiosk) (string, time.Time, error) {
+	now := m.clock.Now()
+	expiresAt := now.Add(m.ttl)
+
+	claims := KioskTokenClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   k.ID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+		},
+		Code:        k.Code,
+		DisplayName: k.DisplayName,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString(m.secret)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("sign kiosk token: %w", err)
+	}
+	return signed, expiresAt, nil
+}
+
+// ParseKiosk validates a kiosk token string and returns its claims.
+// It applies the same security rules as Parse (HS256 only, expiry
+// required, zero leeway).
+func (m *JWTManager) ParseKiosk(tokenString string) (*KioskTokenClaims, error) {
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		&KioskTokenClaims{},
+		func(token *jwt.Token) (any, error) {
+			if token.Method != jwt.SigningMethodHS256 {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return m.secret, nil
+		},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithLeeway(0),
+		jwt.WithTimeFunc(func() time.Time { return m.clock.Now() }),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*KioskTokenClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid kiosk token")
 	}
 
 	return claims, nil

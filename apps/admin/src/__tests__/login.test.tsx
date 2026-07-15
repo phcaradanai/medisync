@@ -76,7 +76,7 @@ describe("admin login flow", () => {
     mockLogin.mockResolvedValueOnce({
       accessToken: "test-token",
       user: { id: "u1", username: "admin", displayName: "Admin" },
-      expiresAt: { seconds: BigInt(Date.now() + 3600_000) },
+      expiresAt: { seconds: Math.floor(Date.now() / 1000) + 3600 },
     });
 
     renderLogin();

@@ -15,6 +15,7 @@ import (
 // *pgxpool.Pool satisfies this interface; tests inject a deterministic fake.
 type dbConn interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
@@ -135,6 +136,124 @@ func (s *Store) SeedAdmin(ctx context.Context, passwordHash string) (bool, error
 		return false, fmt.Errorf("seed admin: %w", err)
 	}
 	return true, nil
+}
+
+// ListUsers returns all users, optionally filtered by a search query on
+// username or display_name.
+func (s *Store) ListUsers(ctx context.Context, query string) ([]*User, error) {
+	var rows pgx.Rows
+	var err error
+	if query != "" {
+		pattern := "%" + query + "%"
+		rows, err = s.db.Query(ctx,
+			`SELECT id, username, password_hash, display_name, role, ward_ids, active, created_at, updated_at
+			   FROM identity.users
+			  WHERE username ILIKE $1 OR display_name ILIKE $1
+			  ORDER BY username ASC`, pattern)
+	} else {
+		rows, err = s.db.Query(ctx,
+			`SELECT id, username, password_hash, display_name, role, ward_ids, active, created_at, updated_at
+			   FROM identity.users
+			  ORDER BY username ASC`)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*User
+	for rows.Next() {
+		var u User
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName,
+			(*roleScanner)(&u.Role), &u.WardIDs, &u.Active, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("scan user row: %w", err)
+		}
+		u.CreatedAt = createdAt
+		u.UpdatedAt = updatedAt
+		users = append(users, &u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate user rows: %w", err)
+	}
+	return users, nil
+}
+
+// CreateUser inserts a new user. Returns ErrUsernameTaken when the
+// username already exists.
+func (s *Store) CreateUser(ctx context.Context, username, passwordHash, displayName string, role Role, wardIDs []string) (*User, error) {
+	if wardIDs == nil {
+		wardIDs = []string{}
+	}
+	row := s.db.QueryRow(ctx,
+		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
+		 VALUES ($1, $2, $3, $4, $5, true)
+		 ON CONFLICT (username) DO NOTHING
+		 RETURNING id, username, password_hash, display_name, role, ward_ids, active, created_at, updated_at`,
+		username, passwordHash, displayName, string(role), wardIDs)
+	u, err := scanUser(row)
+	if err != nil {
+		return nil, fmt.Errorf("create user: %w", err)
+	}
+	if u == nil {
+		return nil, ErrUsernameTaken
+	}
+	return u, nil
+}
+
+// UpdateUser modifies an existing user's mutable fields.
+// Returns nil when the user is not found.
+func (s *Store) UpdateUser(ctx context.Context, id string, displayName *string, role *Role, active *bool, wardIDs []string) (*User, error) {
+	// Build dynamic UPDATE. Only set fields that are provided.
+	setClauses := []string{}
+	args := []any{id}
+	argIdx := 2
+
+	if displayName != nil {
+		setClauses = append(setClauses, fmt.Sprintf("display_name = $%d", argIdx))
+		args = append(args, *displayName)
+		argIdx++
+	}
+	if role != nil {
+		setClauses = append(setClauses, fmt.Sprintf("role = $%d", argIdx))
+		args = append(args, string(*role))
+		argIdx++
+	}
+	if active != nil {
+		setClauses = append(setClauses, fmt.Sprintf("active = $%d", argIdx))
+		args = append(args, *active)
+		argIdx++
+	}
+	if wardIDs != nil {
+		setClauses = append(setClauses, fmt.Sprintf("ward_ids = $%d", argIdx))
+		args = append(args, wardIDs)
+		argIdx++
+	}
+	if len(setClauses) == 0 {
+		// Nothing to update — return the current user.
+		return s.GetByID(ctx, id)
+	}
+
+	setClauses = append(setClauses, "updated_at = now()")
+
+	querySQL := fmt.Sprintf(
+		`UPDATE identity.users SET %s WHERE id = $1
+		 RETURNING id, username, password_hash, display_name, role, ward_ids, active, created_at, updated_at`,
+		joinWithCommas(setClauses))
+
+	row := s.db.QueryRow(ctx, querySQL, args...)
+	return scanUser(row)
+}
+
+func joinWithCommas(parts []string) string {
+	s := ""
+	for i, p := range parts {
+		if i > 0 {
+			s += ", "
+		}
+		s += p
+	}
+	return s
 }
 
 // scanUser maps a pgx.Row to a User from a 9-column result (no card data).

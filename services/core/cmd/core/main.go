@@ -22,6 +22,7 @@ import (
 	dispensingv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1/dispensingv1connect"
 	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
 	inventoryv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/inventory/v1/inventoryv1connect"
+	kioskv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1/kioskv1connect"
 	"github.com/adm-chura3inter/medisync/services/core/internal/identity"
 	"github.com/adm-chura3inter/medisync/services/core/internal/inventory"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
@@ -30,6 +31,8 @@ import (
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/postgres"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/ratelimit"
+	"github.com/adm-chura3inter/medisync/services/core/internal/printing"
+	"github.com/adm-chura3inter/medisync/services/core/internal/vending"
 	"github.com/adm-chura3inter/medisync/services/core/migrations"
 )
 
@@ -57,6 +60,10 @@ func run() (runErr error) {
 		"card_token_hmac_configured", cfg.CardTokenHMACKey != "",
 		"login_rate_limit_max", cfg.LoginRateLimitMax,
 		"login_rate_limit_window_seconds", cfg.LoginRateLimitWindowSeconds,
+		"print_ops_url", cfg.PrintOpsURL,
+		"print_ops_fake", cfg.PrintOpsFake,
+		"vending_url", cfg.VendingURL,
+		"vending_fake", cfg.VendingFake,
 	)
 
 	startupCtx, cancelStartup := context.WithTimeout(context.Background(),
@@ -136,6 +143,11 @@ func run() (runErr error) {
 	path, handler := newIdentityHandler(identityStore, jwtMgr, cfg)
 	mux.Handle(path, handler)
 
+	// Kiosk provisioning and kiosk-token authentication.
+	kioskStore := identity.NewKioskStore(pool)
+	kioskPath, kioskHandler := newKioskHandler(kioskStore, jwtMgr, cfg)
+	mux.Handle(kioskPath, kioskHandler)
+
 	// ── Catalog ─────────────────────────────────────────────────────
 	catalogStore := catalog.NewStore(pool, auditw)
 	catalogServer := catalog.NewCatalogServer(catalogStore, auditw)
@@ -164,6 +176,33 @@ func run() (runErr error) {
 	defer cancelPublisher()
 	outboxPub := dispensing.NewOutboxPublisher(pool, js, log)
 	go outboxPub.Start(publisherCtx)
+
+	// Dispense completion consumer: listens to medisync.dispense.completed
+	// and medisync.dispense.failed, transitions prescription state.
+	completionConsumer := dispensing.NewCompletionConsumer(js, pool, dispensingStore, auditw, log)
+	stopCompletion, err := completionConsumer.Start(startupCtx)
+	if err != nil {
+		return err
+	}
+	defer stopCompletion()
+
+	// ── Printing ──────────────────────────────────────────────────────
+	printClient := printing.NewClientFromConfig(cfg)
+	printConsumer := printing.NewConsumer(js, printClient, auditw, log)
+	stopPrintConsumer, err := printConsumer.Start(startupCtx)
+	if err != nil {
+		return err
+	}
+	defer stopPrintConsumer()
+
+	// ── Vending ───────────────────────────────────────────────────────
+	vendingClient := vending.NewClientFromConfig(cfg.VendingURL, cfg.VendingAPIKey, cfg.VendingFake)
+	vendingConsumer := vending.NewConsumer(js, vendingClient, auditw, log)
+	stopVendingConsumer, err := vendingConsumer.Start(startupCtx)
+	if err != nil {
+		return err
+	}
+	defer stopVendingConsumer()
 
 	// ── HTTP server ──────────────────────────────────────────────────
 	srv := &http.Server{
@@ -232,13 +271,26 @@ func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, 
 	idLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
 	ipLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
 
-	server := identity.NewIdentityServerWithRateLimit(authService, idLimiter, ipLimiter)
+	var identityStore *identity.Store
+	if s, ok := store.(*identity.Store); ok {
+		identityStore = s
+	}
+
+	server := identity.NewIdentityServerWithRateLimit(authService, identityStore, idLimiter, ipLimiter)
 	return identityv1connect.NewIdentityServiceHandler(server)
 }
 
 // newDispensingTokenParser adapts identity.JWTManager to dispensing.TokenParser.
 // The dispensing handler defines its own TokenClaims type to avoid a circular
 // dependency on package identity.
+func newKioskHandler(store identity.KioskStore, jwtMgr *identity.JWTManager, cfg config.Config) (string, http.Handler) {
+	window := time.Duration(cfg.LoginRateLimitWindowSeconds) * time.Second
+	idLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
+	ipLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
+	server := identity.NewKioskServerWithRateLimit(store, jwtMgr, jwtMgr, idLimiter, ipLimiter)
+	return kioskv1connect.NewKioskServiceHandler(server)
+}
+
 func newDispensingTokenParser(mgr *identity.JWTManager) *dispensingTokenParser {
 	return &dispensingTokenParser{mgr: mgr}
 }

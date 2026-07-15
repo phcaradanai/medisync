@@ -54,6 +54,18 @@ type Config struct {
 	// LoginRateLimitWindowSeconds is the sliding-window size in seconds for login
 	// rate limiting. Must be positive when LoginRateLimitMax > 0.
 	LoginRateLimitWindowSeconds int
+	// PrintOpsURL is the base URL of the print_ops API (e.g. http://print-ops:3000).
+	PrintOpsURL string
+	// PrintOpsAPIKey is the X-Api-Key sent to print_ops.
+	PrintOpsAPIKey string
+	// PrintOpsFake, when true, uses a no-op fake print_ops client (for dev/testing).
+	PrintOpsFake bool
+	// VendingURL is the base URL of the vending-3d-ctl-agent API.
+	VendingURL string
+	// VendingAPIKey is the Bearer token sent to vending-3d-ctl-agent.
+	VendingAPIKey string
+	// VendingFake, when true, uses a no-op fake vending client (for dev/testing).
+	VendingFake bool
 }
 
 // Load reads configuration from environment variables. It rejects missing,
@@ -125,6 +137,20 @@ func Load() (Config, error) {
 		}
 		cfg.LoginRateLimitWindowSeconds = n
 	}
+
+	// ── Print ops ────────────────────────────────────────────────────
+	cfg.PrintOpsURL = getenv("PRINT_OPS_URL", "http://localhost:3000")
+	cfg.PrintOpsAPIKey = os.Getenv("PRINT_OPS_API_KEY")
+
+	fakeStr := strings.ToLower(getenv("PRINT_OPS_FAKE", "false"))
+	cfg.PrintOpsFake = fakeStr == "true" || fakeStr == "1"
+
+	// ── Vending ──────────────────────────────────────────────────────
+	cfg.VendingURL = getenv("VENDING_URL", "http://localhost:3000")
+	cfg.VendingAPIKey = os.Getenv("VENDING_API_KEY")
+
+	vendingFakeStr := strings.ToLower(getenv("VENDING_FAKE", "false"))
+	cfg.VendingFake = vendingFakeStr == "true" || vendingFakeStr == "1"
 
 	return cfg, nil
 }

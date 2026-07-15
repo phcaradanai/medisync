@@ -20,6 +20,10 @@ const (
 
 	SubjectPrescriptionCreated = "rx.prescription.created"
 	SubjectDispenseRequested   = "medisync.dispense.requested"
+	SubjectDispenseCompleted   = "medisync.dispense.completed"
+	SubjectDispenseFailed      = "medisync.dispense.failed"
+	SubjectPrintRequested      = "medisync.print.requested"
+	SubjectPrintCompleted      = "medisync.print.completed"
 	SubjectStockChanged        = "medisync.stock.changed"
 	SubjectStockLow            = "medisync.stock.low"
 	SubjectDLQPrefix           = "medisync.dlq."

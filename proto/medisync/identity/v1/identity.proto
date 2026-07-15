@@ -58,4 +58,53 @@ service IdentityService {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc CardLogin(CardLoginRequest) returns (CardLoginResponse);
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
+
+  // User management (admin-only).
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc SetCardToken(SetCardTokenRequest) returns (SetCardTokenResponse);
+}
+
+message ListUsersRequest {
+  // Optional search query — matches username or display_name (partial).
+  string query = 1;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string password = 2;
+  string display_name = 3;
+  Role role = 4;
+  repeated string ward_ids = 5;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  // Fields to update. Empty string / zero value means no change.
+  optional string display_name = 2;
+  optional Role role = 3;
+  optional bool active = 4;
+  repeated string ward_ids = 5;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}
+
+message SetCardTokenRequest {
+  string user_id = 1;
+  string card_token = 2;
+}
+
+message SetCardTokenResponse {
+  User user = 1;
 }

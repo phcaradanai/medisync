@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/identity/v1/identity.proto.
  */
 export const file_medisync_identity_v1_identity: GenFile = /*@__PURE__*/
-  fileDesc("CiNtZWRpc3luYy9pZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxIUbWVkaXN5bmMuaWRlbnRpdHkudjEitgEKBFVzZXISCgoCaWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEigKBHJvbGUYBCABKA4yGi5tZWRpc3luYy5pZGVudGl0eS52MS5Sb2xlEhAKCHdhcmRfaWRzGAUgAygJEg4KBmFjdGl2ZRgGIAEoCBIuCgpjcmVhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIyCgxMb2dpblJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSEAoIcGFzc3dvcmQYAiABKAkifwoNTG9naW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoEdXNlchgDIAEoCzIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlVzZXIiJgoQQ2FyZExvZ2luUmVxdWVzdBISCgpjYXJkX3Rva2VuGAEgASgJIoMBChFDYXJkTG9naW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoEdXNlchgDIAEoCzIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlVzZXIiDwoNV2hvQW1JUmVxdWVzdCI6Cg5XaG9BbUlSZXNwb25zZRIoCgR1c2VyGAEgASgLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlcipkCgRSb2xlEhQKEFJPTEVfVU5TUEVDSUZJRUQQABIOCgpST0xFX0FETUlOEAESEwoPUk9MRV9QSEFSTUFDSVNUEAISDgoKUk9MRV9OVVJTRRADEhEKDVJPTEVfUkVGSUxMRVIQBDKWAgoPSWRlbnRpdHlTZXJ2aWNlElAKBUxvZ2luEiIubWVkaXN5bmMuaWRlbnRpdHkudjEuTG9naW5SZXF1ZXN0GiMubWVkaXN5bmMuaWRlbnRpdHkudjEuTG9naW5SZXNwb25zZRJcCglDYXJkTG9naW4SJi5tZWRpc3luYy5pZGVudGl0eS52MS5DYXJkTG9naW5SZXF1ZXN0GicubWVkaXN5bmMuaWRlbnRpdHkudjEuQ2FyZExvZ2luUmVzcG9uc2USUwoGV2hvQW1JEiMubWVkaXN5bmMuaWRlbnRpdHkudjEuV2hvQW1JUmVxdWVzdBokLm1lZGlzeW5jLmlkZW50aXR5LnYxLldob0FtSVJlc3BvbnNlQmBaXmdpdGh1Yi5jb20vYWRtLWNodXJhM2ludGVyL21lZGlzeW5jL3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL21lZGlzeW5jL2lkZW50aXR5L3YxO2lkZW50aXR5djFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("CiNtZWRpc3luYy9pZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxIUbWVkaXN5bmMuaWRlbnRpdHkudjEitgEKBFVzZXISCgoCaWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEigKBHJvbGUYBCABKA4yGi5tZWRpc3luYy5pZGVudGl0eS52MS5Sb2xlEhAKCHdhcmRfaWRzGAUgAygJEg4KBmFjdGl2ZRgGIAEoCBIuCgpjcmVhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIyCgxMb2dpblJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSEAoIcGFzc3dvcmQYAiABKAkifwoNTG9naW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoEdXNlchgDIAEoCzIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlVzZXIiJgoQQ2FyZExvZ2luUmVxdWVzdBISCgpjYXJkX3Rva2VuGAEgASgJIoMBChFDYXJkTG9naW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoEdXNlchgDIAEoCzIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlVzZXIiDwoNV2hvQW1JUmVxdWVzdCI6Cg5XaG9BbUlSZXNwb25zZRIoCgR1c2VyGAEgASgLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlciIhChBMaXN0VXNlcnNSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJIj4KEUxpc3RVc2Vyc1Jlc3BvbnNlEikKBXVzZXJzGAEgAygLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlciKJAQoRQ3JlYXRlVXNlclJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSEAoIcGFzc3dvcmQYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEigKBHJvbGUYBCABKA4yGi5tZWRpc3luYy5pZGVudGl0eS52MS5Sb2xlEhAKCHdhcmRfaWRzGAUgAygJIj4KEkNyZWF0ZVVzZXJSZXNwb25zZRIoCgR1c2VyGAEgASgLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlciK1AQoRVXBkYXRlVXNlclJlcXVlc3QSCgoCaWQYASABKAkSGQoMZGlzcGxheV9uYW1lGAIgASgJSACIAQESLQoEcm9sZRgDIAEoDjIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlJvbGVIAYgBARITCgZhY3RpdmUYBCABKAhIAogBARIQCgh3YXJkX2lkcxgFIAMoCUIPCg1fZGlzcGxheV9uYW1lQgcKBV9yb2xlQgkKB19hY3RpdmUiPgoSVXBkYXRlVXNlclJlc3BvbnNlEigKBHVzZXIYASABKAsyGi5tZWRpc3luYy5pZGVudGl0eS52MS5Vc2VyIjoKE1NldENhcmRUb2tlblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRISCgpjYXJkX3Rva2VuGAIgASgJIkAKFFNldENhcmRUb2tlblJlc3BvbnNlEigKBHVzZXIYASABKAsyGi5tZWRpc3luYy5pZGVudGl0eS52MS5Vc2VyKmQKBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfQURNSU4QARITCg9ST0xFX1BIQVJNQUNJU1QQAhIOCgpST0xFX05VUlNFEAMSEQoNUk9MRV9SRUZJTExFUhAEMp0FCg9JZGVudGl0eVNlcnZpY2USUAoFTG9naW4SIi5tZWRpc3luYy5pZGVudGl0eS52MS5Mb2dpblJlcXVlc3QaIy5tZWRpc3luYy5pZGVudGl0eS52MS5Mb2dpblJlc3BvbnNlElwKCUNhcmRMb2dpbhImLm1lZGlzeW5jLmlkZW50aXR5LnYxLkNhcmRMb2dpblJlcXVlc3QaJy5tZWRpc3luYy5pZGVudGl0eS52MS5DYXJkTG9naW5SZXNwb25zZRJTCgZXaG9BbUkSIy5tZWRpc3luYy5pZGVudGl0eS52MS5XaG9BbUlSZXF1ZXN0GiQubWVkaXN5bmMuaWRlbnRpdHkudjEuV2hvQW1JUmVzcG9uc2USXAoJTGlzdFVzZXJzEiYubWVkaXN5bmMuaWRlbnRpdHkudjEuTGlzdFVzZXJzUmVxdWVzdBonLm1lZGlzeW5jLmlkZW50aXR5LnYxLkxpc3RVc2Vyc1Jlc3BvbnNlEl8KCkNyZWF0ZVVzZXISJy5tZWRpc3luYy5pZGVudGl0eS52MS5DcmVhdGVVc2VyUmVxdWVzdBooLm1lZGlzeW5jLmlkZW50aXR5LnYxLkNyZWF0ZVVzZXJSZXNwb25zZRJfCgpVcGRhdGVVc2VyEicubWVkaXN5bmMuaWRlbnRpdHkudjEuVXBkYXRlVXNlclJlcXVlc3QaKC5tZWRpc3luYy5pZGVudGl0eS52MS5VcGRhdGVVc2VyUmVzcG9uc2USZQoMU2V0Q2FyZFRva2VuEikubWVkaXN5bmMuaWRlbnRpdHkudjEuU2V0Q2FyZFRva2VuUmVxdWVzdBoqLm1lZGlzeW5jLmlkZW50aXR5LnYxLlNldENhcmRUb2tlblJlc3BvbnNlQmBaXmdpdGh1Yi5jb20vYWRtLWNodXJhM2ludGVyL21lZGlzeW5jL3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL21lZGlzeW5jL2lkZW50aXR5L3YxO2lkZW50aXR5djFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.identity.v1.User
@@ -189,6 +189,191 @@ export const WhoAmIResponseSchema: GenMessage<WhoAmIResponse> = /*@__PURE__*/
   messageDesc(file_medisync_identity_v1_identity, 6);
 
 /**
+ * @generated from message medisync.identity.v1.ListUsersRequest
+ */
+export type ListUsersRequest = Message<"medisync.identity.v1.ListUsersRequest"> & {
+  /**
+   * Optional search query — matches username or display_name (partial).
+   *
+   * @generated from field: string query = 1;
+   */
+  query: string;
+};
+
+/**
+ * Describes the message medisync.identity.v1.ListUsersRequest.
+ * Use `create(ListUsersRequestSchema)` to create a new message.
+ */
+export const ListUsersRequestSchema: GenMessage<ListUsersRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 7);
+
+/**
+ * @generated from message medisync.identity.v1.ListUsersResponse
+ */
+export type ListUsersResponse = Message<"medisync.identity.v1.ListUsersResponse"> & {
+  /**
+   * @generated from field: repeated medisync.identity.v1.User users = 1;
+   */
+  users: User[];
+};
+
+/**
+ * Describes the message medisync.identity.v1.ListUsersResponse.
+ * Use `create(ListUsersResponseSchema)` to create a new message.
+ */
+export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 8);
+
+/**
+ * @generated from message medisync.identity.v1.CreateUserRequest
+ */
+export type CreateUserRequest = Message<"medisync.identity.v1.CreateUserRequest"> & {
+  /**
+   * @generated from field: string username = 1;
+   */
+  username: string;
+
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
+
+  /**
+   * @generated from field: string display_name = 3;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: medisync.identity.v1.Role role = 4;
+   */
+  role: Role;
+
+  /**
+   * @generated from field: repeated string ward_ids = 5;
+   */
+  wardIds: string[];
+};
+
+/**
+ * Describes the message medisync.identity.v1.CreateUserRequest.
+ * Use `create(CreateUserRequestSchema)` to create a new message.
+ */
+export const CreateUserRequestSchema: GenMessage<CreateUserRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 9);
+
+/**
+ * @generated from message medisync.identity.v1.CreateUserResponse
+ */
+export type CreateUserResponse = Message<"medisync.identity.v1.CreateUserResponse"> & {
+  /**
+   * @generated from field: medisync.identity.v1.User user = 1;
+   */
+  user?: User | undefined;
+};
+
+/**
+ * Describes the message medisync.identity.v1.CreateUserResponse.
+ * Use `create(CreateUserResponseSchema)` to create a new message.
+ */
+export const CreateUserResponseSchema: GenMessage<CreateUserResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 10);
+
+/**
+ * @generated from message medisync.identity.v1.UpdateUserRequest
+ */
+export type UpdateUserRequest = Message<"medisync.identity.v1.UpdateUserRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Fields to update. Empty string / zero value means no change.
+   *
+   * @generated from field: optional string display_name = 2;
+   */
+  displayName?: string | undefined;
+
+  /**
+   * @generated from field: optional medisync.identity.v1.Role role = 3;
+   */
+  role?: Role | undefined;
+
+  /**
+   * @generated from field: optional bool active = 4;
+   */
+  active?: boolean | undefined;
+
+  /**
+   * @generated from field: repeated string ward_ids = 5;
+   */
+  wardIds: string[];
+};
+
+/**
+ * Describes the message medisync.identity.v1.UpdateUserRequest.
+ * Use `create(UpdateUserRequestSchema)` to create a new message.
+ */
+export const UpdateUserRequestSchema: GenMessage<UpdateUserRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 11);
+
+/**
+ * @generated from message medisync.identity.v1.UpdateUserResponse
+ */
+export type UpdateUserResponse = Message<"medisync.identity.v1.UpdateUserResponse"> & {
+  /**
+   * @generated from field: medisync.identity.v1.User user = 1;
+   */
+  user?: User | undefined;
+};
+
+/**
+ * Describes the message medisync.identity.v1.UpdateUserResponse.
+ * Use `create(UpdateUserResponseSchema)` to create a new message.
+ */
+export const UpdateUserResponseSchema: GenMessage<UpdateUserResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 12);
+
+/**
+ * @generated from message medisync.identity.v1.SetCardTokenRequest
+ */
+export type SetCardTokenRequest = Message<"medisync.identity.v1.SetCardTokenRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string card_token = 2;
+   */
+  cardToken: string;
+};
+
+/**
+ * Describes the message medisync.identity.v1.SetCardTokenRequest.
+ * Use `create(SetCardTokenRequestSchema)` to create a new message.
+ */
+export const SetCardTokenRequestSchema: GenMessage<SetCardTokenRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 13);
+
+/**
+ * @generated from message medisync.identity.v1.SetCardTokenResponse
+ */
+export type SetCardTokenResponse = Message<"medisync.identity.v1.SetCardTokenResponse"> & {
+  /**
+   * @generated from field: medisync.identity.v1.User user = 1;
+   */
+  user?: User | undefined;
+};
+
+/**
+ * Describes the message medisync.identity.v1.SetCardTokenResponse.
+ * Use `create(SetCardTokenResponseSchema)` to create a new message.
+ */
+export const SetCardTokenResponseSchema: GenMessage<SetCardTokenResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 14);
+
+/**
  * Roles are coarse; fine-grained access is ward-scoped via User.ward_ids.
  *
  * @generated from enum medisync.identity.v1.Role
@@ -253,6 +438,40 @@ export const IdentityService: GenService<{
     methodKind: "unary";
     input: typeof WhoAmIRequestSchema;
     output: typeof WhoAmIResponseSchema;
+  },
+  /**
+   * User management (admin-only).
+   *
+   * @generated from rpc medisync.identity.v1.IdentityService.ListUsers
+   */
+  listUsers: {
+    methodKind: "unary";
+    input: typeof ListUsersRequestSchema;
+    output: typeof ListUsersResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.identity.v1.IdentityService.CreateUser
+   */
+  createUser: {
+    methodKind: "unary";
+    input: typeof CreateUserRequestSchema;
+    output: typeof CreateUserResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.identity.v1.IdentityService.UpdateUser
+   */
+  updateUser: {
+    methodKind: "unary";
+    input: typeof UpdateUserRequestSchema;
+    output: typeof UpdateUserResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.identity.v1.IdentityService.SetCardToken
+   */
+  setCardToken: {
+    methodKind: "unary";
+    input: typeof SetCardTokenRequestSchema;
+    output: typeof SetCardTokenResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_medisync_identity_v1_identity, 0);

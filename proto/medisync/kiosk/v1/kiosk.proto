@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package medisync.kiosk.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1;kioskv1";
+
+// Kiosk is a provisioned dispensing kiosk terminal.
+message Kiosk {
+  string id = 1;
+  string code = 2;
+  string display_name = 3;
+  bool active = 4;
+  google.protobuf.Timestamp created_at = 5;
+  // PIN is returned ONLY in the response to CreateKiosk and
+  // ResetKioskPin. It is never stored in the database in plaintext
+  // and is never readable via ListKiosks, UpdateKiosk, or any other
+  // RPC. The admin must record or relay it at creation/reset time.
+  optional string pin = 6;
+}
+
+// ── Admin RPCs ─────────────────────────────────────────────────────
+
+message ListKiosksRequest {}
+
+message ListKiosksResponse {
+  repeated Kiosk kiosks = 1;
+}
+
+message CreateKioskRequest {
+  string code = 1;
+  string display_name = 2;
+  string pin = 3;
+}
+
+message CreateKioskResponse {
+  Kiosk kiosk = 1;
+}
+
+message UpdateKioskRequest {
+  string id = 1;
+  optional string display_name = 2;
+  optional bool active = 3;
+}
+
+message UpdateKioskResponse {
+  Kiosk kiosk = 1;
+}
+
+message ResetKioskPinRequest {
+  string id = 1;
+  string new_pin = 2;
+}
+
+message ResetKioskPinResponse {
+  Kiosk kiosk = 1;
+}
+
+// ── Kiosk RPCs ─────────────────────────────────────────────────────
+
+message KioskLoginRequest {
+  string code = 1;
+  string pin = 2;
+}
+
+message KioskLoginResponse {
+  string access_token = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  Kiosk kiosk = 3;
+}
+
+message KioskValidateRequest {}
+
+message KioskValidateResponse {
+  Kiosk kiosk = 1;
+}
+
+service KioskService {
+  // Admin endpoints — require admin auth (bearer token from IdentityService).
+  rpc ListKiosks(ListKiosksRequest) returns (ListKiosksResponse);
+  rpc CreateKiosk(CreateKioskRequest) returns (CreateKioskResponse);
+  rpc UpdateKiosk(UpdateKioskRequest) returns (UpdateKioskResponse);
+  rpc ResetKioskPin(ResetKioskPinRequest) returns (ResetKioskPinResponse);
+
+  // Kiosk self-service endpoints.
+  rpc KioskLogin(KioskLoginRequest) returns (KioskLoginResponse);
+  rpc KioskValidate(KioskValidateRequest) returns (KioskValidateResponse);
+}

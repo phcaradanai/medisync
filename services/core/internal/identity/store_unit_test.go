@@ -22,6 +22,9 @@ type fakeDB struct {
 	execErr       error
 	queryRowCalls []queryRowCall
 	queryRow      pgx.Row
+	queryCalls    []queryCall
+	queryRows     pgx.Rows
+	queryErr      error
 }
 
 type execCall struct {
@@ -34,6 +37,11 @@ type queryRowCall struct {
 	args []any
 }
 
+type queryCall struct {
+	sql  string
+	args []any
+}
+
 func (f *fakeDB) Exec(_ context.Context, sql string, arguments ...any) (pgconn.CommandTag, error) {
 	f.execCalls = append(f.execCalls, execCall{sql: sql, args: arguments})
 	return f.execTag, f.execErr
@@ -42,6 +50,11 @@ func (f *fakeDB) Exec(_ context.Context, sql string, arguments ...any) (pgconn.C
 func (f *fakeDB) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
 	f.queryRowCalls = append(f.queryRowCalls, queryRowCall{sql: sql, args: args})
 	return f.queryRow
+}
+
+func (f *fakeDB) Query(_ context.Context, sql string, args ...any) (pgx.Rows, error) {
+	f.queryCalls = append(f.queryCalls, queryCall{sql: sql, args: args})
+	return f.queryRows, f.queryErr
 }
 
 func (f *fakeDB) lastExec() execCall {

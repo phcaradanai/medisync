@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -29,20 +30,21 @@ var _ identityv1connect.IdentityServiceHandler = (*IdentityServer)(nil)
 // It owns no HTTP server startup logic — just the RPC mapping.
 type IdentityServer struct {
 	auth         *AuthService
+	store        *Store
 	idLimiter    LoginRateLimiter // per-identifier (username / card_token)
 	ipLimiter    LoginRateLimiter // per-remote-IP
 }
 
 // NewIdentityServer creates an IdentityServer without rate limiting.
-func NewIdentityServer(auth *AuthService) *IdentityServer {
-	return &IdentityServer{auth: auth}
+func NewIdentityServer(auth *AuthService, store *Store) *IdentityServer {
+	return &IdentityServer{auth: auth, store: store}
 }
 
 // NewIdentityServerWithRateLimit creates an IdentityServer with rate
 // limiting on login endpoints. Both idLimiter and ipLimiter may be nil
 // (or a noop limiter) to disable the corresponding check.
-func NewIdentityServerWithRateLimit(auth *AuthService, idLimiter, ipLimiter LoginRateLimiter) *IdentityServer {
-	return &IdentityServer{auth: auth, idLimiter: idLimiter, ipLimiter: ipLimiter}
+func NewIdentityServerWithRateLimit(auth *AuthService, store *Store, idLimiter, ipLimiter LoginRateLimiter) *IdentityServer {
+	return &IdentityServer{auth: auth, store: store, idLimiter: idLimiter, ipLimiter: ipLimiter}
 }
 
 // Login handles password-based login. It maps domain errors to safe Connect
@@ -238,4 +240,166 @@ func toProtoTimestamp(t time.Time) *timestamppb.Timestamp {
 		return nil
 	}
 	return timestamppb.New(t)
+}
+
+// ── User management handlers (admin-only) ──────────────────────────
+
+// ListUsers returns all users. Requires admin authentication.
+func (s *IdentityServer) ListUsers(
+	ctx context.Context,
+	req *connect.Request[identityv1.ListUsersRequest],
+) (*connect.Response[identityv1.ListUsersResponse], error) {
+	if err := s.requireAdmin(req.Header()); err != nil {
+		return nil, err
+	}
+
+	users, err := s.store.ListUsers(ctx, req.Msg.GetQuery())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list users: %w", err))
+	}
+
+	pbUsers := make([]*identityv1.User, len(users))
+	for i, u := range users {
+		pbUsers[i] = toProtoUser(u)
+	}
+	return connect.NewResponse(&identityv1.ListUsersResponse{Users: pbUsers}), nil
+}
+
+// CreateUser creates a new user. Requires admin authentication.
+func (s *IdentityServer) CreateUser(
+	ctx context.Context,
+	req *connect.Request[identityv1.CreateUserRequest],
+) (*connect.Response[identityv1.CreateUserResponse], error) {
+	if err := s.requireAdmin(req.Header()); err != nil {
+		return nil, err
+	}
+
+	msg := req.Msg
+	if msg.Username == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrMissingUsername)
+	}
+	if msg.Password == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrMissingPassword)
+	}
+
+	passwordHash, err := HashPassword(msg.Password)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("hash password: %w", err))
+	}
+
+	role := protoRoleToDomain(msg.Role)
+	u, err := s.store.CreateUser(ctx, msg.Username, passwordHash, msg.DisplayName, role, msg.WardIds)
+	if err != nil {
+		if errors.Is(err, ErrUsernameTaken) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, ErrUsernameTaken)
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create user: %w", err))
+	}
+
+	return connect.NewResponse(&identityv1.CreateUserResponse{User: toProtoUser(u)}), nil
+}
+
+// UpdateUser modifies an existing user. Requires admin authentication.
+func (s *IdentityServer) UpdateUser(
+	ctx context.Context,
+	req *connect.Request[identityv1.UpdateUserRequest],
+) (*connect.Response[identityv1.UpdateUserResponse], error) {
+	if err := s.requireAdmin(req.Header()); err != nil {
+		return nil, err
+	}
+
+	msg := req.Msg
+	if msg.Id == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("user id is required"))
+	}
+
+	var displayName *string
+	if msg.DisplayName != nil {
+		dn := *msg.DisplayName
+		displayName = &dn
+	}
+
+	var role *Role
+	if msg.Role != nil {
+		r := protoRoleToDomain(*msg.Role)
+		role = &r
+	}
+
+	u, err := s.store.UpdateUser(ctx, msg.Id, displayName, role, msg.Active, msg.WardIds)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update user: %w", err))
+	}
+	if u == nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("user not found"))
+	}
+
+	return connect.NewResponse(&identityv1.UpdateUserResponse{User: toProtoUser(u)}), nil
+}
+
+// SetCardToken enrolls a card token for a user. Requires admin authentication.
+func (s *IdentityServer) SetCardToken(
+	ctx context.Context,
+	req *connect.Request[identityv1.SetCardTokenRequest],
+) (*connect.Response[identityv1.SetCardTokenResponse], error) {
+	if err := s.requireAdmin(req.Header()); err != nil {
+		return nil, err
+	}
+
+	msg := req.Msg
+	if msg.UserId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("user_id is required"))
+	}
+
+	if err := s.store.SetCardToken(ctx, msg.UserId, msg.CardToken); err != nil {
+		if errors.Is(err, ErrMissingHasher) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+		if errors.Is(err, ErrMissingCardToken) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("set card token: %w", err))
+	}
+
+	u, err := s.store.GetByID(ctx, msg.UserId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get user: %w", err))
+	}
+	if u == nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("user not found"))
+	}
+
+	return connect.NewResponse(&identityv1.SetCardTokenResponse{User: toProtoUser(u)}), nil
+}
+
+// requireAdmin extracts the Bearer token, validates it, and returns an
+// error if the caller is not an admin.
+func (s *IdentityServer) requireAdmin(header http.Header) error {
+	tokenStr, err := extractBearer(header)
+	if err != nil {
+		return connect.NewError(connect.CodeUnauthenticated, err)
+	}
+	claims, err := s.auth.jwt.Parse(tokenStr)
+	if err != nil {
+		return connect.NewError(connect.CodeUnauthenticated, ErrInvalidCredentials)
+	}
+	if claims.Role != "ADMIN" {
+		return connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
+	}
+	return nil
+}
+
+// protoRoleToDomain maps a proto Role enum to the domain Role string.
+func protoRoleToDomain(r identityv1.Role) Role {
+	switch r {
+	case identityv1.Role_ROLE_ADMIN:
+		return RoleAdmin
+	case identityv1.Role_ROLE_PHARMACIST:
+		return RolePharmacist
+	case identityv1.Role_ROLE_NURSE:
+		return RoleNurse
+	case identityv1.Role_ROLE_REFILLER:
+		return RoleRefiller
+	default:
+		return RoleNurse
+	}
 }

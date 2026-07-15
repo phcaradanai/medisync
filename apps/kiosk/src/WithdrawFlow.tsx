@@ -18,7 +18,7 @@ type Step = "list" | "confirm" | "dispensing" | "done";
 
 export default function WithdrawFlow() {
   const { state, logout } = useAuth();
-  const user = state!.user;
+  const kiosk = state!.kiosk;
 
   const [step, setStep] = useState<Step>("list");
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -166,7 +166,7 @@ export default function WithdrawFlow() {
         <div className="kiosk-panel">
           <h1 className="kiosk-panel-title">รายการยาที่รอเบิก</h1>
           <p className="kiosk-panel-subtitle">
-            {user.displayName} — เลือกรายการเพื่อเริ่มเบิกยา
+            {kiosk.displayName} — เลือกรายการเพื่อเริ่มเบิกยา
           </p>
 
           {error && <div className="kiosk-error" role="alert">{error}</div>}

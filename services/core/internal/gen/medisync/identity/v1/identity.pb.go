@@ -468,6 +468,432 @@ func (x *WhoAmIResponse) GetUser() *User {
 	return nil
 }
 
+type ListUsersRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional search query — matches username or display_name (partial).
+	Query         string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUsersRequest) Reset() {
+	*x = ListUsersRequest{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUsersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUsersRequest) ProtoMessage() {}
+
+func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
+func (*ListUsersRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListUsersRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+type ListUsersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Users         []*User                `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUsersResponse) Reset() {
+	*x = ListUsersResponse{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUsersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUsersResponse) ProtoMessage() {}
+
+func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
+func (*ListUsersResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListUsersResponse) GetUsers() []*User {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
+type CreateUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Role          Role                   `protobuf:"varint,4,opt,name=role,proto3,enum=medisync.identity.v1.Role" json:"role,omitempty"`
+	WardIds       []string               `protobuf:"bytes,5,rep,name=ward_ids,json=wardIds,proto3" json:"ward_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateUserRequest) Reset() {
+	*x = CreateUserRequest{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateUserRequest) ProtoMessage() {}
+
+func (x *CreateUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateUserRequest.ProtoReflect.Descriptor instead.
+func (*CreateUserRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CreateUserRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *CreateUserRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *CreateUserRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *CreateUserRequest) GetRole() Role {
+	if x != nil {
+		return x.Role
+	}
+	return Role_ROLE_UNSPECIFIED
+}
+
+func (x *CreateUserRequest) GetWardIds() []string {
+	if x != nil {
+		return x.WardIds
+	}
+	return nil
+}
+
+type CreateUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateUserResponse) Reset() {
+	*x = CreateUserResponse{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateUserResponse) ProtoMessage() {}
+
+func (x *CreateUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateUserResponse.ProtoReflect.Descriptor instead.
+func (*CreateUserResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *CreateUserResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type UpdateUserRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Fields to update. Empty string / zero value means no change.
+	DisplayName   *string  `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
+	Role          *Role    `protobuf:"varint,3,opt,name=role,proto3,enum=medisync.identity.v1.Role,oneof" json:"role,omitempty"`
+	Active        *bool    `protobuf:"varint,4,opt,name=active,proto3,oneof" json:"active,omitempty"`
+	WardIds       []string `protobuf:"bytes,5,rep,name=ward_ids,json=wardIds,proto3" json:"ward_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateUserRequest) Reset() {
+	*x = UpdateUserRequest{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateUserRequest) ProtoMessage() {}
+
+func (x *UpdateUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateUserRequest.ProtoReflect.Descriptor instead.
+func (*UpdateUserRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *UpdateUserRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateUserRequest) GetDisplayName() string {
+	if x != nil && x.DisplayName != nil {
+		return *x.DisplayName
+	}
+	return ""
+}
+
+func (x *UpdateUserRequest) GetRole() Role {
+	if x != nil && x.Role != nil {
+		return *x.Role
+	}
+	return Role_ROLE_UNSPECIFIED
+}
+
+func (x *UpdateUserRequest) GetActive() bool {
+	if x != nil && x.Active != nil {
+		return *x.Active
+	}
+	return false
+}
+
+func (x *UpdateUserRequest) GetWardIds() []string {
+	if x != nil {
+		return x.WardIds
+	}
+	return nil
+}
+
+type UpdateUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateUserResponse) Reset() {
+	*x = UpdateUserResponse{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateUserResponse) ProtoMessage() {}
+
+func (x *UpdateUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateUserResponse.ProtoReflect.Descriptor instead.
+func (*UpdateUserResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *UpdateUserResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type SetCardTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	CardToken     string                 `protobuf:"bytes,2,opt,name=card_token,json=cardToken,proto3" json:"card_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCardTokenRequest) Reset() {
+	*x = SetCardTokenRequest{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCardTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCardTokenRequest) ProtoMessage() {}
+
+func (x *SetCardTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCardTokenRequest.ProtoReflect.Descriptor instead.
+func (*SetCardTokenRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SetCardTokenRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SetCardTokenRequest) GetCardToken() string {
+	if x != nil {
+		return x.CardToken
+	}
+	return ""
+}
+
+type SetCardTokenResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCardTokenResponse) Reset() {
+	*x = SetCardTokenResponse{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCardTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCardTokenResponse) ProtoMessage() {}
+
+func (x *SetCardTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCardTokenResponse.ProtoReflect.Descriptor instead.
+func (*SetCardTokenResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SetCardTokenResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
 var File_medisync_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_medisync_identity_v1_identity_proto_rawDesc = "" +
@@ -500,6 +926,35 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\x04user\x18\x03 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\x0f\n" +
 	"\rWhoAmIRequest\"@\n" +
 	"\x0eWhoAmIResponse\x12.\n" +
+	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"(\n" +
+	"\x10ListUsersRequest\x12\x14\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\"E\n" +
+	"\x11ListUsersResponse\x120\n" +
+	"\x05users\x18\x01 \x03(\v2\x1a.medisync.identity.v1.UserR\x05users\"\xb9\x01\n" +
+	"\x11CreateUserRequest\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12.\n" +
+	"\x04role\x18\x04 \x01(\x0e2\x1a.medisync.identity.v1.RoleR\x04role\x12\x19\n" +
+	"\bward_ids\x18\x05 \x03(\tR\awardIds\"D\n" +
+	"\x12CreateUserResponse\x12.\n" +
+	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\xdd\x01\n" +
+	"\x11UpdateUserRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
+	"\fdisplay_name\x18\x02 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x123\n" +
+	"\x04role\x18\x03 \x01(\x0e2\x1a.medisync.identity.v1.RoleH\x01R\x04role\x88\x01\x01\x12\x1b\n" +
+	"\x06active\x18\x04 \x01(\bH\x02R\x06active\x88\x01\x01\x12\x19\n" +
+	"\bward_ids\x18\x05 \x03(\tR\awardIdsB\x0f\n" +
+	"\r_display_nameB\a\n" +
+	"\x05_roleB\t\n" +
+	"\a_active\"D\n" +
+	"\x12UpdateUserResponse\x12.\n" +
+	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"M\n" +
+	"\x13SetCardTokenRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"card_token\x18\x02 \x01(\tR\tcardToken\"F\n" +
+	"\x14SetCardTokenResponse\x12.\n" +
 	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user*d\n" +
 	"\x04Role\x12\x14\n" +
 	"\x10ROLE_UNSPECIFIED\x10\x00\x12\x0e\n" +
@@ -508,11 +963,17 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\x0fROLE_PHARMACIST\x10\x02\x12\x0e\n" +
 	"\n" +
 	"ROLE_NURSE\x10\x03\x12\x11\n" +
-	"\rROLE_REFILLER\x10\x042\x96\x02\n" +
+	"\rROLE_REFILLER\x10\x042\x9d\x05\n" +
 	"\x0fIdentityService\x12P\n" +
 	"\x05Login\x12\".medisync.identity.v1.LoginRequest\x1a#.medisync.identity.v1.LoginResponse\x12\\\n" +
 	"\tCardLogin\x12&.medisync.identity.v1.CardLoginRequest\x1a'.medisync.identity.v1.CardLoginResponse\x12S\n" +
-	"\x06WhoAmI\x12#.medisync.identity.v1.WhoAmIRequest\x1a$.medisync.identity.v1.WhoAmIResponseB`Z^github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1;identityv1b\x06proto3"
+	"\x06WhoAmI\x12#.medisync.identity.v1.WhoAmIRequest\x1a$.medisync.identity.v1.WhoAmIResponse\x12\\\n" +
+	"\tListUsers\x12&.medisync.identity.v1.ListUsersRequest\x1a'.medisync.identity.v1.ListUsersResponse\x12_\n" +
+	"\n" +
+	"CreateUser\x12'.medisync.identity.v1.CreateUserRequest\x1a(.medisync.identity.v1.CreateUserResponse\x12_\n" +
+	"\n" +
+	"UpdateUser\x12'.medisync.identity.v1.UpdateUserRequest\x1a(.medisync.identity.v1.UpdateUserResponse\x12e\n" +
+	"\fSetCardToken\x12).medisync.identity.v1.SetCardTokenRequest\x1a*.medisync.identity.v1.SetCardTokenResponseB`Z^github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_medisync_identity_v1_identity_proto_rawDescOnce sync.Once
@@ -527,7 +988,7 @@ func file_medisync_identity_v1_identity_proto_rawDescGZIP() []byte {
 }
 
 var file_medisync_identity_v1_identity_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_medisync_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_medisync_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_medisync_identity_v1_identity_proto_goTypes = []any{
 	(Role)(0),                     // 0: medisync.identity.v1.Role
 	(*User)(nil),                  // 1: medisync.identity.v1.User
@@ -537,27 +998,49 @@ var file_medisync_identity_v1_identity_proto_goTypes = []any{
 	(*CardLoginResponse)(nil),     // 5: medisync.identity.v1.CardLoginResponse
 	(*WhoAmIRequest)(nil),         // 6: medisync.identity.v1.WhoAmIRequest
 	(*WhoAmIResponse)(nil),        // 7: medisync.identity.v1.WhoAmIResponse
-	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(*ListUsersRequest)(nil),      // 8: medisync.identity.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),     // 9: medisync.identity.v1.ListUsersResponse
+	(*CreateUserRequest)(nil),     // 10: medisync.identity.v1.CreateUserRequest
+	(*CreateUserResponse)(nil),    // 11: medisync.identity.v1.CreateUserResponse
+	(*UpdateUserRequest)(nil),     // 12: medisync.identity.v1.UpdateUserRequest
+	(*UpdateUserResponse)(nil),    // 13: medisync.identity.v1.UpdateUserResponse
+	(*SetCardTokenRequest)(nil),   // 14: medisync.identity.v1.SetCardTokenRequest
+	(*SetCardTokenResponse)(nil),  // 15: medisync.identity.v1.SetCardTokenResponse
+	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
 }
 var file_medisync_identity_v1_identity_proto_depIdxs = []int32{
 	0,  // 0: medisync.identity.v1.User.role:type_name -> medisync.identity.v1.Role
-	8,  // 1: medisync.identity.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 2: medisync.identity.v1.LoginResponse.expires_at:type_name -> google.protobuf.Timestamp
+	16, // 1: medisync.identity.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	16, // 2: medisync.identity.v1.LoginResponse.expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: medisync.identity.v1.LoginResponse.user:type_name -> medisync.identity.v1.User
-	8,  // 4: medisync.identity.v1.CardLoginResponse.expires_at:type_name -> google.protobuf.Timestamp
+	16, // 4: medisync.identity.v1.CardLoginResponse.expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 5: medisync.identity.v1.CardLoginResponse.user:type_name -> medisync.identity.v1.User
 	1,  // 6: medisync.identity.v1.WhoAmIResponse.user:type_name -> medisync.identity.v1.User
-	2,  // 7: medisync.identity.v1.IdentityService.Login:input_type -> medisync.identity.v1.LoginRequest
-	4,  // 8: medisync.identity.v1.IdentityService.CardLogin:input_type -> medisync.identity.v1.CardLoginRequest
-	6,  // 9: medisync.identity.v1.IdentityService.WhoAmI:input_type -> medisync.identity.v1.WhoAmIRequest
-	3,  // 10: medisync.identity.v1.IdentityService.Login:output_type -> medisync.identity.v1.LoginResponse
-	5,  // 11: medisync.identity.v1.IdentityService.CardLogin:output_type -> medisync.identity.v1.CardLoginResponse
-	7,  // 12: medisync.identity.v1.IdentityService.WhoAmI:output_type -> medisync.identity.v1.WhoAmIResponse
-	10, // [10:13] is the sub-list for method output_type
-	7,  // [7:10] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	1,  // 7: medisync.identity.v1.ListUsersResponse.users:type_name -> medisync.identity.v1.User
+	0,  // 8: medisync.identity.v1.CreateUserRequest.role:type_name -> medisync.identity.v1.Role
+	1,  // 9: medisync.identity.v1.CreateUserResponse.user:type_name -> medisync.identity.v1.User
+	0,  // 10: medisync.identity.v1.UpdateUserRequest.role:type_name -> medisync.identity.v1.Role
+	1,  // 11: medisync.identity.v1.UpdateUserResponse.user:type_name -> medisync.identity.v1.User
+	1,  // 12: medisync.identity.v1.SetCardTokenResponse.user:type_name -> medisync.identity.v1.User
+	2,  // 13: medisync.identity.v1.IdentityService.Login:input_type -> medisync.identity.v1.LoginRequest
+	4,  // 14: medisync.identity.v1.IdentityService.CardLogin:input_type -> medisync.identity.v1.CardLoginRequest
+	6,  // 15: medisync.identity.v1.IdentityService.WhoAmI:input_type -> medisync.identity.v1.WhoAmIRequest
+	8,  // 16: medisync.identity.v1.IdentityService.ListUsers:input_type -> medisync.identity.v1.ListUsersRequest
+	10, // 17: medisync.identity.v1.IdentityService.CreateUser:input_type -> medisync.identity.v1.CreateUserRequest
+	12, // 18: medisync.identity.v1.IdentityService.UpdateUser:input_type -> medisync.identity.v1.UpdateUserRequest
+	14, // 19: medisync.identity.v1.IdentityService.SetCardToken:input_type -> medisync.identity.v1.SetCardTokenRequest
+	3,  // 20: medisync.identity.v1.IdentityService.Login:output_type -> medisync.identity.v1.LoginResponse
+	5,  // 21: medisync.identity.v1.IdentityService.CardLogin:output_type -> medisync.identity.v1.CardLoginResponse
+	7,  // 22: medisync.identity.v1.IdentityService.WhoAmI:output_type -> medisync.identity.v1.WhoAmIResponse
+	9,  // 23: medisync.identity.v1.IdentityService.ListUsers:output_type -> medisync.identity.v1.ListUsersResponse
+	11, // 24: medisync.identity.v1.IdentityService.CreateUser:output_type -> medisync.identity.v1.CreateUserResponse
+	13, // 25: medisync.identity.v1.IdentityService.UpdateUser:output_type -> medisync.identity.v1.UpdateUserResponse
+	15, // 26: medisync.identity.v1.IdentityService.SetCardToken:output_type -> medisync.identity.v1.SetCardTokenResponse
+	20, // [20:27] is the sub-list for method output_type
+	13, // [13:20] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_medisync_identity_v1_identity_proto_init() }
@@ -565,13 +1048,14 @@ func file_medisync_identity_v1_identity_proto_init() {
 	if File_medisync_identity_v1_identity_proto != nil {
 		return
 	}
+	file_medisync_identity_v1_identity_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_medisync_identity_v1_identity_proto_rawDesc), len(file_medisync_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

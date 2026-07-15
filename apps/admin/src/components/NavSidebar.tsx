@@ -47,6 +47,12 @@ export function NavSidebar({ page, onNavigate }: NavSidebarProps) {
       >
         Users
       </button>
+      <button
+        className={`nav-link${page === "kiosks" ? " active" : ""}`}
+        onClick={() => onNavigate("kiosks")}
+      >
+        Kiosks
+      </button>
 
       <div className="nav-footer">
         {user && (

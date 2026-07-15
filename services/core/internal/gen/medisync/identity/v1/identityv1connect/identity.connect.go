@@ -40,6 +40,18 @@ const (
 	IdentityServiceCardLoginProcedure = "/medisync.identity.v1.IdentityService/CardLogin"
 	// IdentityServiceWhoAmIProcedure is the fully-qualified name of the IdentityService's WhoAmI RPC.
 	IdentityServiceWhoAmIProcedure = "/medisync.identity.v1.IdentityService/WhoAmI"
+	// IdentityServiceListUsersProcedure is the fully-qualified name of the IdentityService's ListUsers
+	// RPC.
+	IdentityServiceListUsersProcedure = "/medisync.identity.v1.IdentityService/ListUsers"
+	// IdentityServiceCreateUserProcedure is the fully-qualified name of the IdentityService's
+	// CreateUser RPC.
+	IdentityServiceCreateUserProcedure = "/medisync.identity.v1.IdentityService/CreateUser"
+	// IdentityServiceUpdateUserProcedure is the fully-qualified name of the IdentityService's
+	// UpdateUser RPC.
+	IdentityServiceUpdateUserProcedure = "/medisync.identity.v1.IdentityService/UpdateUser"
+	// IdentityServiceSetCardTokenProcedure is the fully-qualified name of the IdentityService's
+	// SetCardToken RPC.
+	IdentityServiceSetCardTokenProcedure = "/medisync.identity.v1.IdentityService/SetCardToken"
 )
 
 // IdentityServiceClient is a client for the medisync.identity.v1.IdentityService service.
@@ -47,6 +59,11 @@ type IdentityServiceClient interface {
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	CardLogin(context.Context, *connect.Request[v1.CardLoginRequest]) (*connect.Response[v1.CardLoginResponse], error)
 	WhoAmI(context.Context, *connect.Request[v1.WhoAmIRequest]) (*connect.Response[v1.WhoAmIResponse], error)
+	// User management (admin-only).
+	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
+	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
+	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
+	SetCardToken(context.Context, *connect.Request[v1.SetCardTokenRequest]) (*connect.Response[v1.SetCardTokenResponse], error)
 }
 
 // NewIdentityServiceClient constructs a client for the medisync.identity.v1.IdentityService
@@ -78,14 +95,42 @@ func NewIdentityServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(identityServiceMethods.ByName("WhoAmI")),
 			connect.WithClientOptions(opts...),
 		),
+		listUsers: connect.NewClient[v1.ListUsersRequest, v1.ListUsersResponse](
+			httpClient,
+			baseURL+IdentityServiceListUsersProcedure,
+			connect.WithSchema(identityServiceMethods.ByName("ListUsers")),
+			connect.WithClientOptions(opts...),
+		),
+		createUser: connect.NewClient[v1.CreateUserRequest, v1.CreateUserResponse](
+			httpClient,
+			baseURL+IdentityServiceCreateUserProcedure,
+			connect.WithSchema(identityServiceMethods.ByName("CreateUser")),
+			connect.WithClientOptions(opts...),
+		),
+		updateUser: connect.NewClient[v1.UpdateUserRequest, v1.UpdateUserResponse](
+			httpClient,
+			baseURL+IdentityServiceUpdateUserProcedure,
+			connect.WithSchema(identityServiceMethods.ByName("UpdateUser")),
+			connect.WithClientOptions(opts...),
+		),
+		setCardToken: connect.NewClient[v1.SetCardTokenRequest, v1.SetCardTokenResponse](
+			httpClient,
+			baseURL+IdentityServiceSetCardTokenProcedure,
+			connect.WithSchema(identityServiceMethods.ByName("SetCardToken")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // identityServiceClient implements IdentityServiceClient.
 type identityServiceClient struct {
-	login     *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	cardLogin *connect.Client[v1.CardLoginRequest, v1.CardLoginResponse]
-	whoAmI    *connect.Client[v1.WhoAmIRequest, v1.WhoAmIResponse]
+	login        *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	cardLogin    *connect.Client[v1.CardLoginRequest, v1.CardLoginResponse]
+	whoAmI       *connect.Client[v1.WhoAmIRequest, v1.WhoAmIResponse]
+	listUsers    *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
+	createUser   *connect.Client[v1.CreateUserRequest, v1.CreateUserResponse]
+	updateUser   *connect.Client[v1.UpdateUserRequest, v1.UpdateUserResponse]
+	setCardToken *connect.Client[v1.SetCardTokenRequest, v1.SetCardTokenResponse]
 }
 
 // Login calls medisync.identity.v1.IdentityService.Login.
@@ -103,11 +148,36 @@ func (c *identityServiceClient) WhoAmI(ctx context.Context, req *connect.Request
 	return c.whoAmI.CallUnary(ctx, req)
 }
 
+// ListUsers calls medisync.identity.v1.IdentityService.ListUsers.
+func (c *identityServiceClient) ListUsers(ctx context.Context, req *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {
+	return c.listUsers.CallUnary(ctx, req)
+}
+
+// CreateUser calls medisync.identity.v1.IdentityService.CreateUser.
+func (c *identityServiceClient) CreateUser(ctx context.Context, req *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
+	return c.createUser.CallUnary(ctx, req)
+}
+
+// UpdateUser calls medisync.identity.v1.IdentityService.UpdateUser.
+func (c *identityServiceClient) UpdateUser(ctx context.Context, req *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
+	return c.updateUser.CallUnary(ctx, req)
+}
+
+// SetCardToken calls medisync.identity.v1.IdentityService.SetCardToken.
+func (c *identityServiceClient) SetCardToken(ctx context.Context, req *connect.Request[v1.SetCardTokenRequest]) (*connect.Response[v1.SetCardTokenResponse], error) {
+	return c.setCardToken.CallUnary(ctx, req)
+}
+
 // IdentityServiceHandler is an implementation of the medisync.identity.v1.IdentityService service.
 type IdentityServiceHandler interface {
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	CardLogin(context.Context, *connect.Request[v1.CardLoginRequest]) (*connect.Response[v1.CardLoginResponse], error)
 	WhoAmI(context.Context, *connect.Request[v1.WhoAmIRequest]) (*connect.Response[v1.WhoAmIResponse], error)
+	// User management (admin-only).
+	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
+	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
+	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
+	SetCardToken(context.Context, *connect.Request[v1.SetCardTokenRequest]) (*connect.Response[v1.SetCardTokenResponse], error)
 }
 
 // NewIdentityServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -135,6 +205,30 @@ func NewIdentityServiceHandler(svc IdentityServiceHandler, opts ...connect.Handl
 		connect.WithSchema(identityServiceMethods.ByName("WhoAmI")),
 		connect.WithHandlerOptions(opts...),
 	)
+	identityServiceListUsersHandler := connect.NewUnaryHandler(
+		IdentityServiceListUsersProcedure,
+		svc.ListUsers,
+		connect.WithSchema(identityServiceMethods.ByName("ListUsers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	identityServiceCreateUserHandler := connect.NewUnaryHandler(
+		IdentityServiceCreateUserProcedure,
+		svc.CreateUser,
+		connect.WithSchema(identityServiceMethods.ByName("CreateUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	identityServiceUpdateUserHandler := connect.NewUnaryHandler(
+		IdentityServiceUpdateUserProcedure,
+		svc.UpdateUser,
+		connect.WithSchema(identityServiceMethods.ByName("UpdateUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	identityServiceSetCardTokenHandler := connect.NewUnaryHandler(
+		IdentityServiceSetCardTokenProcedure,
+		svc.SetCardToken,
+		connect.WithSchema(identityServiceMethods.ByName("SetCardToken")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/medisync.identity.v1.IdentityService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case IdentityServiceLoginProcedure:
@@ -143,6 +237,14 @@ func NewIdentityServiceHandler(svc IdentityServiceHandler, opts ...connect.Handl
 			identityServiceCardLoginHandler.ServeHTTP(w, r)
 		case IdentityServiceWhoAmIProcedure:
 			identityServiceWhoAmIHandler.ServeHTTP(w, r)
+		case IdentityServiceListUsersProcedure:
+			identityServiceListUsersHandler.ServeHTTP(w, r)
+		case IdentityServiceCreateUserProcedure:
+			identityServiceCreateUserHandler.ServeHTTP(w, r)
+		case IdentityServiceUpdateUserProcedure:
+			identityServiceUpdateUserHandler.ServeHTTP(w, r)
+		case IdentityServiceSetCardTokenProcedure:
+			identityServiceSetCardTokenHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -162,4 +264,20 @@ func (UnimplementedIdentityServiceHandler) CardLogin(context.Context, *connect.R
 
 func (UnimplementedIdentityServiceHandler) WhoAmI(context.Context, *connect.Request[v1.WhoAmIRequest]) (*connect.Response[v1.WhoAmIResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.IdentityService.WhoAmI is not implemented"))
+}
+
+func (UnimplementedIdentityServiceHandler) ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.IdentityService.ListUsers is not implemented"))
+}
+
+func (UnimplementedIdentityServiceHandler) CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.IdentityService.CreateUser is not implemented"))
+}
+
+func (UnimplementedIdentityServiceHandler) UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.IdentityService.UpdateUser is not implemented"))
+}
+
+func (UnimplementedIdentityServiceHandler) SetCardToken(context.Context, *connect.Request[v1.SetCardTokenRequest]) (*connect.Response[v1.SetCardTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.IdentityService.SetCardToken is not implemented"))
 }
