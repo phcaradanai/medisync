@@ -375,7 +375,7 @@ export default function WithdrawFlow() {
   // ── Retry list load ───────────────────────────────────────────
 
   const handleRetry = () => {
-    setStep("list"); // triggers the useEffect
+    setListAttempt((attempt) => attempt + 1);
   };
 
   // ── List screen ────────────────────────────────────────────────
