@@ -528,6 +528,7 @@ body {
   text-align: center;
 }
 
+<<<<<<< HEAD
 .kiosk-btn-warning {
   background: var(--semantic-progress);
   color: var(--text-on-progress);
@@ -624,6 +625,21 @@ body {
 
 .refill-progress-fill[data-low="true"] {
   background: var(--semantic-progress);
+=======
+/* Error variant: offline (warning tone — network problem). */
+.kiosk-error--offline {
+  background: var(--semantic-warning);
+  color: var(--text-on-warning);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Error variant: warning (hardware busy, transient). */
+.kiosk-error--warning {
+  background: var(--semantic-warning);
+  color: var(--text-on-warning);
+>>>>>>> 702a65b (feat(kiosk): harden withdrawal flow)
 }
 
 /* ── Reduced motion ────────────────────────────────────────── */
