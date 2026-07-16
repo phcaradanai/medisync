@@ -182,7 +182,7 @@ func (s *Store) ListUsers(ctx context.Context, query, projectID string) ([]*User
 		var u User
 		var createdAt, updatedAt time.Time
 		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName,
-			(*roleScanner)(&u.Role), &u.WardIDs, &u.Active, &createdAt, &updatedAt); err != nil {
+			(*roleScanner)(&u.Role), &u.WardIDs, &u.ProjectID, &u.Active, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan user row: %w", err)
 		}
 		u.CreatedAt = createdAt

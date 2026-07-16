@@ -63,7 +63,7 @@ func (s *fakeDrugStore) GetByCode(_ context.Context, code string) (*Drug, error)
 	return nil, errors.New("not implemented")
 }
 
-func (s *fakeDrugStore) List(_ context.Context, query string, includeInactive bool, pageSize int32, pageToken string) ([]*Drug, string, error) {
+func (s *fakeDrugStore) List(_ context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, error) {
 	return s.listResult, s.listNextToken, s.listErr
 }
 

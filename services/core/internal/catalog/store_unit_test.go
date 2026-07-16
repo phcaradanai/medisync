@@ -513,7 +513,7 @@ func TestListDrugsEmpty(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	drugs, nextToken, err := store.List(context.Background(), "", false, 50, "")
+	drugs, nextToken, err := store.List(context.Background(), "", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -536,7 +536,7 @@ func TestListDrugsWithResults(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	drugs, nextToken, err := store.List(context.Background(), "", false, 50, "")
+	drugs, nextToken, err := store.List(context.Background(), "", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -560,7 +560,7 @@ func TestListDrugsPagination(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	drugs, nextToken, err := store.List(context.Background(), "", false, 2, "")
+	drugs, nextToken, err := store.List(context.Background(), "", false, 2, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -582,7 +582,7 @@ func TestListDrugsWithQuery(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	_, _, err := store.List(context.Background(), "para", false, 50, "")
+	_, _, err := store.List(context.Background(), "para", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -599,7 +599,7 @@ func TestListDrugsDBError(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	_, _, err := store.List(context.Background(), "", false, 50, "")
+	_, _, err := store.List(context.Background(), "", false, 50, "", "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

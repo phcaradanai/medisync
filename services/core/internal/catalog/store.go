@@ -76,7 +76,8 @@ func (s *Store) GetByCode(ctx context.Context, code string) (*Drug, error) {
 // List returns drugs matching the optional query string against code, name,
 // and generic_name. Pagination uses a cursor based on the drug id.
 // When includeInactive is false, only active drugs are returned.
-func (s *Store) List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken string) ([]*Drug, string, error) {
+// When projectID is non-empty, results are scoped to that project.
+func (s *Store) List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, error) {
 	if pageSize <= 0 || pageSize > 100 {
 		pageSize = 50
 	}
@@ -96,6 +97,12 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 				argIdx, argIdx+1, argIdx+2))
 		args = append(args, q, q, q)
 		argIdx += 3
+	}
+
+	if projectID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("project_id = $%d", argIdx))
+		args = append(args, projectID)
+		argIdx++
 	}
 
 	if pageToken != "" {

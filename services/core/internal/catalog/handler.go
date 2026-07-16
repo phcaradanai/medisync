@@ -53,7 +53,7 @@ type DrugStore interface {
 	Create(ctx context.Context, d Drug) (*Drug, error)
 	GetByID(ctx context.Context, id string) (*Drug, error)
 	GetByCode(ctx context.Context, code string) (*Drug, error)
-	List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken string) ([]*Drug, string, error)
+	List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, error)
 	Update(ctx context.Context, d Drug) (*Drug, error)
 	Deactivate(ctx context.Context, id string) (*Drug, error)
 }
@@ -170,7 +170,8 @@ func (s *CatalogServer) GetDrug(ctx context.Context, req *connect.Request[catalo
 }
 
 func (s *CatalogServer) ListDrugs(ctx context.Context, req *connect.Request[catalogv1.ListDrugsRequest]) (*connect.Response[catalogv1.ListDrugsResponse], error) {
-	if _, cerr := s.authenticate(req.Header()); cerr != nil {
+	claims, cerr := s.authenticate(req.Header())
+	if cerr != nil {
 		return nil, cerr
 	}
 	msg := req.Msg
@@ -188,7 +189,8 @@ func (s *CatalogServer) ListDrugs(ctx context.Context, req *connect.Request[cata
 		pageToken = msg.PageToken
 	}
 
-	drugs, nextToken, err := s.store.List(ctx, query, includeInactive, pageSize, pageToken)
+	projectID := claims.GetProjectID()
+	drugs, nextToken, err := s.store.List(ctx, query, includeInactive, pageSize, pageToken, projectID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list drugs: %w", err))
 	}
