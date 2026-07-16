@@ -39,7 +39,7 @@ func NewStoreWithDB(db dbConn) *Store {
 // List returns all cabinets ordered by code.
 func (s *Store) List(ctx context.Context) ([]*Cabinet, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT id, code, name, active, created_at, updated_at
+		`SELECT id, code, name, display_name, active, project_id, created_at, updated_at
 		   FROM cabinet.cabinet ORDER BY code ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("list cabinets: %w", err)
@@ -63,18 +63,19 @@ func (s *Store) List(ctx context.Context) ([]*Cabinet, error) {
 // GetByID returns a Cabinet by UUID, or nil if not found.
 func (s *Store) GetByID(ctx context.Context, id string) (*Cabinet, error) {
 	row := s.db.QueryRow(ctx,
-		`SELECT id, code, name, active, created_at, updated_at
+		`SELECT id, code, name, display_name, active, project_id, created_at, updated_at
 		   FROM cabinet.cabinet WHERE id = $1`, id)
 	return scanCabinet(row)
 }
 
 // Create inserts a new cabinet.
-func (s *Store) Create(ctx context.Context, code, name string) (*Cabinet, error) {
+func (s *Store) Create(ctx context.Context, code, name, displayName, projectID string) (*Cabinet, error) {
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO cabinet.cabinet (code, name)
-		 VALUES ($1, $2)
+		`INSERT INTO cabinet.cabinet (code, name, display_name, project_id)
+		 VALUES ($1, $2, $3, $4)
 		 ON CONFLICT (code) DO NOTHING
-		 RETURNING id, code, name, active, created_at, updated_at`, code, name)
+		 RETURNING id, code, name, display_name, active, project_id, created_at, updated_at`,
+		code, name, displayName, projectID)
 	c, err := scanCabinet(row)
 	if err != nil {
 		return nil, fmt.Errorf("create cabinet: %w", err)
@@ -108,7 +109,7 @@ func (s *Store) Update(ctx context.Context, id string, name *string, active *boo
 	setClauses = append(setClauses, "updated_at = now()")
 	query := fmt.Sprintf(
 		`UPDATE cabinet.cabinet SET %s WHERE id = $1
-		 RETURNING id, code, name, active, created_at, updated_at`,
+		 RETURNING id, code, name, display_name, active, project_id, created_at, updated_at`,
 		joinClauses(setClauses))
 
 	row := s.db.QueryRow(ctx, query, args...)
@@ -118,7 +119,7 @@ func (s *Store) Update(ctx context.Context, id string, name *string, active *boo
 func scanCabinet(row pgx.Row) (*Cabinet, error) {
 	var c Cabinet
 	var createdAt, updatedAt time.Time
-	err := row.Scan(&c.ID, &c.Code, &c.Name, &c.Active, &createdAt, &updatedAt)
+	err := row.Scan(&c.ID, &c.Code, &c.Name, &c.DisplayName, &c.Active, &c.ProjectID, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

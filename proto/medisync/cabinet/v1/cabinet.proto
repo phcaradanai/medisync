@@ -17,6 +17,8 @@ message Cabinet {
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
   string display_name = 7;
+  // Project this cabinet belongs to (multi-tenant).
+  string project_id = 8;
 }
 
 message ListCabinetsRequest {}
@@ -28,6 +30,9 @@ message ListCabinetsResponse {
 message CreateCabinetRequest {
   string code = 1;
   string name = 2;
+  string display_name = 3;
+  // Required for SYSADMIN; project-scoped users inherit from JWT.
+  string project_id = 4;
 }
 
 message CreateCabinetResponse {

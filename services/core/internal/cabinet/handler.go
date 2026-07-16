@@ -65,7 +65,8 @@ func (s *Server) CreateCabinet(
 	ctx context.Context,
 	req *connect.Request[cabinetv1.CreateCabinetRequest],
 ) (*connect.Response[cabinetv1.CreateCabinetResponse], error) {
-	if err := s.requireAdmin(req.Header()); err != nil {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
 		return nil, err
 	}
 
@@ -77,7 +78,20 @@ func (s *Server) CreateCabinet(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cabinet name is required"))
 	}
 
-	c, err := s.store.Create(ctx, msg.Code, msg.Name)
+	projectID := claims.ProjectID
+	if projectID == "" {
+		projectID = msg.ProjectId
+	}
+	if projectID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project_id is required"))
+	}
+
+	displayName := msg.DisplayName
+	if displayName == "" {
+		displayName = msg.Name
+	}
+
+	c, err := s.store.Create(ctx, msg.Code, msg.Name, displayName, projectID)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateCode) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, ErrDuplicateCode)
@@ -129,18 +143,26 @@ func (s *Server) UpdateCabinet(
 
 // requireAdmin validates the admin bearer token.
 func (s *Server) requireAdmin(header http.Header) error {
-	tokenStr, err := extractBearer(header)
+	claims, err := s.authenticate(header)
 	if err != nil {
-		return connect.NewError(connect.CodeUnauthenticated, err)
-	}
-	claims, err := s.parser.Parse(tokenStr)
-	if err != nil {
-		return connect.NewError(connect.CodeUnauthenticated, errors.New("invalid token"))
+		return err
 	}
 	if claims.Role != "ADMIN" {
 		return connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
 	}
 	return nil
+}
+
+func (s *Server) authenticate(header http.Header) (*TokenClaims, error) {
+	tokenStr, err := extractBearer(header)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, err)
+	}
+	claims, err := s.parser.Parse(tokenStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid token"))
+	}
+	return claims, nil
 }
 
 func extractBearer(header http.Header) (string, error) {
@@ -172,11 +194,13 @@ func toProto(c *Cabinet) *cabinetv1.Cabinet {
 		updatedAt = nil
 	}
 	return &cabinetv1.Cabinet{
-		Id:        c.ID,
-		Code:      c.Code,
-		Name:      c.Name,
-		Active:    c.Active,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		Id:          c.ID,
+		Code:        c.Code,
+		Name:        c.Name,
+		DisplayName: c.DisplayName,
+		Active:      c.Active,
+		ProjectId:   c.ProjectID,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
 	}
 }

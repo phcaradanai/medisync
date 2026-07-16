@@ -28,12 +28,14 @@ type Cabinet struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Unique machine code, e.g. "CAB-01".
-	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Active        bool                   `protobuf:"varint,4,opt,name=active,proto3" json:"active,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Code        string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	Name        string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Active      bool                   `protobuf:"varint,4,opt,name=active,proto3" json:"active,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DisplayName string                 `protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Project this cabinet belongs to (multi-tenant).
+	ProjectId     string `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -113,6 +115,13 @@ func (x *Cabinet) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *Cabinet) GetDisplayName() string {
 	if x != nil {
 		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *Cabinet) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -198,9 +207,12 @@ func (x *ListCabinetsResponse) GetCabinets() []*Cabinet {
 }
 
 type CreateCabinetRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Code        string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	DisplayName string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Required for SYSADMIN; project-scoped users inherit from JWT.
+	ProjectId     string `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -245,6 +257,20 @@ func (x *CreateCabinetRequest) GetCode() string {
 func (x *CreateCabinetRequest) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateCabinetRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *CreateCabinetRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -401,7 +427,7 @@ var File_medisync_cabinet_v1_cabinet_proto protoreflect.FileDescriptor
 
 const file_medisync_cabinet_v1_cabinet_proto_rawDesc = "" +
 	"\n" +
-	"!medisync/cabinet/v1/cabinet.proto\x12\x13medisync.cabinet.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf2\x01\n" +
+	"!medisync/cabinet/v1/cabinet.proto\x12\x13medisync.cabinet.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x91\x02\n" +
 	"\aCabinet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -411,13 +437,18 @@ const file_medisync_cabinet_v1_cabinet_proto_rawDesc = "" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12!\n" +
-	"\fdisplay_name\x18\a \x01(\tR\vdisplayName\"\x15\n" +
+	"\fdisplay_name\x18\a \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\b \x01(\tR\tprojectId\"\x15\n" +
 	"\x13ListCabinetsRequest\"P\n" +
 	"\x14ListCabinetsResponse\x128\n" +
-	"\bcabinets\x18\x01 \x03(\v2\x1c.medisync.cabinet.v1.CabinetR\bcabinets\">\n" +
+	"\bcabinets\x18\x01 \x03(\v2\x1c.medisync.cabinet.v1.CabinetR\bcabinets\"\x80\x01\n" +
 	"\x14CreateCabinetRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"O\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\"O\n" +
 	"\x15CreateCabinetResponse\x126\n" +
 	"\acabinet\x18\x01 \x01(\v2\x1c.medisync.cabinet.v1.CabinetR\acabinet\"p\n" +
 	"\x14UpdateCabinetRequest\x12\x0e\n" +
