@@ -150,6 +150,10 @@ func run() (runErr error) {
 	path, handler := newIdentityHandler(identityStore, jwtMgr, cfg)
 	mux.Handle(path, handler)
 
+	// Project management (SYSADMIN-only).
+	projectPath, projectHandler := newProjectHandler(identityStore)
+	mux.Handle(projectPath, projectHandler)
+
 	// Kiosk provisioning and kiosk-token authentication.
 	kioskStore := identity.NewKioskStore(pool)
 	kioskPath, kioskHandler := newKioskHandler(kioskStore, jwtMgr, cfg)
@@ -293,6 +297,11 @@ func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, 
 	return identityv1connect.NewIdentityServiceHandler(server)
 }
 
+func newProjectHandler(store *identity.Store) (string, http.Handler) {
+	server := identity.NewProjectServer(store)
+	return identityv1connect.NewProjectServiceHandler(server)
+}
+
 // newDispensingTokenParser adapts identity.JWTManager to dispensing.TokenParser.
 // The dispensing handler defines its own TokenClaims type to avoid a circular
 // dependency on package identity.
@@ -318,9 +327,10 @@ func (p *dispensingTokenParser) Parse(tokenString string) (*dispensing.TokenClai
 		return nil, err
 	}
 	return &dispensing.TokenClaims{
-		Subject: claims.Subject,
-		Role:    claims.Role,
-		WardIDs: claims.WardIDs,
+		Subject:   claims.Subject,
+		Role:      claims.Role,
+		ProjectID: claims.ProjectID,
+		WardIDs:   claims.WardIDs,
 	}, nil
 }
 
@@ -340,8 +350,9 @@ func (p *cabinetTokenParser) Parse(tokenString string) (*cabinet.TokenClaims, er
 		return nil, err
 	}
 	return &cabinet.TokenClaims{
-		Subject: claims.Subject,
-		Role:    claims.Role,
-		WardIDs: claims.WardIDs,
+		Subject:   claims.Subject,
+		Role:      claims.Role,
+		ProjectID: claims.ProjectID,
+		WardIDs:   claims.WardIDs,
 	}, nil
 }

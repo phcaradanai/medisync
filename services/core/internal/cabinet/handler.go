@@ -22,9 +22,10 @@ type TokenParser interface {
 
 // TokenClaims mirrors identity.TokenClaims to avoid import cycle.
 type TokenClaims struct {
-	Subject string
-	Role    string
-	WardIDs []string
+	Subject   string
+	Role      string
+	ProjectID string
+	WardIDs   []string
 }
 
 // Server is the Connect-RPC handler for CabinetService.

@@ -27,9 +27,10 @@ type TokenParser interface {
 // authorization needs (role + ward_ids). We define our own narrow interface
 // to avoid a circular dependency on package identity.
 type TokenClaims struct {
-	Subject string
-	Role    string
-	WardIDs []string
+	Subject   string
+	Role      string
+	ProjectID string
+	WardIDs   []string
 }
 
 // UserResolver resolves the current user from a JWT token. The identity
