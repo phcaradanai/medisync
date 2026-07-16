@@ -1,51 +1,155 @@
 # MediSync
 
-Hospital medication dispensing platform: automated vending cabinet + kiosk UI + admin app, event-driven around NATS JetStream, Go core, React/TS frontends.
+Hospital medication dispensing platform: automated vending cabinet + kiosk UI + admin app. Event-driven around NATS JetStream, Go modular monolith core, React/TS frontends.
 
 ## What it does
 
-A prescription flows in from the hospital (external feeder service → `rx.prescription.created` on JetStream). Ward staff authenticate at the cabinet kiosk, confirm the withdrawal, the cabinet dispenses the medication (via the existing `vending-3d-ctl-agent`), a sticker prints (via the existing `print_ops` gateway), stock is decremented, and every step is audited.
+A prescription flows from the hospital → `rx.prescription.created` on JetStream. Ward staff authenticate at the kiosk, confirm withdrawal. The cabinet dispenses medication (via `vending-3d-ctl-agent`), a sticker prints (via `print_ops`), stock is decremented, and every step is audited.
+
+## Event Chain
+
+```
+rx.prescription.created → READY → Dispense RPC → DISPENSING
+  → vending consumer → vending agent → dispense.completed
+    → completion consumer → DISPENSED + stock.changed + print.requested
+      → printing consumer → print_ops → sticker
+```
 
 ## Documents
 
 | Doc | Purpose |
 |---|---|
 | [PRODUCT.md](PRODUCT.md) | Users, purpose, brand, design principles |
-| [DESIGN.md](DESIGN.md) | Visual system (inherits PrintOps "Lab Notebook", adds kiosk scale) |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Services, bounded contexts, proto contracts, event flow, security |
-| [docs/MILESTONES.md](docs/MILESTONES.md) | 10-day plan, definition of done, working agreement |
+| [DESIGN.md](DESIGN.md) | Visual system (PrintOps "Lab Notebook" + kiosk scale) |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Services, bounded contexts, proto contracts, events, security |
+| [docs/MILESTONES.md](docs/MILESTONES.md) | 10-day plan, definition of done |
+| [RUNBOOK.md](RUNBOOK.md) | Deployment, operations, recovery, monitoring |
+| [docs/EVENTS.md](docs/EVENTS.md) | NATS subject registry |
 
 ## Stack
 
-- **Core:** Go modular monolith (DDD bounded contexts), Connect-RPC (proto-first, buf), PostgreSQL, NATS JetStream
-- **Frontends:** React + Vite + TypeScript (kiosk, admin), Connect-Web clients
-- **Hardware:** `../vending-3d-ctl-agent` (serial cabinet control), `../print_ops` (sticker printing) — reused, not rewritten
+- **Core:** Go 1.26 modular monolith (Connect-RPC, PostgreSQL, NATS JetStream)
+- **Frontends:** React 19 + Vite 7 + TypeScript 5.9, `@bufbuild/protobuf`, UnoCSS
+- **Hardware:** `../vending-3d-ctl-agent` (serial cabinet), `../print_ops` (sticker) — reused
+- **Bundled:** `infra/docker-compose.yml` (postgres + nats + core)
 
 ## Layout
 
 ```
 proto/               # buf-managed contracts (source of truth)
+  medisync/
+    identity/v1/     # users, roles, auth
+    catalog/v1/      # drug master catalog
+    inventory/v1/    # slots, stock, refill
+    dispensing/v1/   # prescription state machine
+    kiosk/v1/        # kiosk terminal registry
+    cabinet/v1/      # physical cabinet registry
+    events/v1/       # JetStream event payloads
 services/core/       # Go backend (modular monolith)
-apps/kiosk/          # cabinet touch UI (React + Vite)
-apps/admin/          # management UI (React + Vite)
-packages/proto-ts/   # generated TS types shared by both apps
-infra/               # docker compose (postgres + NATS JetStream)
-docs/                # architecture, milestones, event registry
+  internal/
+    platform/        # config, logging, postgres, nats, audit, ratelimit
+    identity/        # auth, users, kiosk management
+    catalog/         # drug CRUD
+    inventory/       # slot mapping, stock, refill
+    dispensing/      # prescription state machine + consumers
+    vending/         # vending-3d-ctl-agent client + consumer
+    printing/        # print_ops client + consumer
+    cabinet/         # cabinet registry
+apps/
+  kiosk/             # cabinet touch UI (React + Vite, :5173)
+  admin/             # management UI (React + Vite, :5174)
+packages/proto-ts/   # generated TS types (shared)
+infra/               # docker compose files
+migrations/          # PostgreSQL migrations (0001-0009)
 ```
 
-## Development
+## Quick Start
 
-Prerequisites: Go ≥1.26, Node ≥20, Docker, [buf](https://buf.build).
+Prerequisites: Go ≥1.26, Node ≥20, Docker.
 
 ```bash
-npm install                 # workspaces (apps + packages)
-npm run infra:up            # postgres:5432 + NATS:4222 (JetStream)
-npm run core                # Go core: migrations, streams, consumers
-npm run feeder -- -count 3  # publish mock prescriptions (see docs/EVENTS.md)
-npm run dev:kiosk           # http://localhost:5173
-npm run dev:admin           # http://localhost:5174
-npm run proto               # regenerate after editing proto/ (buf lint + generate)
-npm run test:core           # Go tests
+npm install              # workspaces (apps + packages)
+
+# ── Start everything ──
+npm run dev:all          # postgres + nats + core (Docker) + admin + kiosk
+
+# ── Or per layer ──
+npm run infra:up         # postgres:5432 + nats:4222 + core:8080
+npm run dev              # admin (:5174) + kiosk (:5173)
+
+# ── Demo data (optional) ──
+npm run seed:demo        # drugs, slots, kiosk for testing
 ```
 
-Default DB: `postgres://medisync:medisync@localhost:5432/medisync`. Core config via env — see `services/core/internal/platform/config`.
+### URLs
+
+| Surface | URL | Login |
+|---|---|---|
+| Admin | http://localhost:5174 | `admin` / `medisync-local-admin-2026` |
+| Kiosk | http://localhost:5173 | Code: `KIOSK-1` PIN: `1234` (after `seed:demo`) |
+| Core API | http://localhost:8080 | Connect-RPC |
+
+## Admin Features
+
+| Page | What you can do |
+|---|---|
+| **Drugs** | CRUD drug catalog, search by code/name, activate/deactivate |
+| **Inventory** | Slot management — assign drugs, refill stock, adjust quantities |
+| **Users** | User management — create/edit, roles (admin/pharmacist/nurse/refiller), ward scopes |
+| **Kiosks** | Register kiosk terminals, PIN management, activate/deactivate |
+| **Cabinets** | Register physical vending machines |
+
+## Kiosk Features
+
+| Mode | Flow |
+|---|---|
+| **Withdraw** | Login → prescription list → confirm → dispense status (live polling) → done |
+| **Refill** | Toggle refill mode → low stock / all slots → enter qty → confirm → done |
+
+## Scripts Reference
+
+| Script | Purpose |
+|---|---|
+| `npm run dev:all` | Start everything (infra + admin + kiosk) |
+| `npm run infra:up` | Start docker services |
+| `npm run infra:down` | Stop docker services |
+| `npm run core` | Run Go core locally (for dev) |
+| `npm run core:dev` | infra (postgres+nats only) + core local + admin + kiosk |
+| `npm run feeder` | Publish mock prescriptions to NATS |
+| `npm run dev` | Start admin + kiosk |
+| `npm run dev:admin` | Start admin only |
+| `npm run dev:kiosk` | Start kiosk only |
+| `npm run seed:demo` | Seed demo data (drugs, slots, kiosk) |
+| `npm run seed:demo-reset` | Reset and re-seed demo data |
+| `npm run proto` | Regenerate proto (buf lint + generate) |
+| `npm run build` | Build all workspaces |
+| `npm run test:core` | Run Go tests |
+| `npm run test:all` | Run all Go tests |
+| `npm run smoke:demo` | End-to-end smoke test |
+
+## Test Status
+
+| Suite | Result |
+|---|---|
+| Go: identity, catalog, inventory, dispensing, vending, printing, cabinet, platform | All pass |
+| Admin (TS): login + drugs | 17/17 |
+| Kiosk (TS): login + withdraw | 25/25 |
+
+## Milestone Status
+
+| M | Scope | Status |
+|---|---|---|
+| M1 | Foundations | ✅ |
+| M2 | Core domain | ✅ |
+| M3 | Hardware & printing bridges | ✅ |
+| M4 | Kiosk refill + withdraw | ✅ |
+| M5 | Admin CRUD | ✅ |
+| M6 | Hardware integration | ⬜ |
+| M7 | Ship | ✅ |
+
+## Config
+
+Default DB: `postgres://medisync:medisync@localhost:5432/medisync`  
+Core config via env — see `services/core/internal/platform/config/config.go`  
+Env template: `.env.example` (dev) / `.env.production.example` (prod)  
+Fake clients: `PRINT_OPS_FAKE=true`, `VENDING_FAKE=true` for dev without external services
