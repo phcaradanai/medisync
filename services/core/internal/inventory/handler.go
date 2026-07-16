@@ -90,7 +90,8 @@ func (s *InventoryServer) authenticate(header http.Header) (TokenClaimser, *conn
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
 	}
-	if claims.GetRole() != "ADMIN" {
+	role := claims.GetRole()
+	if role != "ADMIN" && role != "KIOSK" {
 		return nil, connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
 	}
 	return claims, nil

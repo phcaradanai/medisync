@@ -398,6 +398,16 @@ type inventoryTokenParser struct {
 }
 
 func (p *inventoryTokenParser) Parse(tokenString string) (inventory.TokenClaimser, error) {
+	// Try kiosk token first (KIOSK role for refill operations).
+	kClaims, kErr := p.mgr.ParseKiosk(tokenString)
+	if kErr == nil {
+		return inventory.Claims{
+			Subject:   kClaims.Subject,
+			Role:      "KIOSK",
+			ProjectID: kClaims.ProjectID,
+		}, nil
+	}
+	// Fall back to user token (ADMIN role).
 	claims, err := p.mgr.Parse(tokenString)
 	if err != nil {
 		return nil, err
