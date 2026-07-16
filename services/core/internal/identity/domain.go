@@ -22,7 +22,7 @@ type User struct {
 	Role         Role
 	WardIDs      []string
 	Active       bool
-	ProjectID    string    // empty = SYSADMIN (cross-project)
+	ProjectID    *string // nil = SYSADMIN (cross-project)
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -30,12 +30,10 @@ type User struct {
 // IsSysadmin returns true when the user is a cross-project super admin
 // (ADMIN role with no project binding).
 func (u *User) IsSysadmin() bool {
-	return u.Role == RoleAdmin && u.ProjectID == ""
+	return u.Role == RoleAdmin && (u.ProjectID == nil || *u.ProjectID == "")
 }
 
 // Can checks whether this user is authorized to act in a ward.
-// SYSADMIN and project ADMIN can act in any ward within their project;
-// other roles must be scoped to a ward they belong to.
 func (u *User) Can(wardID string) bool {
 	if u.Role == RoleAdmin {
 		return true
@@ -46,6 +44,14 @@ func (u *User) Can(wardID string) bool {
 		}
 	}
 	return false
+}
+
+// ProjectIDStr returns the project ID as a string, or empty for SYSADMIN.
+func (u *User) ProjectIDStr() string {
+	if u.ProjectID == nil {
+		return ""
+	}
+	return *u.ProjectID
 }
 
 // Project is the domain model for a multi-tenant project.

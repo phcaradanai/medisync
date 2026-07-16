@@ -73,7 +73,7 @@ func (m *JWTManager) Issue(user *User) (string, time.Time, error) {
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 		},
 		Role:      string(user.Role),
-		ProjectID: user.ProjectID,
+		ProjectID: user.ProjectIDStr(),
 		WardIDs:   user.WardIDs,
 	}
 

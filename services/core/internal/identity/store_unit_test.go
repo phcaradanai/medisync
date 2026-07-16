@@ -103,7 +103,9 @@ func rowWithUser(u User) *fakeRow {
 			}
 			wardIDs := dest[5].(*[]string)
 			*wardIDs = append(*wardIDs, u.WardIDs...)
-			*(dest[6].(*string)) = u.ProjectID
+			if u.ProjectID != nil {
+				*(dest[6].(*string)) = *u.ProjectID
+			}
 			*(dest[7].(*bool)) = u.Active
 			if dt, ok := dest[8].(*time.Time); ok {
 				*dt = u.CreatedAt

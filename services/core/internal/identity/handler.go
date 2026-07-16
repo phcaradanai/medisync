@@ -175,7 +175,7 @@ func toProtoUser(u *User) *identityv1.User {
 		Role:        pbRole,
 		WardIds:     u.WardIDs,
 		Active:      u.Active,
-		ProjectId:   u.ProjectID,
+		ProjectId:   u.ProjectIDStr(),
 		CreatedAt:   createdAt,
 	}
 }
