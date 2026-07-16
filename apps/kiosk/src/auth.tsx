@@ -80,7 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (token: string, expiresAt: Date, kiosk: Kiosk) => {
       localStorage.setItem(`${STORAGE_PREFIX}token`, token);
       localStorage.setItem(`${STORAGE_PREFIX}expires`, expiresAt.toISOString());
-      localStorage.setItem(`${STORAGE_PREFIX}kiosk`, JSON.stringify(kiosk));
+      localStorage.setItem(`${STORAGE_PREFIX}kiosk`, JSON.stringify(kiosk, (_key, value) =>
+        typeof value === "bigint" ? String(value) : value
+      ));
       setState({ kiosk, token, expiresAt });
     },
     [],

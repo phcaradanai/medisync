@@ -480,7 +480,7 @@ body {
   border-radius: var(--radius-sm);
   cursor: pointer;
   touch-action: manipulation;
-  min-height: 40px;
+  min-height: 48px;
 }
 
 /* ── Step indicator ────────────────────────────────────────── */
@@ -563,7 +563,7 @@ body {
   font: 600 1rem / 1.3 var(--font-family);
   cursor: pointer;
   transition: background 150ms, border-color 150ms;
-  min-height: 40px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   gap: var(--space-xs);
@@ -602,7 +602,7 @@ body {
 }
 
 .refill-stock-badge[data-low="true"] {
-  color: var(--text-on-error);
+  color: var(--text-on-warning);
 }
 
 /* ── Progress bar ──────────────────────────────────────────── */

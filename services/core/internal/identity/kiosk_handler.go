@@ -94,8 +94,12 @@ func (s *KioskServer) CreateKiosk(
 	ctx context.Context,
 	req *connect.Request[kioskv1.CreateKioskRequest],
 ) (*connect.Response[kioskv1.CreateKioskResponse], error) {
-	if err := s.requireAdmin(req.Header()); err != nil {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
 		return nil, err
+	}
+	if claims.Role != string(RoleAdmin) {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
 	}
 
 	msg := req.Msg
@@ -106,15 +110,24 @@ func (s *KioskServer) CreateKiosk(
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrKioskPinRequired)
 	}
 
-	pinHash, err := s.passwd.Hash(msg.Pin)
-	if err != nil {
+	pinHash, hashErr := s.passwd.Hash(msg.Pin)
+	if hashErr != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	projectID := claims.ProjectID
+	if projectID == "" {
+		projectID = msg.ProjectId
+	}
+	if projectID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project_id is required"))
 	}
 
 	k := &Kiosk{
 		Code:        msg.Code,
 		DisplayName: msg.DisplayName,
 		PinHash:     pinHash,
+		ProjectID:   projectID,
 	}
 	if err := s.store.Create(ctx, k); err != nil {
 		if errors.Is(err, ErrDuplicateKioskCode) {
@@ -315,6 +328,20 @@ func (s *KioskServer) KioskValidate(
 }
 
 // ── Internal helpers ────────────────────────────────────────────────
+
+// authenticate extracts and validates a user Bearer token, returning
+// the claims. Returns a Connect error on failure.
+func (s *KioskServer) authenticate(header http.Header) (*TokenClaims, *connect.Error) {
+	tokenStr, err := extractBearer(header)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, err)
+	}
+	claims, err := s.userParser.Parse(tokenStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, ErrInvalidCredentials)
+	}
+	return claims, nil
+}
 
 // requireAdmin extracts the Bearer token from the request headers,
 // validates it via the user token parser, and checks that the caller has

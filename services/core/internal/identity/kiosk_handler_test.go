@@ -124,7 +124,7 @@ func (p *fakeAdminParser) Parse(_ string) (*TokenClaims, error) {
 	if p.err != nil {
 		return nil, p.err
 	}
-	return &TokenClaims{Role: string(p.role)}, nil
+	return &TokenClaims{Role: string(p.role), ProjectID: "proj-1"}, nil
 }
 
 type alwaysAllowLimiter struct{}

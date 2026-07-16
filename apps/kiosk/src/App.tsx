@@ -45,7 +45,7 @@ function KioskShell() {
           >
             📦 เติมยา
           </button>
-          <button className="text-sm text-gray-400 hover:text-white transition-colors" onClick={logout}>
+          <button className="kiosk-header__logout" onClick={logout}>
             ออกจากระบบ
           </button>
         </div>
