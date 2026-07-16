@@ -12,7 +12,26 @@ import (
 	"github.com/adm-chura3inter/medisync/services/core/internal/testutil"
 )
 
-// ── Fake DrugStore ──────────────────────────────────────────────────
+// ── Fake Token Parser ────────────────────────────────────────────
+
+type fakeTokenParser struct {
+	claims Claims
+	err    error
+}
+
+func (p *fakeTokenParser) Parse(tokenString string) (TokenClaimser, error) {
+	return p.claims, p.err
+}
+
+func adminClaims() Claims { return Claims{Subject: "user-1", Role: "ADMIN", ProjectID: "proj-1"} }
+
+func newAuthedRequest[T any](msg *T) *connect.Request[T] {
+	req := connect.NewRequest(msg)
+	req.Header().Set("Authorization", "Bearer test-token")
+	return req
+}
+
+// ── Fake DrugStore ────────────────────────────────────────────────
 
 type fakeDrugStore struct {
 	createResult     *Drug
@@ -84,9 +103,9 @@ func TestHandlerCreateDrugSuccess(t *testing.T) {
 	}
 	auditDB := &fakeAuditDB{FakeExecer: &testutil.FakeExecer{}}
 	auditWriter := audit.NewWriterWithDB(auditDB)
-	server := NewCatalogServer(fakeStore, auditWriter)
+	server := NewCatalogServerWithAuth(fakeStore, auditWriter, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.CreateDrug(context.Background(), connect.NewRequest(&catalogv1.CreateDrugRequest{
+	resp, err := server.CreateDrug(context.Background(), newAuthedRequest(&catalogv1.CreateDrugRequest{
 		Code:        "PARA-500",
 		Name:        "Paracetamol",
 		GenericName: "Paracetamol",
@@ -120,8 +139,8 @@ func TestHandlerCreateDrugSuccess(t *testing.T) {
 }
 
 func TestHandlerCreateDrugMissingCode(t *testing.T) {
-	server := NewCatalogServer(&fakeDrugStore{}, nil)
-	_, err := server.CreateDrug(context.Background(), connect.NewRequest(&catalogv1.CreateDrugRequest{}))
+	server := NewCatalogServerWithAuth(&fakeDrugStore{}, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.CreateDrug(context.Background(), newAuthedRequest(&catalogv1.CreateDrugRequest{}))
 	if err == nil {
 		t.Fatal("expected error for missing code")
 	}
@@ -131,8 +150,8 @@ func TestHandlerCreateDrugMissingCode(t *testing.T) {
 }
 
 func TestHandlerCreateDrugMissingName(t *testing.T) {
-	server := NewCatalogServer(&fakeDrugStore{}, nil)
-	_, err := server.CreateDrug(context.Background(), connect.NewRequest(&catalogv1.CreateDrugRequest{
+	server := NewCatalogServerWithAuth(&fakeDrugStore{}, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.CreateDrug(context.Background(), newAuthedRequest(&catalogv1.CreateDrugRequest{
 		Code: "CODE",
 	}))
 	if err == nil {
@@ -145,9 +164,9 @@ func TestHandlerCreateDrugMissingName(t *testing.T) {
 
 func TestHandlerCreateDrugStoreError(t *testing.T) {
 	fakeStore := &fakeDrugStore{createErr: errors.New("db down")}
-	server := NewCatalogServer(fakeStore, nil)
+	server := NewCatalogServerWithAuth(fakeStore, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.CreateDrug(context.Background(), connect.NewRequest(&catalogv1.CreateDrugRequest{
+	_, err := server.CreateDrug(context.Background(), newAuthedRequest(&catalogv1.CreateDrugRequest{
 		Code: "C",
 		Name: "N",
 	}))
@@ -171,9 +190,9 @@ func TestHandlerGetDrugSuccess(t *testing.T) {
 			UpdatedAt: now,
 		},
 	}
-	server := NewCatalogServer(fakeStore, nil)
+	server := NewCatalogServerWithAuth(fakeStore, nil, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.GetDrug(context.Background(), connect.NewRequest(&catalogv1.GetDrugRequest{
+	resp, err := server.GetDrug(context.Background(), newAuthedRequest(&catalogv1.GetDrugRequest{
 		Id: "drug-1",
 	}))
 	if err != nil {
@@ -188,8 +207,8 @@ func TestHandlerGetDrugSuccess(t *testing.T) {
 }
 
 func TestHandlerGetDrugMissingID(t *testing.T) {
-	server := NewCatalogServer(&fakeDrugStore{}, nil)
-	_, err := server.GetDrug(context.Background(), connect.NewRequest(&catalogv1.GetDrugRequest{}))
+	server := NewCatalogServerWithAuth(&fakeDrugStore{}, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.GetDrug(context.Background(), newAuthedRequest(&catalogv1.GetDrugRequest{}))
 	if err == nil {
 		t.Fatal("expected error for missing id")
 	}
@@ -200,9 +219,9 @@ func TestHandlerGetDrugMissingID(t *testing.T) {
 
 func TestHandlerGetDrugNotFound(t *testing.T) {
 	fakeStore := &fakeDrugStore{getByIDResult: nil}
-	server := NewCatalogServer(fakeStore, nil)
+	server := NewCatalogServerWithAuth(fakeStore, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.GetDrug(context.Background(), connect.NewRequest(&catalogv1.GetDrugRequest{
+	_, err := server.GetDrug(context.Background(), newAuthedRequest(&catalogv1.GetDrugRequest{
 		Id: "ghost",
 	}))
 	if err == nil {
@@ -221,9 +240,9 @@ func TestHandlerListDrugs(t *testing.T) {
 		},
 		listNextToken: "d2",
 	}
-	server := NewCatalogServer(fakeStore, nil)
+	server := NewCatalogServerWithAuth(fakeStore, nil, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.ListDrugs(context.Background(), connect.NewRequest(&catalogv1.ListDrugsRequest{
+	resp, err := server.ListDrugs(context.Background(), newAuthedRequest(&catalogv1.ListDrugsRequest{
 		PageSize: 2,
 	}))
 	if err != nil {
@@ -247,9 +266,9 @@ func TestHandlerUpdateDrugSuccess(t *testing.T) {
 	}
 	auditDB := &fakeAuditDB{FakeExecer: &testutil.FakeExecer{}}
 	auditWriter := audit.NewWriterWithDB(auditDB)
-	server := NewCatalogServer(fakeStore, auditWriter)
+	server := NewCatalogServerWithAuth(fakeStore, auditWriter, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.UpdateDrug(context.Background(), connect.NewRequest(&catalogv1.UpdateDrugRequest{
+	resp, err := server.UpdateDrug(context.Background(), newAuthedRequest(&catalogv1.UpdateDrugRequest{
 		Drug: &catalogv1.Drug{
 			Id:   "drug-1",
 			Code: "CODE",
@@ -269,8 +288,8 @@ func TestHandlerUpdateDrugSuccess(t *testing.T) {
 }
 
 func TestHandlerUpdateDrugMissingID(t *testing.T) {
-	server := NewCatalogServer(&fakeDrugStore{}, nil)
-	_, err := server.UpdateDrug(context.Background(), connect.NewRequest(&catalogv1.UpdateDrugRequest{}))
+	server := NewCatalogServerWithAuth(&fakeDrugStore{}, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.UpdateDrug(context.Background(), newAuthedRequest(&catalogv1.UpdateDrugRequest{}))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -281,9 +300,9 @@ func TestHandlerUpdateDrugMissingID(t *testing.T) {
 
 func TestHandlerUpdateDrugNotFound(t *testing.T) {
 	fakeStore := &fakeDrugStore{updateResult: nil}
-	server := NewCatalogServer(fakeStore, nil)
+	server := NewCatalogServerWithAuth(fakeStore, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.UpdateDrug(context.Background(), connect.NewRequest(&catalogv1.UpdateDrugRequest{
+	_, err := server.UpdateDrug(context.Background(), newAuthedRequest(&catalogv1.UpdateDrugRequest{
 		Drug: &catalogv1.Drug{Id: "ghost"},
 	}))
 	if err == nil {
@@ -304,9 +323,9 @@ func TestHandlerDeactivateDrugSuccess(t *testing.T) {
 	}
 	auditDB := &fakeAuditDB{FakeExecer: &testutil.FakeExecer{}}
 	auditWriter := audit.NewWriterWithDB(auditDB)
-	server := NewCatalogServer(fakeStore, auditWriter)
+	server := NewCatalogServerWithAuth(fakeStore, auditWriter, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.DeactivateDrug(context.Background(), connect.NewRequest(&catalogv1.DeactivateDrugRequest{
+	resp, err := server.DeactivateDrug(context.Background(), newAuthedRequest(&catalogv1.DeactivateDrugRequest{
 		Id: "drug-1",
 	}))
 	if err != nil {
@@ -322,8 +341,8 @@ func TestHandlerDeactivateDrugSuccess(t *testing.T) {
 }
 
 func TestHandlerDeactivateDrugMissingID(t *testing.T) {
-	server := NewCatalogServer(&fakeDrugStore{}, nil)
-	_, err := server.DeactivateDrug(context.Background(), connect.NewRequest(&catalogv1.DeactivateDrugRequest{}))
+	server := NewCatalogServerWithAuth(&fakeDrugStore{}, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.DeactivateDrug(context.Background(), newAuthedRequest(&catalogv1.DeactivateDrugRequest{}))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -334,9 +353,9 @@ func TestHandlerDeactivateDrugMissingID(t *testing.T) {
 
 func TestHandlerDeactivateDrugNotFound(t *testing.T) {
 	fakeStore := &fakeDrugStore{deactivateResult: nil}
-	server := NewCatalogServer(fakeStore, nil)
+	server := NewCatalogServerWithAuth(fakeStore, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.DeactivateDrug(context.Background(), connect.NewRequest(&catalogv1.DeactivateDrugRequest{
+	_, err := server.DeactivateDrug(context.Background(), newAuthedRequest(&catalogv1.DeactivateDrugRequest{
 		Id: "ghost",
 	}))
 	if err == nil {
@@ -448,8 +467,8 @@ func TestStoreImplementsDrugStore(t *testing.T) {
 func TestCatalogServerImplementsHandler(t *testing.T) {
 	// Compile-time check is at the top of handler.go.
 	// This test confirms the runtime factory works.
-	server := NewCatalogServer(&fakeDrugStore{}, nil)
-	_, err := server.GetDrug(context.Background(), connect.NewRequest(&catalogv1.GetDrugRequest{}))
+	server := NewCatalogServerWithAuth(&fakeDrugStore{}, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.GetDrug(context.Background(), newAuthedRequest(&catalogv1.GetDrugRequest{}))
 	// We expect an error because the fake returns a nil audit error or something.
 	// The point is the call compiled and ran.
 	_ = err

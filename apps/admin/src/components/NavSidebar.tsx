@@ -13,6 +13,7 @@ function roleLabel(role: Role): string {
 }
 
 const NAV_ITEMS = [
+  { label: "Projects",  path: "/projects" },
   { label: "Drugs",     path: "/drugs" },
   { label: "Inventory", path: "/inventory" },
   { label: "Users",     path: "/users" },

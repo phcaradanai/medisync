@@ -167,7 +167,7 @@ func run() (runErr error) {
 
 	// ── Catalog ─────────────────────────────────────────────────────
 	catalogStore := catalog.NewStore(pool, auditw)
-	catalogServer := catalog.NewCatalogServer(catalogStore, auditw)
+	catalogServer := catalog.NewCatalogServerWithAuth(catalogStore, auditw, newCatalogTokenParser(jwtMgr))
 	catalogPath, catalogHandler := catalogv1connect.NewCatalogServiceHandler(catalogServer)
 	mux.Handle(catalogPath, catalogHandler)
 
@@ -354,5 +354,27 @@ func (p *cabinetTokenParser) Parse(tokenString string) (*cabinet.TokenClaims, er
 		Role:      claims.Role,
 		ProjectID: claims.ProjectID,
 		WardIDs:   claims.WardIDs,
+	}, nil
+}
+
+// ── Catalog token parser adapter ──────────────────────────────────
+
+func newCatalogTokenParser(mgr *identity.JWTManager) *catalogTokenParser {
+	return &catalogTokenParser{mgr: mgr}
+}
+
+type catalogTokenParser struct {
+	mgr *identity.JWTManager
+}
+
+func (p *catalogTokenParser) Parse(tokenString string) (catalog.TokenClaimser, error) {
+	claims, err := p.mgr.Parse(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	return catalog.Claims{
+		Subject:   claims.Subject,
+		Role:      claims.Role,
+		ProjectID: claims.ProjectID,
 	}, nil
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
 	catalogv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/catalog/v1"
@@ -18,10 +20,35 @@ var (
 	ErrDrugNameRequired = errors.New("drug name is required")
 	ErrDrugIDRequired   = errors.New("drug id is required")
 	ErrDrugNotFound     = errors.New("drug not found")
+	ErrNotAuthenticated = errors.New("authentication required")
+	ErrNotAdmin         = errors.New("admin role required")
 )
 
-// DrugStore is the narrow drug-persistence interface consumed by the
-// catalog handler. The concrete Store satisfies this interface.
+// TokenClaimser is the narrow JWT claims interface consumed by catalog.
+// Avoids circular dependency on package identity.
+type TokenClaimser interface {
+	GetSubject() string
+	GetRole() string
+	GetProjectID() string
+}
+
+// Claims adapter wraps identity TokenClaims for catalog.
+type Claims struct {
+	Subject   string
+	Role      string
+	ProjectID string
+}
+
+func (c Claims) GetSubject() string   { return c.Subject }
+func (c Claims) GetRole() string      { return c.Role }
+func (c Claims) GetProjectID() string { return c.ProjectID }
+
+// TokenParser validates a Bearer token and returns claims.
+type TokenParser interface {
+	Parse(tokenString string) (TokenClaimser, error)
+}
+
+// DrugStore is the narrow drug-persistence interface.
 type DrugStore interface {
 	Create(ctx context.Context, d Drug) (*Drug, error)
 	GetByID(ctx context.Context, id string) (*Drug, error)
@@ -31,14 +58,14 @@ type DrugStore interface {
 	Deactivate(ctx context.Context, id string) (*Drug, error)
 }
 
-// Compile-time checks.
 var _ catalogv1connect.CatalogServiceHandler = (*CatalogServer)(nil)
 var _ DrugStore = (*Store)(nil)
 
 // CatalogServer is the Connect-RPC handler for CatalogService.
 type CatalogServer struct {
-	store DrugStore
-	audit *audit.Writer
+	store  DrugStore
+	audit  *audit.Writer
+	parser TokenParser
 }
 
 // NewCatalogServer creates a CatalogServer with the given store and audit writer.
@@ -46,12 +73,39 @@ func NewCatalogServer(store DrugStore, aw *audit.Writer) *CatalogServer {
 	return &CatalogServer{store: store, audit: aw}
 }
 
-// CreateDrug handles drug creation. It validates required fields, creates
-// the drug via the store, and writes an audit entry.
-func (s *CatalogServer) CreateDrug(
-	ctx context.Context,
-	req *connect.Request[catalogv1.CreateDrugRequest],
-) (*connect.Response[catalogv1.CreateDrugResponse], error) {
+// NewCatalogServerWithAuth creates a CatalogServer with JWT auth.
+func NewCatalogServerWithAuth(store DrugStore, aw *audit.Writer, parser TokenParser) *CatalogServer {
+	return &CatalogServer{store: store, audit: aw, parser: parser}
+}
+
+// authenticate extracts and validates JWT claims. Returns connect.Error on failure.
+func (s *CatalogServer) authenticate(header http.Header) (TokenClaimser, *connect.Error) {
+	if s.parser == nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, ErrNotAuthenticated)
+	}
+	auth := header.Get("Authorization")
+	if auth == "" {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authorization header is required"))
+	}
+	parts := strings.SplitN(auth, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authorization header must use Bearer scheme"))
+	}
+	claims, err := s.parser.Parse(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
+	}
+	if claims.GetRole() != "ADMIN" {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
+	}
+	return claims, nil
+}
+
+func (s *CatalogServer) CreateDrug(ctx context.Context, req *connect.Request[catalogv1.CreateDrugRequest]) (*connect.Response[catalogv1.CreateDrugResponse], error) {
+	claims, cerr := s.authenticate(req.Header())
+	if cerr != nil {
+		return nil, cerr
+	}
 	msg := req.Msg
 	if msg == nil || msg.Code == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrDrugCodeRequired)
@@ -74,24 +128,21 @@ func (s *CatalogServer) CreateDrug(
 	}
 
 	s.writeAudit(ctx, audit.Entry{
-		Actor:    "system",
-		Action:   "drug.created",
-		Entity:   "drug",
-		EntityID: drug.ID,
-		Detail:   auditDetail{Code: drug.Code, Name: drug.Name},
+		Actor:     claims.GetSubject(),
+		Action:    "drug.created",
+		Entity:    "drug",
+		EntityID:  drug.ID,
+		ProjectID: claims.GetProjectID(),
+		Detail:    auditDetail{Code: drug.Code, Name: drug.Name},
 	})
 
-	return connect.NewResponse(&catalogv1.CreateDrugResponse{
-		Drug: toProtoDrug(drug),
-	}), nil
+	return connect.NewResponse(&catalogv1.CreateDrugResponse{Drug: toProtoDrug(drug)}), nil
 }
 
-// GetDrug fetches a single drug by ID. Returns NotFound when the drug
-// does not exist.
-func (s *CatalogServer) GetDrug(
-	ctx context.Context,
-	req *connect.Request[catalogv1.GetDrugRequest],
-) (*connect.Response[catalogv1.GetDrugResponse], error) {
+func (s *CatalogServer) GetDrug(ctx context.Context, req *connect.Request[catalogv1.GetDrugRequest]) (*connect.Response[catalogv1.GetDrugResponse], error) {
+	if _, cerr := s.authenticate(req.Header()); cerr != nil {
+		return nil, cerr
+	}
 	msg := req.Msg
 	if msg == nil || msg.Id == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrDrugIDRequired)
@@ -105,17 +156,13 @@ func (s *CatalogServer) GetDrug(
 		return nil, connect.NewError(connect.CodeNotFound, ErrDrugNotFound)
 	}
 
-	return connect.NewResponse(&catalogv1.GetDrugResponse{
-		Drug: toProtoDrug(drug),
-	}), nil
+	return connect.NewResponse(&catalogv1.GetDrugResponse{Drug: toProtoDrug(drug)}), nil
 }
 
-// ListDrugs searches and paginates the drug catalog. An empty query
-// returns all drugs. By default only active drugs are returned.
-func (s *CatalogServer) ListDrugs(
-	ctx context.Context,
-	req *connect.Request[catalogv1.ListDrugsRequest],
-) (*connect.Response[catalogv1.ListDrugsResponse], error) {
+func (s *CatalogServer) ListDrugs(ctx context.Context, req *connect.Request[catalogv1.ListDrugsRequest]) (*connect.Response[catalogv1.ListDrugsResponse], error) {
+	if _, cerr := s.authenticate(req.Header()); cerr != nil {
+		return nil, cerr
+	}
 	msg := req.Msg
 	query := ""
 	includeInactive := false
@@ -141,18 +188,14 @@ func (s *CatalogServer) ListDrugs(
 		pbDrugs = append(pbDrugs, toProtoDrug(d))
 	}
 
-	return connect.NewResponse(&catalogv1.ListDrugsResponse{
-		Drugs:         pbDrugs,
-		NextPageToken: nextToken,
-	}), nil
+	return connect.NewResponse(&catalogv1.ListDrugsResponse{Drugs: pbDrugs, NextPageToken: nextToken}), nil
 }
 
-// UpdateDrug modifies an existing drug. The request Drug must include
-// the id. All mutable fields are applied; timestamps are managed server-side.
-func (s *CatalogServer) UpdateDrug(
-	ctx context.Context,
-	req *connect.Request[catalogv1.UpdateDrugRequest],
-) (*connect.Response[catalogv1.UpdateDrugResponse], error) {
+func (s *CatalogServer) UpdateDrug(ctx context.Context, req *connect.Request[catalogv1.UpdateDrugRequest]) (*connect.Response[catalogv1.UpdateDrugResponse], error) {
+	claims, cerr := s.authenticate(req.Header())
+	if cerr != nil {
+		return nil, cerr
+	}
 	msg := req.Msg
 	if msg == nil || msg.Drug == nil || msg.Drug.Id == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrDrugIDRequired)
@@ -178,24 +221,22 @@ func (s *CatalogServer) UpdateDrug(
 	}
 
 	s.writeAudit(ctx, audit.Entry{
-		Actor:    "system",
-		Action:   "drug.updated",
-		Entity:   "drug",
-		EntityID: drug.ID,
-		Detail:   auditDetail{Code: drug.Code, Name: drug.Name},
+		Actor:     claims.GetSubject(),
+		Action:    "drug.updated",
+		Entity:    "drug",
+		EntityID:  drug.ID,
+		ProjectID: claims.GetProjectID(),
+		Detail:    auditDetail{Code: drug.Code, Name: drug.Name},
 	})
 
-	return connect.NewResponse(&catalogv1.UpdateDrugResponse{
-		Drug: toProtoDrug(drug),
-	}), nil
+	return connect.NewResponse(&catalogv1.UpdateDrugResponse{Drug: toProtoDrug(drug)}), nil
 }
 
-// DeactivateDrug soft-deletes a drug by setting active=false. It is
-// idempotent — deactivating an already-inactive drug returns NotFound.
-func (s *CatalogServer) DeactivateDrug(
-	ctx context.Context,
-	req *connect.Request[catalogv1.DeactivateDrugRequest],
-) (*connect.Response[catalogv1.DeactivateDrugResponse], error) {
+func (s *CatalogServer) DeactivateDrug(ctx context.Context, req *connect.Request[catalogv1.DeactivateDrugRequest]) (*connect.Response[catalogv1.DeactivateDrugResponse], error) {
+	claims, cerr := s.authenticate(req.Header())
+	if cerr != nil {
+		return nil, cerr
+	}
 	msg := req.Msg
 	if msg == nil || msg.Id == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrDrugIDRequired)
@@ -210,20 +251,17 @@ func (s *CatalogServer) DeactivateDrug(
 	}
 
 	s.writeAudit(ctx, audit.Entry{
-		Actor:    "system",
-		Action:   "drug.deactivated",
-		Entity:   "drug",
-		EntityID: drug.ID,
-		Detail:   auditDetail{Code: drug.Code, Name: drug.Name},
+		Actor:     claims.GetSubject(),
+		Action:    "drug.deactivated",
+		Entity:    "drug",
+		EntityID:  drug.ID,
+		ProjectID: claims.GetProjectID(),
+		Detail:    auditDetail{Code: drug.Code, Name: drug.Name},
 	})
 
-	return connect.NewResponse(&catalogv1.DeactivateDrugResponse{
-		Drug: toProtoDrug(drug),
-	}), nil
+	return connect.NewResponse(&catalogv1.DeactivateDrugResponse{Drug: toProtoDrug(drug)}), nil
 }
 
-// writeAudit records an audit entry when the audit writer is configured.
-// Audit failures are logged but do not cause the RPC to fail.
 func (s *CatalogServer) writeAudit(ctx context.Context, e audit.Entry) {
 	if s.audit == nil {
 		return
@@ -231,7 +269,6 @@ func (s *CatalogServer) writeAudit(ctx context.Context, e audit.Entry) {
 	_ = s.audit.Write(ctx, e)
 }
 
-// toProtoDrug converts a domain Drug to a proto Drug. Safe for nil input.
 func toProtoDrug(d *Drug) *catalogv1.Drug {
 	if d == nil {
 		return nil

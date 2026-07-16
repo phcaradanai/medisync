@@ -8,6 +8,7 @@ import { InventoryPage } from "./features/inventory/InventoryPage";
 import { UsersPage } from "./features/users/UsersPage";
 import { KiosksPage } from "./features/kiosks/KiosksPage";
 import { CabinetsPage } from "./features/cabinets/CabinetsPage";
+import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { checkContrast } from "./utils/contrast";
 
 let contrastChecked = false;
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="users" element={<UsersPage />} />
           <Route path="kiosks" element={<KiosksPage />} />
           <Route path="cabinets" element={<CabinetsPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
         </Route>
       </Routes>
     </AuthProvider>

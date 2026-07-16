@@ -4,6 +4,7 @@ import { createClient, type Transport } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import {
   IdentityService,
+  ProjectService,
 } from "@medisync/proto/medisync/identity/v1/identity_pb";
 import {
   CatalogService,
@@ -62,6 +63,8 @@ export function resetTransport() {
 }
 
 export const identityClient = createClient(IdentityService, getTransport());
+
+export const projectClient = createClient(ProjectService, getTransport());
 
 export const catalogClient = createClient(CatalogService, getTransport());
 
