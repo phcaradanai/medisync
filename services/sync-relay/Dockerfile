@@ -14,7 +14,8 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /bin/sync-relay ./cmd/
 FROM alpine:3.21
 
 RUN apk add --no-cache ca-certificates sqlite-libs && \
-    adduser -D -H -h /app sync-relay
+    adduser -D -H -h /app sync-relay && \
+    mkdir -p /data && chown sync-relay /data
 
 COPY --from=build /bin/sync-relay /app/sync-relay
 
