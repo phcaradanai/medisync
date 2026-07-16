@@ -32,18 +32,18 @@ function makeTransport(): Transport {
   return createConnectTransport({
     // Empty baseUrl — Vite dev server proxies /medisync.* to core.
     baseUrl: "",
+    useBinaryFormat: false,
     fetch: (input, init) => {
       const token = tokenStore();
+      const headers: Record<string, string> = {
+        ...(init?.headers as Record<string, string>),
+      };
       if (token) {
-        init = {
-          ...init,
-          headers: {
-            ...(init?.headers as Record<string, string>),
-            Authorization: `Bearer ${token}`,
-          },
-        };
+        headers["Authorization"] = `Bearer ${token}`;
       }
-      return fetch(input, init);
+      // Force application/json: server doesn't support application/connect+json.
+      headers["Content-Type"] = "application/json";
+      return fetch(input, { ...init, headers });
     },
   });
 }
