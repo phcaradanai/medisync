@@ -24,8 +24,9 @@ USER medisync
 
 EXPOSE 8080
 
-# Process-alive health check only — core has no HTTP server yet.
-# TODO(M2): switch to HTTP health check when the Connect-RPC server exists.
+# Process-alive health check. Core serves Connect-RPC on :8080 via HTTP/2.
+# Container orchestration uses this to detect crashes and trigger restarts.
+# For deeper health (DB/NATS reachable), use the Connect reflection API.
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
     CMD pgrep -x core || exit 1
 
