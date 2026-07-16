@@ -213,6 +213,14 @@ func run() (runErr error) {
 	defer stopPrintConsumer()
 
 	// ── Vending ───────────────────────────────────────────────────────
+	// DispenseRequestedConsumer bridges dispense.requested → fulfillment.requested.
+	dispReqConsumer := dispensing.NewDispenseRequestedConsumer(js, log)
+	stopDispReq, err := dispReqConsumer.Start(startupCtx)
+	if err != nil {
+		return err
+	}
+	defer stopDispReq()
+
 	vendingClient := vending.NewClientFromConfig(cfg)
 	vendingConsumer := vending.NewConsumer(js, vendingClient, auditw, log)
 	stopVendingConsumer, err := vendingConsumer.Start(startupCtx)

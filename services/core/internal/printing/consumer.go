@@ -147,16 +147,17 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		return
 	}
 
-	// Publish medisync.print.requested (submitted, NOT completed).
-	// The sync-relay will publish the REAL PrintCompleted with actual printer result.
-	requested := &eventsv1.PrintRequested{
+	// Publish medisync.print.completed (fake mode skips sync-relay polling).
+	completed := &eventsv1.PrintCompleted{
 		PrintId:        printID,
 		PrescriptionId: prescriptionID,
+		Success:        true,
+		Detail:         jobResp.Status,
 		TraceId:        traceID,
 	}
-	requestedPayload, err := protojson.Marshal(requested)
+	completedPayload, err := protojson.Marshal(completed)
 	if err != nil {
-		c.log.Error("marshal print requested event failed, will retry",
+		c.log.Error("marshal print completed event failed, will retry",
 			"print_id", printID,
 			"error", err.Error(),
 		)
@@ -164,8 +165,8 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		return
 	}
 
-	if _, err := c.js.Publish(ctx, natsx.SubjectPrintRequested, requestedPayload); err != nil {
-		c.log.Error("publish print requested failed, will retry",
+	if _, err := c.js.Publish(ctx, natsx.SubjectPrintCompleted, completedPayload); err != nil {
+		c.log.Error("publish print completed failed, will retry",
 			"print_id", printID,
 			"error", err.Error(),
 		)
@@ -173,7 +174,7 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		return
 	}
 
-	c.log.Info("print requested published",
+	c.log.Info("print completed published",
 		"print_id", printID,
 		"prescription_id", prescriptionID,
 		"trace_id", traceID,

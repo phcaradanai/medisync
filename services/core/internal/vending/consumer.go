@@ -8,6 +8,7 @@ import (
 
 	"github.com/nats-io/nats.go/jetstream"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
@@ -178,20 +179,21 @@ func (c *Consumer) publishCompleted(ctx context.Context, fulfillmentID, prescrip
 	if c.js == nil {
 		return fmt.Errorf("no jetstream context")
 	}
-	completed := &eventsv1.FulfillmentCompleted{
-		FulfillmentId:  fulfillmentID,
+	completed := &eventsv1.DispenseCompleted{
+		DispenseId:     fulfillmentID,
 		PrescriptionId: prescriptionID,
-		Success:        success,
-		Detail:         detail,
 		TraceId:        traceID,
+	}
+	if success {
+		completed.CompletedAt = timestamppb.Now()
 	}
 	payload, err := protojson.Marshal(completed)
 	if err != nil {
-		return fmt.Errorf("marshal fulfillment.completed: %w", err)
+		return fmt.Errorf("marshal dispense.completed: %w", err)
 	}
-	_, err = c.js.Publish(ctx, natsx.SubjectFulfillmentCompleted, payload)
+	_, err = c.js.Publish(ctx, natsx.SubjectDispenseCompleted, payload)
 	if err != nil {
-		return fmt.Errorf("publish fulfillment.completed: %w", err)
+		return fmt.Errorf("publish dispense.completed: %w", err)
 	}
 	c.log.Info("fulfillment completed published",
 		"fulfillment_id", fulfillmentID,

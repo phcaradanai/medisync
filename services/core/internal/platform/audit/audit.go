@@ -59,9 +59,18 @@ func (w *Writer) Write(ctx context.Context, e Entry) error {
 	_, err := w.db.Exec(ctx,
 		`INSERT INTO audit.audit_log (trace_id, actor, action, entity, entity_id, project_id, detail)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		e.TraceID, e.Actor, e.Action, e.Entity, e.EntityID, e.ProjectID, detail)
+		e.TraceID, e.Actor, e.Action, e.Entity, e.EntityID, nilIfEmpty(e.ProjectID), detail)
 	if err != nil {
 		return fmt.Errorf("write audit log: %w", err)
 	}
 	return nil
+}
+
+// nilIfEmpty returns nil when s is empty, otherwise returns s.
+// Use this for nullable UUID columns to avoid PostgreSQL casting errors.
+func nilIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }

@@ -98,11 +98,20 @@ func (s *Store) GetByID(ctx context.Context, id string) (*PrescriptionRow, error
 // GetByPrescriptionID fetches a prescription by external (prescription_id, source_system).
 // Returns nil when not found.
 func (s *Store) GetByPrescriptionID(ctx context.Context, prescriptionID, sourceSystem string) (*PrescriptionRow, error) {
-	row := s.db.QueryRow(ctx,
-		`SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
-		        items, state, failure_reason, issued_at, created_at, updated_at
-		   FROM dispensing.prescription
-		  WHERE prescription_id = $1 AND source_system = $2`, prescriptionID, sourceSystem)
+	var row pgx.Row
+	if sourceSystem != "" {
+		row = s.db.QueryRow(ctx,
+			`SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
+			        items, state, failure_reason, issued_at, created_at, updated_at
+			   FROM dispensing.prescription
+			  WHERE prescription_id = $1 AND source_system = $2`, prescriptionID, sourceSystem)
+	} else {
+		row = s.db.QueryRow(ctx,
+			`SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
+			        items, state, failure_reason, issued_at, created_at, updated_at
+			   FROM dispensing.prescription
+			  WHERE prescription_id = $1`, prescriptionID)
+	}
 	return scanPrescription(row)
 }
 
