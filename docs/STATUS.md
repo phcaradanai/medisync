@@ -1,10 +1,18 @@
 # Project Status
 
-**Last updated:** 2026-07-14
+**Last updated:** 2026-07-16
 
 ## Current Milestone
 
-**M3 — Hardware & printing bridges (Day 4–5)** — Next. M2 Core Domain fully complete 2026-07-14.
+**Connected M3-M5 delivery** — M2 is complete. Hardware/printing bridges, kiosk authentication, withdraw/refill UI, Admin CRUD, and deterministic demo seed now exist, but release is not accepted until project-scoped authorization and a fresh Compose end-to-end run pass.
+
+## Current Integration Status
+
+- Project/tenant scope is the active blocker. The current kiosk JWT has kiosk identity but no project, cabinet, or ward authorization context.
+- Admin has initial users, kiosks, drugs, and inventory surfaces; they need a shared project selector, permission-aware actions, and browser acceptance.
+- Kiosk code/PIN login, session restore, withdrawal, and refill screens exist. They need scoped claims and live fulfillment verification.
+- Core has vending and printing consumers plus fake hardware support. The stock/print/audit terminal-state path still needs independent Compose acceptance.
+- Demo seed is available through `npm run seed:demo`, reset through `npm run seed:demo-reset`, and documented in `docs/DEMO_SEED.md`.
 
 ## Completed Work
 
@@ -158,8 +166,8 @@ Current integration tests use transactions with explicit rollback and do not add
 
 ## Next Actions
 
-1. **M3 — Fulfillment bridge:** vending-3d-ctl-agent client (health check, dispense write, timeout/504 handling), fake mode for dev
-2. **M3 — Print bridge:** print_ops client (idempotent `request_id`, `X-Api-Key`), sticker payload from prescription
-3. **M3 — Full happy path:** wire `READY → DISPENSING → DISPENSED` + sticker against fake hardware
-4. Address Team 12 F2 finding (404 vs 403 ward enum leak) before production hardening
-5. Give the producer team the canonical v1 event contract and run a real-payload contract test before production
+1. `t_8ae8ba59` — project scope, memberships, permissions, and scoped kiosk claims.
+2. `t_07f326b9`, `t_3101e0c5`, `t_53f8c8ef`, `t_68fb1a06` — parallel Admin, Kiosk, and fulfillment lanes after foundation review.
+3. `t_f9aed710`, `t_f7b11503`, `t_fe376f28` — refill, withdrawal, and operations workflows.
+4. `t_a19913c6` — independent fresh-Compose and browser acceptance.
+5. Address Team 12 F2 and validate a real producer payload before production.

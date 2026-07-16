@@ -42,22 +42,22 @@
 - Exit: prescription event → `READY` prescription queryable via Connect-RPC; unit tests on state machine + authorization
 
 ### M3 — Hardware & printing bridges (Day 4–5)
-- [ ] fulfillment: vending-3d-ctl-agent client (health check, dispense write, timeout/504 handling), fake mode for dev
-- [ ] printing: print_ops client (idempotent `request_id`, `X-Api-Key`), sticker payload from prescription
-- [ ] Full happy path wired: `READY → DISPENSING → DISPENSED` + sticker, against fake hardware
+- [x] Initial vending-3d-ctl-agent client/consumer and fake mode implemented
+- [x] Initial print_ops client/consumer and completion handling implemented
+- [ ] Project/cabinet-scoped happy path verified: `READY → DISPENSING → DISPENSED | FAILED`, stock, sticker, and audit (`t_68fb1a06`)
 - Exit: one command demo — publish mock event, call dispense API, watch state machine complete with fake HW + real print_ops (fake printer adapter)
 
 ### M4 — Kiosk app (Day 5–7)
-- [ ] Auth screen (login; card scan if ready), session timeout
-- [ ] Withdraw flow: prescription list → confirm → live dispense status (hardware truth) → done/failed acknowledgment
-- [ ] Refill mode: peach band, slot list, count entry, confirm
+- [x] Code/PIN authentication, session restore, expiry, and logout foundation
+- [x] Initial withdraw flow: prescription list → confirm → status polling → done/failed acknowledgment
+- [x] Initial refill mode: slot list, count entry, confirm
 - [ ] Per DESIGN.md: kiosk scale tokens, ≥48px targets, Thai-first copy
 - Exit: complete withdraw + refill on touch-sized viewport against dev backend
 
 ### M5 — Admin app (Day 6–8, overlaps M4)
-- [ ] Login + shell (dark left nav, PrintOps register)
-- [ ] Drugs, slots/stock (live via `stock.changed`), users + ward roles
-- [ ] Audit trail view (filter by user/drug/date)
+- [x] Login and application shell foundation
+- [x] Initial users, kiosks, drugs, and inventory pages
+- [ ] Project-scoped projects, users/permissions, inventory, and audit acceptance (`t_07f326b9`, `t_3101e0c5`, `t_fe376f28`)
 - Exit: admin can fully provision a new drug into a slot and see it dispensable on kiosk
 
 ### M6 — Hardware integration & hardening (Day 8–9)
@@ -72,6 +72,15 @@
 - [ ] Seed/ops runbook, EVENTS.md payload registry finalized
 - [ ] Final pass: `/impeccable audit` kiosk + admin (contrast, touch targets, reduced motion)
 - Exit: fresh-machine deploy from README in <30 min
+
+## Connected Application Kanban (2026-07-16)
+
+Execution order: security foundation, parallel Admin/Kiosk/backend lanes, operational workflows, then independent acceptance. Every card uses an isolated worktree and has test plus live-browser exit criteria.
+
+1. `t_8ae8ba59` — project scope and permission foundation
+2. `t_07f326b9`, `t_3101e0c5`, `t_53f8c8ef`, `t_68fb1a06` — parallel application lanes
+3. `t_f9aed710`, `t_f7b11503`, `t_fe376f28` — refill, withdrawal, and operations workflows
+4. `t_a19913c6` — fresh Compose, isolation, fake hardware, printing, and browser release gate
 
 ## Working agreement (codex / claude / hermes)
 
