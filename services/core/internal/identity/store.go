@@ -57,7 +57,7 @@ func NewStoreWithDBAndHasher(db dbConn, hasher *CardTokenHasher) *Store {
 func (s *Store) GetByUsername(ctx context.Context, username string) (*User, error) {
 	row := s.db.QueryRow(ctx,
 		`SELECT id, username, password_hash, display_name, role, ward_ids,
-		        active, created_at, updated_at
+		        project_id, active, created_at, updated_at
 		   FROM identity.users WHERE username = $1`, username)
 	return scanUser(row)
 }
@@ -67,7 +67,7 @@ func (s *Store) GetByUsername(ctx context.Context, username string) (*User, erro
 func (s *Store) GetByID(ctx context.Context, id string) (*User, error) {
 	row := s.db.QueryRow(ctx,
 		`SELECT id, username, password_hash, display_name, role, ward_ids,
-		        active, created_at, updated_at
+		        project_id, active, created_at, updated_at
 		   FROM identity.users WHERE id = $1`, id)
 	return scanUser(row)
 }
@@ -86,7 +86,7 @@ func (s *Store) GetByCardToken(ctx context.Context, token string) (*User, error)
 	}
 	row := s.db.QueryRow(ctx,
 		`SELECT id, username, password_hash, display_name, role, ward_ids,
-		        active, created_at, updated_at
+		        project_id, active, created_at, updated_at
 		   FROM identity.users WHERE card_token_hash = $1`, hash)
 	return scanUser(row)
 }
@@ -130,32 +130,48 @@ func (s *Store) SeedAdmin(ctx context.Context, passwordHash string) (bool, error
 	}
 
 	_, err := s.db.Exec(ctx,
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids)
-		 VALUES ('admin', $1, 'Administrator', 'ADMIN', '{}')`, passwordHash)
+		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, project_id)
+		 VALUES ('admin', $1, 'Administrator', 'ADMIN', '{}', NULL)`, passwordHash)
 	if err != nil {
 		return false, fmt.Errorf("seed admin: %w", err)
 	}
 	return true, nil
 }
 
-// ListUsers returns all users, optionally filtered by a search query on
-// username or display_name.
-func (s *Store) ListUsers(ctx context.Context, query string) ([]*User, error) {
+// ListUsers returns users, optionally filtered by search query and project.
+// When projectID is non-empty, only users in that project are returned.
+func (s *Store) ListUsers(ctx context.Context, query, projectID string) ([]*User, error) {
 	var rows pgx.Rows
 	var err error
+
+	baseSQL := `SELECT id, username, password_hash, display_name, role, ward_ids,
+	                   project_id, active, created_at, updated_at
+	              FROM identity.users`
+	var conditions []string
+	var args []any
+	argIdx := 1
+
 	if query != "" {
-		pattern := "%" + query + "%"
-		rows, err = s.db.Query(ctx,
-			`SELECT id, username, password_hash, display_name, role, ward_ids, active, created_at, updated_at
-			   FROM identity.users
-			  WHERE username ILIKE $1 OR display_name ILIKE $1
-			  ORDER BY username ASC`, pattern)
-	} else {
-		rows, err = s.db.Query(ctx,
-			`SELECT id, username, password_hash, display_name, role, ward_ids, active, created_at, updated_at
-			   FROM identity.users
-			  ORDER BY username ASC`)
+		conditions = append(conditions, fmt.Sprintf("(username ILIKE $%d OR display_name ILIKE $%d)", argIdx, argIdx))
+		args = append(args, "%"+query+"%")
+		argIdx++
 	}
+	if projectID != "" {
+		conditions = append(conditions, fmt.Sprintf("project_id = $%d", argIdx))
+		args = append(args, projectID)
+		argIdx++
+	}
+
+	sql := baseSQL
+	if len(conditions) > 0 {
+		sql += " WHERE " + conditions[0]
+		for i := 1; i < len(conditions); i++ {
+			sql += " AND " + conditions[i]
+		}
+	}
+	sql += " ORDER BY username ASC"
+
+	rows, err = s.db.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
@@ -181,16 +197,16 @@ func (s *Store) ListUsers(ctx context.Context, query string) ([]*User, error) {
 
 // CreateUser inserts a new user. Returns ErrUsernameTaken when the
 // username already exists.
-func (s *Store) CreateUser(ctx context.Context, username, passwordHash, displayName string, role Role, wardIDs []string) (*User, error) {
+func (s *Store) CreateUser(ctx context.Context, username, passwordHash, displayName string, role Role, wardIDs []string, projectID string) (*User, error) {
 	if wardIDs == nil {
 		wardIDs = []string{}
 	}
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
-		 VALUES ($1, $2, $3, $4, $5, true)
+		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, project_id, active)
+		 VALUES ($1, $2, $3, $4, $5, $6, true)
 		 ON CONFLICT (username) DO NOTHING
-		 RETURNING id, username, password_hash, display_name, role, ward_ids, active, created_at, updated_at`,
-		username, passwordHash, displayName, string(role), wardIDs)
+		 RETURNING id, username, password_hash, display_name, role, ward_ids, project_id, active, created_at, updated_at`,
+		username, passwordHash, displayName, string(role), wardIDs, projectID)
 	u, err := scanUser(row)
 	if err != nil {
 		return nil, fmt.Errorf("create user: %w", err)
@@ -203,7 +219,7 @@ func (s *Store) CreateUser(ctx context.Context, username, passwordHash, displayN
 
 // UpdateUser modifies an existing user's mutable fields.
 // Returns nil when the user is not found.
-func (s *Store) UpdateUser(ctx context.Context, id string, displayName *string, role *Role, active *bool, wardIDs []string) (*User, error) {
+func (s *Store) UpdateUser(ctx context.Context, id string, displayName *string, role *Role, active *bool, wardIDs []string, projectID *string) (*User, error) {
 	// Build dynamic UPDATE. Only set fields that are provided.
 	setClauses := []string{}
 	args := []any{id}
@@ -229,6 +245,11 @@ func (s *Store) UpdateUser(ctx context.Context, id string, displayName *string, 
 		args = append(args, wardIDs)
 		argIdx++
 	}
+	if projectID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("project_id = $%d", argIdx))
+		args = append(args, *projectID)
+		argIdx++
+	}
 	if len(setClauses) == 0 {
 		// Nothing to update — return the current user.
 		return s.GetByID(ctx, id)
@@ -238,7 +259,7 @@ func (s *Store) UpdateUser(ctx context.Context, id string, displayName *string, 
 
 	querySQL := fmt.Sprintf(
 		`UPDATE identity.users SET %s WHERE id = $1
-		 RETURNING id, username, password_hash, display_name, role, ward_ids, active, created_at, updated_at`,
+		 RETURNING id, username, password_hash, display_name, role, ward_ids, project_id, active, created_at, updated_at`,
 		joinWithCommas(setClauses))
 
 	row := s.db.QueryRow(ctx, querySQL, args...)
@@ -256,13 +277,15 @@ func joinWithCommas(parts []string) string {
 	return s
 }
 
-// scanUser maps a pgx.Row to a User from a 9-column result (no card data).
+// scanUser maps a pgx.Row to a User from a 10-column result (no card data).
+// Columns: id, username, password_hash, display_name, role, ward_ids,
+//          project_id, active, created_at, updated_at.
 // Returns nil when the row is empty (pgx.ErrNoRows).
 func scanUser(row pgx.Row) (*User, error) {
 	var u User
 	var createdAt, updatedAt time.Time
 	err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName,
-		(*roleScanner)(&u.Role), &u.WardIDs,
+		(*roleScanner)(&u.Role), &u.WardIDs, &u.ProjectID,
 		&u.Active, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -273,6 +296,103 @@ func scanUser(row pgx.Row) (*User, error) {
 	u.CreatedAt = createdAt
 	u.UpdatedAt = updatedAt
 	return &u, nil
+}
+
+// ── Project CRUD ──────────────────────────────────────────────────
+
+// CreateProject inserts a new project.
+func (s *Store) CreateProject(ctx context.Context, name, slug string) (*Project, error) {
+	var p Project
+	var createdAt, updatedAt time.Time
+	err := s.db.QueryRow(ctx,
+		`INSERT INTO identity.projects (name, slug) VALUES ($1, $2)
+		 RETURNING id, name, slug, active, created_at, updated_at`,
+		name, slug).Scan(&p.ID, &p.Name, &p.Slug, &p.Active, &createdAt, &updatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create project: %w", err)
+	}
+	p.CreatedAt = createdAt
+	p.UpdatedAt = updatedAt
+	return &p, nil
+}
+
+// GetProject returns a project by ID, or nil if not found.
+func (s *Store) GetProject(ctx context.Context, id string) (*Project, error) {
+	var p Project
+	var createdAt, updatedAt time.Time
+	err := s.db.QueryRow(ctx,
+		`SELECT id, name, slug, active, created_at, updated_at
+		   FROM identity.projects WHERE id = $1`, id).Scan(
+		&p.ID, &p.Name, &p.Slug, &p.Active, &createdAt, &updatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get project: %w", err)
+	}
+	p.CreatedAt = createdAt
+	p.UpdatedAt = updatedAt
+	return &p, nil
+}
+
+// ListProjects returns all projects.
+func (s *Store) ListProjects(ctx context.Context) ([]*Project, error) {
+	rows, err := s.db.Query(ctx,
+		`SELECT id, name, slug, active, created_at, updated_at
+		   FROM identity.projects ORDER BY name ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("list projects: %w", err)
+	}
+	defer rows.Close()
+	var projects []*Project
+	for rows.Next() {
+		var p Project
+		var ca, ua time.Time
+		if err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.Active, &ca, &ua); err != nil {
+			return nil, fmt.Errorf("scan project: %w", err)
+		}
+		p.CreatedAt = ca
+		p.UpdatedAt = ua
+		projects = append(projects, &p)
+	}
+	return projects, rows.Err()
+}
+
+// UpdateProject modifies a project's name or active flag.
+func (s *Store) UpdateProject(ctx context.Context, id string, name *string, active *bool) (*Project, error) {
+	setClauses := []string{}
+	args := []any{id}
+	argIdx := 2
+	if name != nil {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
+		args = append(args, *name)
+		argIdx++
+	}
+	if active != nil {
+		setClauses = append(setClauses, fmt.Sprintf("active = $%d", argIdx))
+		args = append(args, *active)
+		argIdx++
+	}
+	if len(setClauses) == 0 {
+		return s.GetProject(ctx, id)
+	}
+	setClauses = append(setClauses, "updated_at = now()")
+	querySQL := fmt.Sprintf(
+		`UPDATE identity.projects SET %s WHERE id = $1
+		 RETURNING id, name, slug, active, created_at, updated_at`,
+		joinWithCommas(setClauses))
+	var p Project
+	var ca, ua time.Time
+	err := s.db.QueryRow(ctx, querySQL, args...).Scan(&p.ID, &p.Name, &p.Slug, &p.Active, &ca, &ua)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("update project: %w", err)
+	}
+	p.CreatedAt = ca
+	p.UpdatedAt = ua
+	return &p, nil
 }
 
 // roleScanner scans a text column into a Role, rejecting unknown values.

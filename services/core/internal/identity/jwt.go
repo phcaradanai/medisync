@@ -21,8 +21,9 @@ func (realClock) Now() time.Time { return time.Now() }
 // TokenClaims carries the identity JWT payload.
 type TokenClaims struct {
 	jwt.RegisteredClaims
-	Role    string   `json:"role"`
-	WardIDs []string `json:"ward_ids"`
+	Role      string   `json:"role"`
+	ProjectID string   `json:"project_id"`
+	WardIDs   []string `json:"ward_ids"`
 }
 
 // KioskTokenClaims carries the kiosk JWT payload.
@@ -30,6 +31,7 @@ type KioskTokenClaims struct {
 	jwt.RegisteredClaims
 	Code        string `json:"code"`
 	DisplayName string `json:"display_name"`
+	ProjectID   string `json:"project_id"`
 }
 
 // JWTManager issues and validates HS256 JWTs. All operations reject
@@ -70,8 +72,9 @@ func (m *JWTManager) Issue(user *User) (string, time.Time, error) {
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 		},
-		Role:    string(user.Role),
-		WardIDs: user.WardIDs,
+		Role:      string(user.Role),
+		ProjectID: user.ProjectID,
+		WardIDs:   user.WardIDs,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -125,6 +128,7 @@ func (m *JWTManager) IssueKiosk(k *Kiosk) (string, time.Time, error) {
 		},
 		Code:        k.Code,
 		DisplayName: k.DisplayName,
+		ProjectID:   k.ProjectID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

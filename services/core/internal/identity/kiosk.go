@@ -12,6 +12,7 @@ type Kiosk struct {
 	DisplayName string
 	PinHash     string
 	Active      bool
+	ProjectID   string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

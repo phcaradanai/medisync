@@ -13,7 +13,7 @@ const (
 	RoleRefiller   Role = "REFILLER"
 )
 
-// User is the domain model. It decouples the store from proto types.
+// User is the domain model.
 type User struct {
 	ID           string
 	Username     string
@@ -22,12 +22,20 @@ type User struct {
 	Role         Role
 	WardIDs      []string
 	Active       bool
+	ProjectID    string    // empty = SYSADMIN (cross-project)
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
 
-// Can checks whether this user is authorized to perform an action in a ward.
-// Admins can act in any ward; other roles must be scoped to a ward they belong to.
+// IsSysadmin returns true when the user is a cross-project super admin
+// (ADMIN role with no project binding).
+func (u *User) IsSysadmin() bool {
+	return u.Role == RoleAdmin && u.ProjectID == ""
+}
+
+// Can checks whether this user is authorized to act in a ward.
+// SYSADMIN and project ADMIN can act in any ward within their project;
+// other roles must be scoped to a ward they belong to.
 func (u *User) Can(wardID string) bool {
 	if u.Role == RoleAdmin {
 		return true
@@ -38,4 +46,14 @@ func (u *User) Can(wardID string) bool {
 		}
 	}
 	return false
+}
+
+// Project is the domain model for a multi-tenant project.
+type Project struct {
+	ID        string
+	Name      string
+	Slug      string
+	Active    bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

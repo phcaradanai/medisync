@@ -86,12 +86,12 @@ func (r *fakeRow) Scan(dest ...any) error {
 }
 
 // rowWithUser returns a fakeRow that fills dest with a sample user.
-// Matches the 9-column scan used by GetByUsername / GetByID.
+// Matches the 10-column scan used by GetByUsername / GetByID.
 func rowWithUser(u User) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 9 {
-				return fmt.Errorf("expected 9 dests, got %d", len(dest))
+			if len(dest) != 10 {
+				return fmt.Errorf("expected 10 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = u.ID
 			*(dest[1].(*string)) = u.Username
@@ -103,11 +103,12 @@ func rowWithUser(u User) *fakeRow {
 			}
 			wardIDs := dest[5].(*[]string)
 			*wardIDs = append(*wardIDs, u.WardIDs...)
-			*(dest[6].(*bool)) = u.Active
-			if dt, ok := dest[7].(*time.Time); ok {
+			*(dest[6].(*string)) = u.ProjectID
+			*(dest[7].(*bool)) = u.Active
+			if dt, ok := dest[8].(*time.Time); ok {
 				*dt = u.CreatedAt
 			}
-			if dt, ok := dest[8].(*time.Time); ok {
+			if dt, ok := dest[9].(*time.Time); ok {
 				*dt = u.UpdatedAt
 			}
 			return nil

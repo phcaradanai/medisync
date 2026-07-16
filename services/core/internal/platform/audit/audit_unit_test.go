@@ -65,7 +65,7 @@ func TestWriteDefaultsActor(t *testing.T) {
 	}
 
 	call := fake.LastCall()
-	// Args: trace_id, actor, action, entity, entity_id, detail
+	// Args: trace_id, actor, action, entity, entity_id, project_id, detail
 	if len(call.Args) < 2 {
 		t.Fatal("expected at least 2 args")
 	}
@@ -125,10 +125,10 @@ func TestWriteWithDetail(t *testing.T) {
 	}
 
 	call := fake.LastCall()
-	// Detail is arg[5] — should be JSON bytes.
-	detailRaw, ok := call.Args[5].([]byte)
+	// Detail is arg[6] — should be JSON bytes.
+	detailRaw, ok := call.Args[6].([]byte)
 	if !ok {
-		t.Fatalf("detail arg[5] is not []byte, got %T", call.Args[5])
+		t.Fatalf("detail arg[6] is not []byte, got %T", call.Args[6])
 	}
 
 	var detail map[string]any
@@ -166,7 +166,7 @@ func TestWriteEmptyDetail(t *testing.T) {
 	}
 
 	call := fake.LastCall()
-	detailRaw := call.Args[5].([]byte)
+	detailRaw := call.Args[6].([]byte)
 	if string(detailRaw) != "{}" {
 		t.Errorf("nil detail should be '{}', got %q", string(detailRaw))
 	}
@@ -192,7 +192,7 @@ func TestWriteEmptyStructDetail(t *testing.T) {
 	}
 
 	call := fake.LastCall()
-	detailRaw := call.Args[5].([]byte)
+	detailRaw := call.Args[6].([]byte)
 	if string(detailRaw) != "{}" {
 		t.Errorf("empty struct detail should be '{}', got %q", string(detailRaw))
 	}
@@ -285,8 +285,8 @@ func TestWriteSQLAndArgs(t *testing.T) {
 		t.Error("SQL missing expected columns")
 	}
 
-	if len(call.Args) != 6 {
-		t.Fatalf("expected 6 args, got %d", len(call.Args))
+	if len(call.Args) != 7 {
+		t.Fatalf("expected 7 args, got %d", len(call.Args))
 	}
 	if call.Args[0] != "trace-sql-001" {
 		t.Errorf("arg[0] trace_id = %v", call.Args[0])
@@ -303,8 +303,8 @@ func TestWriteSQLAndArgs(t *testing.T) {
 	if call.Args[4] != "RX-001" {
 		t.Errorf("arg[4] entity_id = %v", call.Args[4])
 	}
-	detailRaw := call.Args[5].([]byte)
+	detailRaw := call.Args[6].([]byte)
 	if !strings.Contains(string(detailRaw), "count") {
-		t.Errorf("arg[5] detail missing 'count': %s", string(detailRaw))
+		t.Errorf("arg[6] detail missing 'count': %s", string(detailRaw))
 	}
 }

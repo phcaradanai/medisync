@@ -19,12 +19,12 @@ type Entry struct {
 	Action   string // e.g. "prescription.received"
 	Entity   string // e.g. "prescription"
 	EntityID string
-	Detail   any // JSON-serializable context; nil becomes {}
+	// ProjectID scopes this entry to a project for multi-tenant isolation.
+	ProjectID string
+	Detail    any // JSON-serializable context; nil becomes {}
 }
 
-// Writer persists audit entries to PostgreSQL. The exported NewWriter
-// constructor accepts *pgxpool.Pool for production wiring; unit tests
-// inject a testutil.Execer fake through NewWriterWithDB.
+// Writer persists audit entries to PostgreSQL.
 type Writer struct {
 	db testutil.Execer
 }
@@ -35,7 +35,6 @@ func NewWriter(pool *pgxpool.Pool) *Writer {
 }
 
 // NewWriterWithDB creates a Writer backed by an arbitrary Execer.
-// Exported for use by integration and unit tests.
 func NewWriterWithDB(db testutil.Execer) *Writer {
 	return &Writer{db: db}
 }
@@ -58,9 +57,9 @@ func (w *Writer) Write(ctx context.Context, e Entry) error {
 	}
 
 	_, err := w.db.Exec(ctx,
-		`INSERT INTO audit.audit_log (trace_id, actor, action, entity, entity_id, detail)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		e.TraceID, e.Actor, e.Action, e.Entity, e.EntityID, detail)
+		`INSERT INTO audit.audit_log (trace_id, actor, action, entity, entity_id, project_id, detail)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		e.TraceID, e.Actor, e.Action, e.Entity, e.EntityID, e.ProjectID, detail)
 	if err != nil {
 		return fmt.Errorf("write audit log: %w", err)
 	}

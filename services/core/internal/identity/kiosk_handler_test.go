@@ -31,6 +31,19 @@ func (s *fakeKioskStore) List(_ context.Context) ([]*Kiosk, error) {
 	return s.allKiosks, nil
 }
 
+func (s *fakeKioskStore) ListByProject(_ context.Context, projectID string) ([]*Kiosk, error) {
+	if s.listErr != nil {
+		return nil, s.listErr
+	}
+	var result []*Kiosk
+	for _, k := range s.allKiosks {
+		if k.ProjectID == projectID {
+			result = append(result, k)
+		}
+	}
+	return result, nil
+}
+
 func (s *fakeKioskStore) Create(_ context.Context, k *Kiosk) error {
 	if s.createErr != nil {
 		return s.createErr

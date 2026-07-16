@@ -24,19 +24,20 @@ func (r *fakeKioskRow) Scan(dest ...any) error {
 	return r.scanErr
 }
 
-// kioskScanData returns a Scan function that fills dest with a Kiosk (7 columns).
+// kioskScanData returns a Scan function that fills dest with a Kiosk (8 columns).
 func kioskScanData(k Kiosk) func(dest ...any) error {
 	return func(dest ...any) error {
-		if len(dest) != 7 {
-			return errors.New("expected 7 dests")
+		if len(dest) != 8 {
+			return errors.New("expected 8 dests")
 		}
 		*(dest[0].(*string)) = k.ID
 		*(dest[1].(*string)) = k.Code
 		*(dest[2].(*string)) = k.DisplayName
 		*(dest[3].(*string)) = k.PinHash
 		*(dest[4].(*bool)) = k.Active
-		*(dest[5].(*time.Time)) = k.CreatedAt
-		*(dest[6].(*time.Time)) = k.UpdatedAt
+		*(dest[5].(*string)) = k.ProjectID
+		*(dest[6].(*time.Time)) = k.CreatedAt
+		*(dest[7].(*time.Time)) = k.UpdatedAt
 		return nil
 	}
 }
@@ -68,16 +69,17 @@ func (r *fakeKioskRows) Scan(dest ...any) error {
 		return errors.New("fakeKioskRows: index out of range")
 	}
 	k := r.kiosks[r.idx-1]
-	if len(dest) != 7 {
-		return errors.New("expected 7 dests")
+	if len(dest) != 8 {
+		return errors.New("expected 8 dests")
 	}
 	*(dest[0].(*string)) = k.ID
 	*(dest[1].(*string)) = k.Code
 	*(dest[2].(*string)) = k.DisplayName
 	*(dest[3].(*string)) = k.PinHash
 	*(dest[4].(*bool)) = k.Active
-	*(dest[5].(*time.Time)) = k.CreatedAt
-	*(dest[6].(*time.Time)) = k.UpdatedAt
+	*(dest[5].(*string)) = k.ProjectID
+	*(dest[6].(*time.Time)) = k.CreatedAt
+	*(dest[7].(*time.Time)) = k.UpdatedAt
 	return nil
 }
 
