@@ -18,6 +18,7 @@ COPY apps/kiosk/uno.config.ts ./apps/kiosk/
 COPY apps/kiosk/index.html ./apps/kiosk/
 
 RUN npm ci --no-audit --no-fund
+RUN npm rebuild
 
 COPY apps/kiosk/src ./apps/kiosk/src
 

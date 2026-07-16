@@ -18,6 +18,7 @@ COPY apps/admin/uno.config.ts ./apps/admin/
 COPY apps/admin/index.html ./apps/admin/
 
 RUN npm ci --no-audit --no-fund
+RUN npm rebuild
 
 COPY apps/admin/src ./apps/admin/src
 
