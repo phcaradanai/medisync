@@ -17,8 +17,7 @@ COPY apps/kiosk/vite.config.ts ./apps/kiosk/
 COPY apps/kiosk/uno.config.ts ./apps/kiosk/
 COPY apps/kiosk/index.html ./apps/kiosk/
 
-RUN npm ci --no-audit --no-fund
-RUN npm rebuild
+RUN npm install --no-audit --no-fund
 
 COPY apps/kiosk/src ./apps/kiosk/src
 
