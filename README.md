@@ -149,7 +149,55 @@ npm run seed:demo        # drugs, slots, kiosk for testing
 
 ## Config
 
-Default DB: `postgres://medisync:medisync@localhost:5432/medisync`  
+Default DB: `postgres://medisync:***@localhost:5432/medisync`  
 Core config via env — see `services/core/internal/platform/config/config.go`  
-Env template: `.env.example` (dev) / `.env.production.example` (prod)  
+Env template: `.env.example` (dev) / `.env.production.example` (prod)
+
+## Deployment
+
+### Development (local Docker)
+```bash
+# From workspace root
+cp .env .env.local && vim .env.local    # set dev secrets
+docker compose --env-file .env.local up -d --build
+
+# Seed demo data (optional)
+docker compose exec medisync-core /app/demoseed --project default
+
+# Verify
+curl http://localhost:8080/health
+open http://localhost:5175  # kiosk
+open http://localhost:5176  # admin (login: admin / <ADMIN_BOOTSTRAP_PASSWORD>)
+```
+
+### Production
+```bash
+# 1. Copy and fill production secrets
+cp .env.production .env.prod.local
+vim .env.prod.local  # set ALL required passwords/keys
+
+# 2. Generate secrets (example)
+openssl rand -hex 32  # JWT_SECRET, CARD_TOKEN_HMAC_KEY
+openssl rand -base64 32  # API keys
+
+# 3. Deploy
+docker compose -f docker-compose.prod.yml --env-file .env.prod.local up -d --build
+
+# 4. Verify
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs medisync-core
+
+# 5. Seed initial data
+docker compose -f docker-compose.prod.yml exec medisync-core /app/demoseed --project default
+```
+
+### Backup
+```bash
+# Database
+docker compose exec postgres pg_dump -U medisync medisync > backup-$(date +%Y%m%d).sql
+
+# Restore
+docker compose exec -T postgres psql -U medisync medisync < backup.sql
+```
+
 Fake clients: `PRINT_OPS_FAKE=true`, `VENDING_FAKE=true` for dev without external services
