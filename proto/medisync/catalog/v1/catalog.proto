@@ -24,6 +24,8 @@ message Drug {
   google.protobuf.Timestamp updated_at = 11;
   // Human-readable display name (Thai/English label).
   string display_name = 12;
+  // Project this drug belongs to (multi-tenant).
+  string project_id = 13;
 }
 
 message CreateDrugRequest {
@@ -35,6 +37,8 @@ message CreateDrugRequest {
   string unit = 6;
   string sticker_note = 7;
   string display_name = 8;
+  // Required for SYSADMIN; project-scoped users inherit from JWT.
+  string project_id = 9;
 }
 
 message CreateDrugResponse {

@@ -47,19 +47,19 @@ func NewStoreWithDB(db dbConn, aw *audit.Writer) *Store {
 // with server-generated fields (id, timestamps).
 func (s *Store) Create(ctx context.Context, d Drug) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO catalog.drug (code, name, display_name, generic_name, form, strength, unit, sticker_note)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`INSERT INTO catalog.drug (code, name, display_name, generic_name, form, strength, unit, sticker_note, project_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		 RETURNING id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
-		           active, created_at, updated_at`,
-		d.Code, d.Name, d.DisplayName, d.GenericName, d.Form, d.Strength, d.Unit, d.StickerNote)
+		           active, project_id, created_at, updated_at`,
+		d.Code, d.Name, d.DisplayName, d.GenericName, d.Form, d.Strength, d.Unit, d.StickerNote, d.ProjectID)
 	return scanDrug(row)
 }
 
 // GetByID returns a Drug by UUID, or nil if not found.
 func (s *Store) GetByID(ctx context.Context, id string) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
-		`SELECT id, code, name, generic_name, form, strength, unit, sticker_note,
-		        active, created_at, updated_at
+		`SELECT id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
+		        active, project_id, created_at, updated_at
 		   FROM catalog.drug WHERE id = $1`, id)
 	return scanDrug(row)
 }
@@ -67,8 +67,8 @@ func (s *Store) GetByID(ctx context.Context, id string) (*Drug, error) {
 // GetByCode returns a Drug by hospital code, or nil if not found.
 func (s *Store) GetByCode(ctx context.Context, code string) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
-		`SELECT id, code, name, generic_name, form, strength, unit, sticker_note,
-		        active, created_at, updated_at
+		`SELECT id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
+		        active, project_id, created_at, updated_at
 		   FROM catalog.drug WHERE code = $1`, code)
 	return scanDrug(row)
 }
@@ -116,8 +116,8 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 	}
 
 	querySQL := fmt.Sprintf(
-		`SELECT id, code, name, generic_name, form, strength, unit, sticker_note,
-		        active, created_at, updated_at
+		`SELECT id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
+		        active, project_id, created_at, updated_at
 		   FROM catalog.drug %s ORDER BY id ASC LIMIT $%d`,
 		whereSQL, argIdx)
 	args = append(args, pageSize+1)
@@ -132,9 +132,9 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 	for rows.Next() {
 		var d Drug
 		var createdAt, updatedAt time.Time
-		if err := rows.Scan(&d.ID, &d.Code, &d.Name, &d.GenericName,
+		if err := rows.Scan(&d.ID, &d.Code, &d.Name, &d.DisplayName, &d.GenericName,
 			&d.Form, &d.Strength, &d.Unit, &d.StickerNote,
-			&d.Active, &createdAt, &updatedAt); err != nil {
+			&d.Active, &d.ProjectID, &createdAt, &updatedAt); err != nil {
 			return nil, "", fmt.Errorf("scan drug row: %w", err)
 		}
 		d.CreatedAt = createdAt
@@ -161,12 +161,12 @@ func (s *Store) Update(ctx context.Context, d Drug) (*Drug, error) {
 		`UPDATE catalog.drug
 		   SET code = $1, name = $2, generic_name = $3, form = $4,
 		       strength = $5, unit = $6, sticker_note = $7, active = $8,
-		       updated_at = now()
-		 WHERE id = $9
-		 RETURNING id, code, name, generic_name, form, strength, unit, sticker_note,
-		           active, created_at, updated_at`,
+		       display_name = $9, updated_at = now()
+		 WHERE id = $10
+		 RETURNING id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
+		           active, project_id, created_at, updated_at`,
 		d.Code, d.Name, d.GenericName, d.Form, d.Strength, d.Unit,
-		d.StickerNote, d.Active, d.ID)
+		d.StickerNote, d.Active, d.DisplayName, d.ID)
 	return scanDrug(row)
 }
 
@@ -177,8 +177,8 @@ func (s *Store) Deactivate(ctx context.Context, id string) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
 		`UPDATE catalog.drug SET active = false, updated_at = now()
 		 WHERE id = $1 AND active = true
-		 RETURNING id, code, name, generic_name, form, strength, unit, sticker_note,
-		           active, created_at, updated_at`,
+		 RETURNING id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
+		           active, project_id, created_at, updated_at`,
 		id)
 	return scanDrug(row)
 }
@@ -192,13 +192,13 @@ func (s *Store) writeAudit(ctx context.Context, e audit.Entry) {
 	_ = s.auditWriter.Write(ctx, e)
 }
 
-// scanDrug maps a pgx.Row to a Drug from a 12-column result.
+// scanDrug maps a pgx.Row to a Drug from a 13-column result.
 func scanDrug(row pgx.Row) (*Drug, error) {
 	var d Drug
 	var createdAt, updatedAt time.Time
 	err := row.Scan(&d.ID, &d.Code, &d.Name, &d.DisplayName, &d.GenericName,
 		&d.Form, &d.Strength, &d.Unit, &d.StickerNote,
-		&d.Active, &createdAt, &updatedAt)
+		&d.Active, &d.ProjectID, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

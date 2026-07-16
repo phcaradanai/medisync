@@ -40,7 +40,9 @@ type Drug struct {
 	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Human-readable display name (Thai/English label).
-	DisplayName   string `protobuf:"bytes,12,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	DisplayName string `protobuf:"bytes,12,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Project this drug belongs to (multi-tenant).
+	ProjectId     string `protobuf:"bytes,13,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -159,16 +161,25 @@ func (x *Drug) GetDisplayName() string {
 	return ""
 }
 
+func (x *Drug) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 type CreateDrugRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	GenericName   string                 `protobuf:"bytes,3,opt,name=generic_name,json=genericName,proto3" json:"generic_name,omitempty"`
-	Form          string                 `protobuf:"bytes,4,opt,name=form,proto3" json:"form,omitempty"`
-	Strength      string                 `protobuf:"bytes,5,opt,name=strength,proto3" json:"strength,omitempty"`
-	Unit          string                 `protobuf:"bytes,6,opt,name=unit,proto3" json:"unit,omitempty"`
-	StickerNote   string                 `protobuf:"bytes,7,opt,name=sticker_note,json=stickerNote,proto3" json:"sticker_note,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,8,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Code        string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	GenericName string                 `protobuf:"bytes,3,opt,name=generic_name,json=genericName,proto3" json:"generic_name,omitempty"`
+	Form        string                 `protobuf:"bytes,4,opt,name=form,proto3" json:"form,omitempty"`
+	Strength    string                 `protobuf:"bytes,5,opt,name=strength,proto3" json:"strength,omitempty"`
+	Unit        string                 `protobuf:"bytes,6,opt,name=unit,proto3" json:"unit,omitempty"`
+	StickerNote string                 `protobuf:"bytes,7,opt,name=sticker_note,json=stickerNote,proto3" json:"sticker_note,omitempty"`
+	DisplayName string                 `protobuf:"bytes,8,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Required for SYSADMIN; project-scoped users inherit from JWT.
+	ProjectId     string `protobuf:"bytes,9,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -255,6 +266,13 @@ func (x *CreateDrugRequest) GetStickerNote() string {
 func (x *CreateDrugRequest) GetDisplayName() string {
 	if x != nil {
 		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *CreateDrugRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -692,7 +710,7 @@ var File_medisync_catalog_v1_catalog_proto protoreflect.FileDescriptor
 
 const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
-	"!medisync/catalog/v1/catalog.proto\x12\x13medisync.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf9\x02\n" +
+	"!medisync/catalog/v1/catalog.proto\x12\x13medisync.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x98\x03\n" +
 	"\x04Drug\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -708,7 +726,9 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12!\n" +
-	"\fdisplay_name\x18\f \x01(\tR\vdisplayName\"\xe8\x01\n" +
+	"\fdisplay_name\x18\f \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\r \x01(\tR\tprojectId\"\x87\x02\n" +
 	"\x11CreateDrugRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -717,7 +737,9 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\bstrength\x18\x05 \x01(\tR\bstrength\x12\x12\n" +
 	"\x04unit\x18\x06 \x01(\tR\x04unit\x12!\n" +
 	"\fsticker_note\x18\a \x01(\tR\vstickerNote\x12!\n" +
-	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"C\n" +
+	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\t \x01(\tR\tprojectId\"C\n" +
 	"\x12CreateDrugResponse\x12-\n" +
 	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug\" \n" +
 	"\x0eGetDrugRequest\x12\x0e\n" +

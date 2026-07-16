@@ -114,6 +114,14 @@ func (s *CatalogServer) CreateDrug(ctx context.Context, req *connect.Request[cat
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrDrugNameRequired)
 	}
 
+	projectID := claims.GetProjectID()
+	if projectID == "" {
+		projectID = msg.ProjectId
+	}
+	if projectID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project_id is required"))
+	}
+
 	drug, err := s.store.Create(ctx, Drug{
 		Code:        msg.Code,
 		Name:        msg.Name,
@@ -123,6 +131,7 @@ func (s *CatalogServer) CreateDrug(ctx context.Context, req *connect.Request[cat
 		Strength:    msg.Strength,
 		Unit:        msg.Unit,
 		StickerNote: msg.StickerNote,
+		ProjectID:   projectID,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create drug: %w", err))
@@ -292,6 +301,7 @@ func toProtoDrug(d *Drug) *catalogv1.Drug {
 		Unit:        d.Unit,
 		StickerNote: d.StickerNote,
 		Active:      d.Active,
+		ProjectId:   d.ProjectID,
 		CreatedAt:   createdAt,
 		UpdatedAt:   updatedAt,
 	}

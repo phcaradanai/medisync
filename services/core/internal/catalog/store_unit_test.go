@@ -99,12 +99,12 @@ func (r *fakeRow) Scan(dest ...any) error {
 }
 
 // rowWithDrug returns a fakeRow that fills dest with a sample drug.
-// Matches the 11-column scan used by all catalog queries.
+// Matches the 13-column scan used by all catalog queries.
 func rowWithDrug(d Drug) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 12 {
-				return fmt.Errorf("expected 12 dests, got %d", len(dest))
+			if len(dest) != 13 {
+				return fmt.Errorf("expected 13 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = d.ID
 			*(dest[1].(*string)) = d.Code
@@ -116,10 +116,11 @@ func rowWithDrug(d Drug) *fakeRow {
 			*(dest[7].(*string)) = d.Unit
 			*(dest[8].(*string)) = d.StickerNote
 			*(dest[9].(*bool)) = d.Active
-			if dt, ok := dest[10].(*time.Time); ok {
+			*(dest[10].(*string)) = d.ProjectID
+			if dt, ok := dest[11].(*time.Time); ok {
 				*dt = d.CreatedAt
 			}
-			if dt, ok := dest[11].(*time.Time); ok {
+			if dt, ok := dest[12].(*time.Time); ok {
 				*dt = d.UpdatedAt
 			}
 			return nil
@@ -168,22 +169,24 @@ func (r *fakeRows) Scan(dest ...any) error {
 		return errors.New("no row to scan")
 	}
 	d := r.drugs[r.current-1]
-	if len(dest) != 11 {
-		return fmt.Errorf("expected 12 dests, got %d", len(dest))
+	if len(dest) != 13 {
+		return fmt.Errorf("expected 13 dests, got %d", len(dest))
 	}
 	*(dest[0].(*string)) = d.ID
 	*(dest[1].(*string)) = d.Code
 	*(dest[2].(*string)) = d.Name
-	*(dest[3].(*string)) = d.GenericName
-	*(dest[4].(*string)) = d.Form
-	*(dest[5].(*string)) = d.Strength
-	*(dest[6].(*string)) = d.Unit
-	*(dest[7].(*string)) = d.StickerNote
-	*(dest[8].(*bool)) = d.Active
-	if dt, ok := dest[9].(*time.Time); ok {
+	*(dest[3].(*string)) = d.DisplayName
+	*(dest[4].(*string)) = d.GenericName
+	*(dest[5].(*string)) = d.Form
+	*(dest[6].(*string)) = d.Strength
+	*(dest[7].(*string)) = d.Unit
+	*(dest[8].(*string)) = d.StickerNote
+	*(dest[9].(*bool)) = d.Active
+	*(dest[10].(*string)) = d.ProjectID
+	if dt, ok := dest[11].(*time.Time); ok {
 		*dt = d.CreatedAt
 	}
-	if dt, ok := dest[10].(*time.Time); ok {
+	if dt, ok := dest[12].(*time.Time); ok {
 		*dt = d.UpdatedAt
 	}
 	return nil
@@ -212,8 +215,8 @@ func TestScanDrugSuccess(t *testing.T) {
 
 	row := &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 12 {
-				return fmt.Errorf("expected 12 dests, got %d", len(dest))
+			if len(dest) != 13 {
+				return fmt.Errorf("expected 13 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = expected.ID
 			*(dest[1].(*string)) = expected.Code
@@ -225,7 +228,8 @@ func TestScanDrugSuccess(t *testing.T) {
 			*(dest[7].(*string)) = expected.Unit
 			*(dest[8].(*string)) = expected.StickerNote
 			*(dest[9].(*bool)) = expected.Active
-			// CreatedAt and UpdatedAt at positions 9 and 10
+			*(dest[10].(*string)) = expected.ProjectID
+			// CreatedAt and UpdatedAt at positions 11 and 12
 			return nil
 		},
 	}
@@ -314,8 +318,8 @@ func TestCreateDrugSuccess(t *testing.T) {
 	if !strings.Contains(call.sql, "INSERT INTO catalog.drug") {
 		t.Error("SQL should be INSERT INTO catalog.drug")
 	}
-	if len(call.args) != 8 {
-		t.Errorf("expected 8 args (with display_name), got %d", len(call.args))
+	if len(call.args) != 9 {
+		t.Errorf("expected 9 args (with display_name + project_id), got %d", len(call.args))
 	}
 }
 
