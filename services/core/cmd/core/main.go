@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/adm-chura3inter/medisync/services/core/internal/catalog"
@@ -46,6 +47,10 @@ func main() {
 }
 
 func run() (runErr error) {
+	// Load .env from project root (../../.env relative to services/core/ dir).
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load("../../.env")
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
