@@ -66,7 +66,7 @@ type assignCall struct {
 	lowThreshold int32
 }
 
-func (s *fakeSlotStore) ListSlots(_ context.Context, cabinetID string, lowOnly bool) ([]*Slot, error) {
+func (s *fakeSlotStore) ListSlots(_ context.Context, cabinetID, projectID string, lowOnly bool) ([]*Slot, error) {
 	return s.listResult, s.listErr
 }
 

@@ -39,16 +39,21 @@ func NewServer(store *Store, parser TokenParser) *Server {
 	return &Server{store: store, parser: parser}
 }
 
-// ListCabinets returns all cabinets. Requires admin role.
+// ListCabinets returns cabinets scoped to the caller's project.
+// Requires admin role. SYSADMIN sees all cabinets.
 func (s *Server) ListCabinets(
 	ctx context.Context,
 	req *connect.Request[cabinetv1.ListCabinetsRequest],
 ) (*connect.Response[cabinetv1.ListCabinetsResponse], error) {
-	if err := s.requireAdmin(req.Header()); err != nil {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
 		return nil, err
 	}
+	if claims.Role != "ADMIN" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
+	}
 
-	cabinets, err := s.store.List(ctx)
+	cabinets, err := s.store.List(ctx, claims.ProjectID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}

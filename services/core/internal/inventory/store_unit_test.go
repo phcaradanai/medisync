@@ -99,28 +99,27 @@ func (r *fakeRow) Scan(dest ...any) error {
 func rowWithSlot(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 10 {
-				return fmt.Errorf("expected 10 dests, got %d", len(dest))
+			if len(dest) != 13 {
+				return fmt.Errorf("expected 13 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
 			*(dest[2].(*string)) = sl.Code
-			*(dest[3].(*string)) = sl.DrugID
-			*(dest[4].(*string)) = sl.DrugCode
-			*(dest[5].(*string)) = sl.DrugName
-			*(dest[6].(*int32)) = sl.Capacity
-			*(dest[7].(*int32)) = sl.Quantity
-			*(dest[8].(*int32)) = sl.LowThreshold
-			// dest[9] and dest[10] are created_at and updated_at (time.Time)
-			if dt, ok := dest[9].(*time.Time); ok {
+			*(dest[3].(*string)) = sl.DisplayName
+			*(dest[4].(*string)) = sl.DrugID
+			*(dest[5].(*string)) = sl.DrugCode
+			*(dest[6].(*string)) = sl.DrugName
+			*(dest[7].(*int32)) = sl.Capacity
+			*(dest[8].(*int32)) = sl.Quantity
+			*(dest[9].(*int32)) = sl.LowThreshold
+			*(dest[10].(*string)) = sl.ProjectID
+			if dt, ok := dest[11].(*time.Time); ok {
 				*dt = sl.CreatedAt
 			}
-			// Wait — the scanSlot reads 10 fields? No, it's 10 fields + 2 timestamps from db = 12
-			// Actually looking at scanSlot: Scan(&slot.ID, &slot.CabinetID, &slot.Code,
-			//   &slot.DrugID, &slot.DrugCode, &slot.DrugName,
-			//   &slot.Capacity, &slot.Quantity, &slot.LowThreshold,
-			//   &createdAt, &updatedAt) → 11 dests
-			return fmt.Errorf("rowWithSlot needs 11 dests")
+			if dt, ok := dest[12].(*time.Time); ok {
+				*dt = sl.UpdatedAt
+			}
+			return nil
 		},
 	}
 }
@@ -165,22 +164,24 @@ func (r *fakeRows) Scan(dest ...any) error {
 		return errors.New("no row to scan")
 	}
 	sl := r.slots[r.current-1]
-	if len(dest) != 11 {
-		return fmt.Errorf("expected 11 dests, got %d", len(dest))
+	if len(dest) != 13 {
+		return fmt.Errorf("expected 13 dests, got %d", len(dest))
 	}
 	*(dest[0].(*string)) = sl.ID
 	*(dest[1].(*string)) = sl.CabinetID
 	*(dest[2].(*string)) = sl.Code
-	*(dest[3].(*string)) = sl.DrugID
-	*(dest[4].(*string)) = sl.DrugCode
-	*(dest[5].(*string)) = sl.DrugName
-	*(dest[6].(*int32)) = sl.Capacity
-	*(dest[7].(*int32)) = sl.Quantity
-	*(dest[8].(*int32)) = sl.LowThreshold
-	if dt, ok := dest[9].(*time.Time); ok {
+	*(dest[3].(*string)) = sl.DisplayName
+	*(dest[4].(*string)) = sl.DrugID
+	*(dest[5].(*string)) = sl.DrugCode
+	*(dest[6].(*string)) = sl.DrugName
+	*(dest[7].(*int32)) = sl.Capacity
+	*(dest[8].(*int32)) = sl.Quantity
+	*(dest[9].(*int32)) = sl.LowThreshold
+	*(dest[10].(*string)) = sl.ProjectID
+	if dt, ok := dest[11].(*time.Time); ok {
 		*dt = sl.CreatedAt
 	}
-	if dt, ok := dest[10].(*time.Time); ok {
+	if dt, ok := dest[12].(*time.Time); ok {
 		*dt = sl.UpdatedAt
 	}
 	return nil
@@ -198,22 +199,24 @@ func (r *fakeRows) Conn() *pgx.Conn { return nil }
 func rowWithSlot11(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 11 {
-				return fmt.Errorf("expected 11 dests, got %d", len(dest))
+			if len(dest) != 13 {
+				return fmt.Errorf("expected 13 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
 			*(dest[2].(*string)) = sl.Code
-			*(dest[3].(*string)) = sl.DrugID
-			*(dest[4].(*string)) = sl.DrugCode
-			*(dest[5].(*string)) = sl.DrugName
-			*(dest[6].(*int32)) = sl.Capacity
-			*(dest[7].(*int32)) = sl.Quantity
-			*(dest[8].(*int32)) = sl.LowThreshold
-			if dt, ok := dest[9].(*time.Time); ok {
+			*(dest[3].(*string)) = sl.DisplayName
+			*(dest[4].(*string)) = sl.DrugID
+			*(dest[5].(*string)) = sl.DrugCode
+			*(dest[6].(*string)) = sl.DrugName
+			*(dest[7].(*int32)) = sl.Capacity
+			*(dest[8].(*int32)) = sl.Quantity
+			*(dest[9].(*int32)) = sl.LowThreshold
+			*(dest[10].(*string)) = sl.ProjectID
+			if dt, ok := dest[11].(*time.Time); ok {
 				*dt = sl.CreatedAt
 			}
-			if dt, ok := dest[10].(*time.Time); ok {
+			if dt, ok := dest[12].(*time.Time); ok {
 				*dt = sl.UpdatedAt
 			}
 			return nil
@@ -240,22 +243,24 @@ func TestScanSlotSuccess(t *testing.T) {
 
 	row := &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 11 {
-				return fmt.Errorf("expected 11 dests, got %d", len(dest))
+			if len(dest) != 13 {
+				return fmt.Errorf("expected 13 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = expected.ID
 			*(dest[1].(*string)) = expected.CabinetID
 			*(dest[2].(*string)) = expected.Code
-			*(dest[3].(*string)) = expected.DrugID
-			*(dest[4].(*string)) = expected.DrugCode
-			*(dest[5].(*string)) = expected.DrugName
-			*(dest[6].(*int32)) = expected.Capacity
-			*(dest[7].(*int32)) = expected.Quantity
-			*(dest[8].(*int32)) = expected.LowThreshold
-			if dt, ok := dest[9].(*time.Time); ok {
+			*(dest[3].(*string)) = expected.DisplayName
+			*(dest[4].(*string)) = expected.DrugID
+			*(dest[5].(*string)) = expected.DrugCode
+			*(dest[6].(*string)) = expected.DrugName
+			*(dest[7].(*int32)) = expected.Capacity
+			*(dest[8].(*int32)) = expected.Quantity
+			*(dest[9].(*int32)) = expected.LowThreshold
+			*(dest[10].(*string)) = expected.ProjectID
+			if dt, ok := dest[11].(*time.Time); ok {
 				*dt = expected.CreatedAt
 			}
-			if dt, ok := dest[10].(*time.Time); ok {
+			if dt, ok := dest[12].(*time.Time); ok {
 				*dt = expected.UpdatedAt
 			}
 			return nil
@@ -349,7 +354,7 @@ func TestListSlotsEmpty(t *testing.T) {
 	db := &fakeDB{queryRows: &fakeRows{}, queryErr: nil}
 	store := NewStoreWithDB(db, nil)
 
-	slots, err := store.ListSlots(context.Background(), "", false)
+	slots, err := store.ListSlots(context.Background(), "", "", false)
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
@@ -367,7 +372,7 @@ func TestListSlotsWithResults(t *testing.T) {
 	db := &fakeDB{queryRows: &fakeRows{slots: slots}}
 	store := NewStoreWithDB(db, nil)
 
-	result, err := store.ListSlots(context.Background(), "", false)
+	result, err := store.ListSlots(context.Background(), "", "", false)
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
@@ -380,7 +385,7 @@ func TestListSlotsFilterByCabinet(t *testing.T) {
 	db := &fakeDB{queryRows: &fakeRows{}}
 	store := NewStoreWithDB(db, nil)
 
-	_, err := store.ListSlots(context.Background(), "cab-1", false)
+	_, err := store.ListSlots(context.Background(), "cab-1", "", false)
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
@@ -395,7 +400,7 @@ func TestListSlotsLowOnly(t *testing.T) {
 	db := &fakeDB{queryRows: &fakeRows{}}
 	store := NewStoreWithDB(db, nil)
 
-	_, err := store.ListSlots(context.Background(), "", true)
+	_, err := store.ListSlots(context.Background(), "", "", true)
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}

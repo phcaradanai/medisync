@@ -21,6 +21,8 @@ message Slot {
   int32 low_threshold = 9;
   google.protobuf.Timestamp updated_at = 10;
   string display_name = 11;
+  // Project this slot belongs to (multi-tenant).
+  string project_id = 12;
 }
 
 message ListSlotsRequest {

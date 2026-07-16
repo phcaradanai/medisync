@@ -1,6 +1,3 @@
-// Package inventory owns slot inventory tracking (cabinet slots, stock
-// levels, refill operations). Every state mutation is audited and
-// publishes stock.changed events via NATS JetStream.
 package inventory
 
 import "time"
@@ -19,6 +16,7 @@ type Slot struct {
 	Capacity     int32
 	Quantity     int32
 	LowThreshold int32
+	ProjectID    string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

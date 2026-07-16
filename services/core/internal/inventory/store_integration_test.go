@@ -145,7 +145,7 @@ func TestStoreListSlots_Integration(t *testing.T) {
 	seedSlot(t, store, cab1, code1)
 	seedSlot(t, store, cab2, code2)
 
-	slots, err := store.ListSlots(context.Background(), "", false)
+	slots, err := store.ListSlots(context.Background(), "", "", false)
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestStoreListSlotsFilterByCabinet_Integration(t *testing.T) {
 	seedSlot(t, store, cab1, code1)
 	seedSlot(t, store, cab2, code2)
 
-	slots, err := store.ListSlots(context.Background(), cab1, false)
+	slots, err := store.ListSlots(context.Background(), cab1, "", false)
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}

@@ -49,7 +49,7 @@ func (c Claims) GetProjectID() string { return c.ProjectID }
 type TokenParser interface{ Parse(tokenString string) (TokenClaimser, error) }
 
 type SlotStore interface {
-	ListSlots(ctx context.Context, cabinetID string, lowOnly bool) ([]*Slot, error)
+	ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool) ([]*Slot, error)
 	GetByID(ctx context.Context, id string) (*Slot, error)
 	AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugName string, capacity, lowThreshold int32) (*Slot, error)
 	Refill(ctx context.Context, id string, delta int32) (*Slot, error)
@@ -97,7 +97,8 @@ func (s *InventoryServer) authenticate(header http.Header) (TokenClaimser, *conn
 }
 
 func (s *InventoryServer) ListSlots(ctx context.Context, req *connect.Request[inventoryv1.ListSlotsRequest]) (*connect.Response[inventoryv1.ListSlotsResponse], error) {
-	if _, cerr := s.authenticate(req.Header()); cerr != nil {
+	claims, cerr := s.authenticate(req.Header())
+	if cerr != nil {
 		return nil, cerr
 	}
 	msg := req.Msg
@@ -105,7 +106,7 @@ func (s *InventoryServer) ListSlots(ctx context.Context, req *connect.Request[in
 	if msg != nil {
 		cabinetID, lowOnly = msg.CabinetId, msg.LowOnly
 	}
-	slots, err := s.store.ListSlots(ctx, cabinetID, lowOnly)
+	slots, err := s.store.ListSlots(ctx, cabinetID, claims.GetProjectID(), lowOnly)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list slots: %w", err))
 	}
@@ -263,5 +264,18 @@ func toProtoSlot(slot *Slot) *inventoryv1.Slot {
 	if slot == nil { return nil }
 	var ua *timestamppb.Timestamp
 	if !slot.UpdatedAt.IsZero() { ua = timestamppb.New(slot.UpdatedAt) }
-	return &inventoryv1.Slot{Id: slot.ID, CabinetId: slot.CabinetID, Code: slot.Code, DrugId: slot.DrugID, DrugCode: slot.DrugCode, DrugName: slot.DrugName, Capacity: slot.Capacity, Quantity: slot.Quantity, LowThreshold: slot.LowThreshold, UpdatedAt: ua, DisplayName: slot.DisplayName}
+	return &inventoryv1.Slot{Id: slot.ID, CabinetId: slot.CabinetID, Code: slot.Code, DisplayName: slot.DisplayName, DrugId: slot.DrugID, DrugCode: slot.DrugCode, DrugName: slot.DrugName, Capacity: slot.Capacity, Quantity: slot.Quantity, LowThreshold: slot.LowThreshold, ProjectId: slot.ProjectID, UpdatedAt: ua}
+}
+
+// ErrSlotNotFound is returned when a slot does not exist.
+var ErrSlotNotFound = errors.New("slot not found")
+
+// auditDetail is the JSON payload for inventory audit entries.
+type auditDetail struct {
+	SlotCode      string `json:"slot_code,omitempty"`
+	DrugCode      string `json:"drug_code,omitempty"`
+	CabinetID     string `json:"cabinet_id,omitempty"`
+	Delta         int32  `json:"delta,omitempty"`
+	QuantityAfter int32  `json:"quantity_after,omitempty"`
+	Reason        string `json:"reason,omitempty"`
 }

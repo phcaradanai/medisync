@@ -43,9 +43,9 @@ func NewStoreWithDB(db dbConn, aw *audit.Writer) *Store {
 	return &Store{db: db, auditWriter: aw}
 }
 
-// ListSlots returns all slots, optionally filtered by cabinet_id and by
-// low-stock status (quantity <= low_threshold).
-func (s *Store) ListSlots(ctx context.Context, cabinetID string, lowOnly bool) ([]*Slot, error) {
+// ListSlots returns all slots, optionally filtered by cabinet_id, by
+// low-stock status, and by project.
+func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool) ([]*Slot, error) {
 	var whereClauses []string
 	args := []any{}
 	argIdx := 1
@@ -53,6 +53,11 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID string, lowOnly bool) (
 	if cabinetID != "" {
 		whereClauses = append(whereClauses, fmt.Sprintf("cabinet_id = $%d", argIdx))
 		args = append(args, cabinetID)
+		argIdx++
+	}
+	if projectID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("project_id = $%d", argIdx))
+		args = append(args, projectID)
 		argIdx++
 	}
 	if lowOnly {
@@ -71,8 +76,8 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID string, lowOnly bool) (
 	}
 
 	query := fmt.Sprintf(
-		`SELECT id, cabinet_id, code, drug_id, drug_code, drug_name,
-		        capacity, quantity, low_threshold, created_at, updated_at
+		`SELECT id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		        capacity, quantity, low_threshold, project_id, created_at, updated_at
 		   FROM inventory.slot %s ORDER BY cabinet_id, code ASC`, whereSQL)
 
 	rows, err := s.db.Query(ctx, query, args...)
@@ -98,8 +103,8 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID string, lowOnly bool) (
 // GetByID returns a Slot by UUID, or nil if not found.
 func (s *Store) GetByID(ctx context.Context, id string) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
-		`SELECT id, cabinet_id, code, drug_id, drug_code, drug_name,
-		        capacity, quantity, low_threshold, created_at, updated_at
+		`SELECT id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		        capacity, quantity, low_threshold, project_id, created_at, updated_at
 		   FROM inventory.slot WHERE id = $1`, id)
 	return scanSlot(row)
 }
@@ -107,8 +112,8 @@ func (s *Store) GetByID(ctx context.Context, id string) (*Slot, error) {
 // GetByCabinetAndCode returns a Slot by cabinet_id + code, or nil if not found.
 func (s *Store) GetByCabinetAndCode(ctx context.Context, cabinetID, code string) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
-		`SELECT id, cabinet_id, code, drug_id, drug_code, drug_name,
-		        capacity, quantity, low_threshold, created_at, updated_at
+		`SELECT id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		        capacity, quantity, low_threshold, project_id, created_at, updated_at
 		   FROM inventory.slot WHERE cabinet_id = $1 AND code = $2`, cabinetID, code)
 	return scanSlot(row)
 }
@@ -122,8 +127,8 @@ func (s *Store) AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugNa
 		       capacity = $4, low_threshold = $5,
 		       quantity = LEAST(quantity, $4), updated_at = now()
 		 WHERE id = $6
-		 RETURNING id, cabinet_id, code, drug_id, drug_code, drug_name,
-		           capacity, quantity, low_threshold, created_at, updated_at`,
+		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		           capacity, quantity, low_threshold, project_id, created_at, updated_at`,
 		drugID, drugCode, drugName, capacity, lowThreshold, slotID)
 	return scanSlot(row)
 }
@@ -137,8 +142,8 @@ func (s *Store) Refill(ctx context.Context, id string, delta int32) (*Slot, erro
 		`UPDATE inventory.slot
 		   SET quantity = quantity + $1, updated_at = now()
 		 WHERE id = $2 AND quantity + $1 >= 0
-		 RETURNING id, cabinet_id, code, drug_id, drug_code, drug_name,
-		           capacity, quantity, low_threshold, created_at, updated_at`,
+		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		           capacity, quantity, low_threshold, project_id, created_at, updated_at`,
 		delta, id)
 	slot, err := scanSlot(row)
 	if err != nil {
@@ -168,8 +173,8 @@ func (s *Store) AdjustStock(ctx context.Context, id string, newQuantity int32) (
 		`UPDATE inventory.slot
 		   SET quantity = $1, updated_at = now()
 		 WHERE id = $2
-		 RETURNING id, cabinet_id, code, drug_id, drug_code, drug_name,
-		           capacity, quantity, low_threshold, created_at, updated_at`,
+		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		           capacity, quantity, low_threshold, project_id, created_at, updated_at`,
 		newQuantity, id)
 	return scanSlot(row)
 }
@@ -183,15 +188,15 @@ func (s *Store) writeAudit(ctx context.Context, e audit.Entry) {
 	_ = s.auditWriter.Write(ctx, e)
 }
 
-// scanSlot maps a pgx.Row or pgx.Rows to a Slot. Returns nil when the
-// row is empty (pgx.ErrNoRows).
+// scanSlot maps a pgx.Row or pgx.Rows to a Slot (13 columns).
+// Returns nil when the row is empty (pgx.ErrNoRows).
 func scanSlot(row pgx.Row) (*Slot, error) {
 	var slot Slot
 	var createdAt, updatedAt time.Time
-	err := row.Scan(&slot.ID, &slot.CabinetID, &slot.Code,
+	err := row.Scan(&slot.ID, &slot.CabinetID, &slot.Code, &slot.DisplayName,
 		&slot.DrugID, &slot.DrugCode, &slot.DrugName,
 		&slot.Capacity, &slot.Quantity, &slot.LowThreshold,
-		&createdAt, &updatedAt)
+		&slot.ProjectID, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -203,31 +208,11 @@ func scanSlot(row pgx.Row) (*Slot, error) {
 	return &slot, nil
 }
 
-// slotRows wraps a list of *Slot as fake row scan targets. The concrete
-// type in catalog is fakeRows; inventory uses this inline.
-// This is internal — used by scanSlot when called from rows.Scan() paths.
-
 // ---- Domain errors ----
 
 // ErrInsufficientStock is returned when a refill delta would result in
 // a negative quantity.
 var ErrInsufficientStock = errors.New("insufficient stock")
-
-// ErrSlotNotFound is returned when a slot is not found.
-var ErrSlotNotFound = errors.New("slot not found")
-
-// ---- Audit helpers ----
-
-// auditDetail is the JSON payload written to audit_log.detail for
-// inventory mutations.
-type auditDetail struct {
-	SlotCode      string `json:"slot_code,omitempty"`
-	DrugCode      string `json:"drug_code,omitempty"`
-	CabinetID     string `json:"cabinet_id,omitempty"`
-	Delta         int32  `json:"delta,omitempty"`
-	QuantityAfter int32  `json:"quantity_after,omitempty"`
-	Reason        string `json:"reason,omitempty"`
-}
 
 // toJSON safely marshals a value to JSON bytes, returning {} on error.
 func toJSON(v any) json.RawMessage {

@@ -37,10 +37,19 @@ func NewStoreWithDB(db dbConn) *Store {
 }
 
 // List returns all cabinets ordered by code.
-func (s *Store) List(ctx context.Context) ([]*Cabinet, error) {
-	rows, err := s.db.Query(ctx,
-		`SELECT id, code, name, display_name, active, project_id, created_at, updated_at
-		   FROM cabinet.cabinet ORDER BY code ASC`)
+// List returns all cabinets, optionally scoped to a project.
+// When projectID is non-empty, only cabinets in that project are returned.
+func (s *Store) List(ctx context.Context, projectID string) ([]*Cabinet, error) {
+	query := `SELECT id, code, name, display_name, active, project_id, created_at, updated_at
+		   FROM cabinet.cabinet`
+	args := []any{}
+	if projectID != "" {
+		query += ` WHERE project_id = $1`
+		args = append(args, projectID)
+	}
+	query += ` ORDER BY code ASC`
+
+	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list cabinets: %w", err)
 	}

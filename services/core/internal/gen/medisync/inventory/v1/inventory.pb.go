@@ -35,9 +35,11 @@ type Slot struct {
 	Capacity int32  `protobuf:"varint,7,opt,name=capacity,proto3" json:"capacity,omitempty"`
 	Quantity int32  `protobuf:"varint,8,opt,name=quantity,proto3" json:"quantity,omitempty"`
 	// stock.low event fires when quantity drops to or below this.
-	LowThreshold  int32                  `protobuf:"varint,9,opt,name=low_threshold,json=lowThreshold,proto3" json:"low_threshold,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,11,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	LowThreshold int32                  `protobuf:"varint,9,opt,name=low_threshold,json=lowThreshold,proto3" json:"low_threshold,omitempty"`
+	UpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DisplayName  string                 `protobuf:"bytes,11,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Project this slot belongs to (multi-tenant).
+	ProjectId     string `protobuf:"bytes,12,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +147,13 @@ func (x *Slot) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *Slot) GetDisplayName() string {
 	if x != nil {
 		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *Slot) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -580,7 +589,7 @@ var File_medisync_inventory_v1_inventory_proto protoreflect.FileDescriptor
 
 const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
-	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd7\x02\n" +
+	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf6\x02\n" +
 	"\x04Slot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -595,7 +604,9 @@ const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12!\n" +
-	"\fdisplay_name\x18\v \x01(\tR\vdisplayName\"L\n" +
+	"\fdisplay_name\x18\v \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\f \x01(\tR\tprojectId\"L\n" +
 	"\x10ListSlotsRequest\x12\x1d\n" +
 	"\n" +
 	"cabinet_id\x18\x01 \x01(\tR\tcabinetId\x12\x19\n" +
