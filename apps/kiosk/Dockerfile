@@ -2,16 +2,14 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Copy workspace root + all workspace package.json files for npm ci
-COPY package.json package-lock.json ./
+# Copy workspace package.json files (no lockfile — resolve native for Linux)
+COPY package.json ./
 COPY packages/proto-ts/package.json ./packages/proto-ts/
 COPY apps/admin/package.json ./apps/admin/
 COPY apps/kiosk/package.json ./apps/kiosk/
 
-# Copy full proto-ts package (needed for build)
+# Copy full proto-ts + app config (needed for build)
 COPY packages/proto-ts ./packages/proto-ts
-
-# Copy app config files
 COPY apps/kiosk/tsconfig.json ./apps/kiosk/
 COPY apps/kiosk/vite.config.ts ./apps/kiosk/
 COPY apps/kiosk/uno.config.ts ./apps/kiosk/
