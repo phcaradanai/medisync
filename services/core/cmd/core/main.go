@@ -173,7 +173,7 @@ func run() (runErr error) {
 
 	// ── Inventory ──────────────────────────────────────────────────
 	inventoryStore := inventory.NewStore(pool, auditw)
-	inventoryServer := inventory.NewInventoryServer(inventoryStore, auditw, js)
+	inventoryServer := inventory.NewInventoryServerWithAuth(inventoryStore, auditw, js, newInventoryTokenParser(jwtMgr))
 	inventoryPath, inventoryHandler := inventoryv1connect.NewInventoryServiceHandler(inventoryServer)
 	mux.Handle(inventoryPath, inventoryHandler)
 
@@ -373,6 +373,28 @@ func (p *catalogTokenParser) Parse(tokenString string) (catalog.TokenClaimser, e
 		return nil, err
 	}
 	return catalog.Claims{
+		Subject:   claims.Subject,
+		Role:      claims.Role,
+		ProjectID: claims.ProjectID,
+	}, nil
+}
+
+// ── Inventory token parser adapter ────────────────────────────────
+
+func newInventoryTokenParser(mgr *identity.JWTManager) *inventoryTokenParser {
+	return &inventoryTokenParser{mgr: mgr}
+}
+
+type inventoryTokenParser struct {
+	mgr *identity.JWTManager
+}
+
+func (p *inventoryTokenParser) Parse(tokenString string) (inventory.TokenClaimser, error) {
+	claims, err := p.mgr.Parse(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	return inventory.Claims{
 		Subject:   claims.Subject,
 		Role:      claims.Role,
 		ProjectID: claims.ProjectID,

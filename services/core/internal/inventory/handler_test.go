@@ -8,11 +8,27 @@ import (
 
 	"connectrpc.com/connect"
 	inventoryv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/inventory/v1"
+
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/testutil"
 )
 
-// ── Fake SlotStore ──────────────────────────────────────────────────
+type fakeTokenParser struct {
+	claims Claims
+	err    error
+}
+
+func (p *fakeTokenParser) Parse(tokenString string) (TokenClaimser, error) { return p.claims, p.err }
+
+func adminClaims() Claims { return Claims{Subject: "user-1", Role: "ADMIN", ProjectID: "proj-1"} }
+
+func newAuthedRequest[T any](msg *T) *connect.Request[T] {
+	req := connect.NewRequest(msg)
+	req.Header().Set("Authorization", "Bearer test-token")
+	return req
+}
+
+// ── Fake SlotStore ─────────────────────────────────────────
 
 type fakeSlotStore struct {
 	listResult    []*Slot
@@ -95,9 +111,9 @@ func TestHandlerListSlotsSuccess(t *testing.T) {
 	fakeStore := &fakeSlotStore{
 		listResult: []*Slot{sampleSlot()},
 	}
-	server := NewInventoryServer(fakeStore, nil, nil)
+	server := NewInventoryServerWithAuth(fakeStore, nil, nil, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.ListSlots(context.Background(), connect.NewRequest(&inventoryv1.ListSlotsRequest{}))
+	resp, err := server.ListSlots(context.Background(), newAuthedRequest(&inventoryv1.ListSlotsRequest{}))
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
@@ -113,9 +129,9 @@ func TestHandlerListSlotsWithFilter(t *testing.T) {
 	fakeStore := &fakeSlotStore{
 		listResult: []*Slot{},
 	}
-	server := NewInventoryServer(fakeStore, nil, nil)
+	server := NewInventoryServerWithAuth(fakeStore, nil, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.ListSlots(context.Background(), connect.NewRequest(&inventoryv1.ListSlotsRequest{
+	_, err := server.ListSlots(context.Background(), newAuthedRequest(&inventoryv1.ListSlotsRequest{
 		CabinetId: "cab-1",
 		LowOnly:   true,
 	}))
@@ -126,9 +142,9 @@ func TestHandlerListSlotsWithFilter(t *testing.T) {
 
 func TestHandlerListSlotsStoreError(t *testing.T) {
 	fakeStore := &fakeSlotStore{listErr: errors.New("db down")}
-	server := NewInventoryServer(fakeStore, nil, nil)
+	server := NewInventoryServerWithAuth(fakeStore, nil, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.ListSlots(context.Background(), connect.NewRequest(&inventoryv1.ListSlotsRequest{}))
+	_, err := server.ListSlots(context.Background(), newAuthedRequest(&inventoryv1.ListSlotsRequest{}))
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -143,9 +159,9 @@ func TestHandlerAssignDrugSuccess(t *testing.T) {
 	}
 	auditDB := &fakeAuditDB{FakeExecer: &testutil.FakeExecer{}}
 	auditWriter := audit.NewWriterWithDB(auditDB)
-	server := NewInventoryServer(fakeStore, auditWriter, nil)
+	server := NewInventoryServerWithAuth(fakeStore, auditWriter, nil, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.AssignDrug(context.Background(), connect.NewRequest(&inventoryv1.AssignDrugRequest{
+	resp, err := server.AssignDrug(context.Background(), newAuthedRequest(&inventoryv1.AssignDrugRequest{
 		SlotId:       "slot-1",
 		DrugId:       "drug-1",
 		Capacity:     100,
@@ -166,8 +182,8 @@ func TestHandlerAssignDrugSuccess(t *testing.T) {
 }
 
 func TestHandlerAssignDrugMissingSlotID(t *testing.T) {
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.AssignDrug(context.Background(), connect.NewRequest(&inventoryv1.AssignDrugRequest{}))
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.AssignDrug(context.Background(), newAuthedRequest(&inventoryv1.AssignDrugRequest{}))
 	if err == nil {
 		t.Fatal("expected error for missing slot id")
 	}
@@ -177,8 +193,8 @@ func TestHandlerAssignDrugMissingSlotID(t *testing.T) {
 }
 
 func TestHandlerAssignDrugMissingDrugID(t *testing.T) {
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.AssignDrug(context.Background(), connect.NewRequest(&inventoryv1.AssignDrugRequest{
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.AssignDrug(context.Background(), newAuthedRequest(&inventoryv1.AssignDrugRequest{
 		SlotId: "slot-1",
 	}))
 	if err == nil {
@@ -190,8 +206,8 @@ func TestHandlerAssignDrugMissingDrugID(t *testing.T) {
 }
 
 func TestHandlerAssignDrugNoCapacity(t *testing.T) {
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.AssignDrug(context.Background(), connect.NewRequest(&inventoryv1.AssignDrugRequest{
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.AssignDrug(context.Background(), newAuthedRequest(&inventoryv1.AssignDrugRequest{
 		SlotId:   "slot-1",
 		DrugId:   "drug-1",
 		Capacity: 0,
@@ -206,9 +222,9 @@ func TestHandlerAssignDrugNoCapacity(t *testing.T) {
 
 func TestHandlerAssignDrugNotFound(t *testing.T) {
 	fakeStore := &fakeSlotStore{assignResult: nil}
-	server := NewInventoryServer(fakeStore, nil, nil)
+	server := NewInventoryServerWithAuth(fakeStore, nil, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.AssignDrug(context.Background(), connect.NewRequest(&inventoryv1.AssignDrugRequest{
+	_, err := server.AssignDrug(context.Background(), newAuthedRequest(&inventoryv1.AssignDrugRequest{
 		SlotId:   "ghost",
 		DrugId:   "drug-1",
 		Capacity: 100,
@@ -228,9 +244,9 @@ func TestHandlerRefillSuccess(t *testing.T) {
 	}
 	auditDB := &fakeAuditDB{FakeExecer: &testutil.FakeExecer{}}
 	auditWriter := audit.NewWriterWithDB(auditDB)
-	server := NewInventoryServer(fakeStore, auditWriter, nil)
+	server := NewInventoryServerWithAuth(fakeStore, auditWriter, nil, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.Refill(context.Background(), connect.NewRequest(&inventoryv1.RefillRequest{
+	resp, err := server.Refill(context.Background(), newAuthedRequest(&inventoryv1.RefillRequest{
 		SlotId:        "slot-1",
 		QuantityAdded: 10,
 	}))
@@ -246,8 +262,8 @@ func TestHandlerRefillSuccess(t *testing.T) {
 }
 
 func TestHandlerRefillMissingSlotID(t *testing.T) {
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.Refill(context.Background(), connect.NewRequest(&inventoryv1.RefillRequest{}))
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.Refill(context.Background(), newAuthedRequest(&inventoryv1.RefillRequest{}))
 	if err == nil {
 		t.Fatal("expected error for missing slot id")
 	}
@@ -257,8 +273,8 @@ func TestHandlerRefillMissingSlotID(t *testing.T) {
 }
 
 func TestHandlerRefillZeroDelta(t *testing.T) {
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.Refill(context.Background(), connect.NewRequest(&inventoryv1.RefillRequest{
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.Refill(context.Background(), newAuthedRequest(&inventoryv1.RefillRequest{
 		SlotId:        "slot-1",
 		QuantityAdded: 0,
 	}))
@@ -275,9 +291,9 @@ func TestHandlerRefillInsufficientStock(t *testing.T) {
 		getByIDResult: sampleSlot(),
 		refillErr:     ErrInsufficientStock,
 	}
-	server := NewInventoryServer(fakeStore, nil, nil)
+	server := NewInventoryServerWithAuth(fakeStore, nil, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.Refill(context.Background(), connect.NewRequest(&inventoryv1.RefillRequest{
+	_, err := server.Refill(context.Background(), newAuthedRequest(&inventoryv1.RefillRequest{
 		SlotId:        "slot-1",
 		QuantityAdded: -100,
 	}))
@@ -294,9 +310,9 @@ func TestHandlerRefillNotFound(t *testing.T) {
 		getByIDResult: sampleSlot(),
 		refillResult:  nil,
 	}
-	server := NewInventoryServer(fakeStore, nil, nil)
+	server := NewInventoryServerWithAuth(fakeStore, nil, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.Refill(context.Background(), connect.NewRequest(&inventoryv1.RefillRequest{
+	_, err := server.Refill(context.Background(), newAuthedRequest(&inventoryv1.RefillRequest{
 		SlotId:        "ghost",
 		QuantityAdded: 10,
 	}))
@@ -321,9 +337,9 @@ func TestHandlerAdjustStockSuccess(t *testing.T) {
 	}
 	auditDB := &fakeAuditDB{FakeExecer: &testutil.FakeExecer{}}
 	auditWriter := audit.NewWriterWithDB(auditDB)
-	server := NewInventoryServer(fakeStore, auditWriter, nil)
+	server := NewInventoryServerWithAuth(fakeStore, auditWriter, nil, &fakeTokenParser{claims: adminClaims()})
 
-	resp, err := server.AdjustStock(context.Background(), connect.NewRequest(&inventoryv1.AdjustStockRequest{
+	resp, err := server.AdjustStock(context.Background(), newAuthedRequest(&inventoryv1.AdjustStockRequest{
 		SlotId:      "slot-1",
 		NewQuantity: 10,
 		Reason:      "audit correction",
@@ -340,8 +356,8 @@ func TestHandlerAdjustStockSuccess(t *testing.T) {
 }
 
 func TestHandlerAdjustStockMissingSlotID(t *testing.T) {
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.AdjustStock(context.Background(), connect.NewRequest(&inventoryv1.AdjustStockRequest{}))
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.AdjustStock(context.Background(), newAuthedRequest(&inventoryv1.AdjustStockRequest{}))
 	if err == nil {
 		t.Fatal("expected error for missing slot id")
 	}
@@ -351,8 +367,8 @@ func TestHandlerAdjustStockMissingSlotID(t *testing.T) {
 }
 
 func TestHandlerAdjustStockNegative(t *testing.T) {
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.AdjustStock(context.Background(), connect.NewRequest(&inventoryv1.AdjustStockRequest{
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.AdjustStock(context.Background(), newAuthedRequest(&inventoryv1.AdjustStockRequest{
 		SlotId:      "slot-1",
 		NewQuantity: -1,
 		Reason:      "test",
@@ -366,8 +382,8 @@ func TestHandlerAdjustStockNegative(t *testing.T) {
 }
 
 func TestHandlerAdjustStockMissingReason(t *testing.T) {
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.AdjustStock(context.Background(), connect.NewRequest(&inventoryv1.AdjustStockRequest{
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.AdjustStock(context.Background(), newAuthedRequest(&inventoryv1.AdjustStockRequest{
 		SlotId:      "slot-1",
 		NewQuantity: 10,
 	}))
@@ -383,9 +399,9 @@ func TestHandlerAdjustStockSlotNotFound(t *testing.T) {
 	fakeStore := &fakeSlotStore{
 		getByIDResult: nil,
 	}
-	server := NewInventoryServer(fakeStore, nil, nil)
+	server := NewInventoryServerWithAuth(fakeStore, nil, nil, &fakeTokenParser{claims: adminClaims()})
 
-	_, err := server.AdjustStock(context.Background(), connect.NewRequest(&inventoryv1.AdjustStockRequest{
+	_, err := server.AdjustStock(context.Background(), newAuthedRequest(&inventoryv1.AdjustStockRequest{
 		SlotId:      "ghost",
 		NewQuantity: 10,
 		Reason:      "audit correction",
@@ -460,7 +476,7 @@ func TestToProtoSlotZeroTime(t *testing.T) {
 
 func TestHandlerImplementsInterface(t *testing.T) {
 	// Compile-time check is at the top of handler.go.
-	server := NewInventoryServer(&fakeSlotStore{}, nil, nil)
-	_, err := server.ListSlots(context.Background(), connect.NewRequest(&inventoryv1.ListSlotsRequest{}))
+	server := NewInventoryServerWithAuth(&fakeSlotStore{}, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.ListSlots(context.Background(), newAuthedRequest(&inventoryv1.ListSlotsRequest{}))
 	_ = err
 }

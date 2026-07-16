@@ -12,6 +12,7 @@ type Slot struct {
 	ID           string
 	CabinetID    string
 	Code         string
+	DisplayName  string
 	DrugID       string
 	DrugCode     string
 	DrugName     string
