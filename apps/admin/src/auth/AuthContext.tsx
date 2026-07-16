@@ -44,7 +44,9 @@ function loadSession(): Session | null {
 }
 
 function saveSession(session: Session) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session, (_key, value) =>
+    typeof value === "bigint" ? String(value) : value
+  ));
 }
 
 function clearSession() {
