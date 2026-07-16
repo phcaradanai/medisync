@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// IdentityServiceName is the fully-qualified name of the IdentityService service.
 	IdentityServiceName = "medisync.identity.v1.IdentityService"
+	// ProjectServiceName is the fully-qualified name of the ProjectService service.
+	ProjectServiceName = "medisync.identity.v1.ProjectService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -52,6 +54,18 @@ const (
 	// IdentityServiceSetCardTokenProcedure is the fully-qualified name of the IdentityService's
 	// SetCardToken RPC.
 	IdentityServiceSetCardTokenProcedure = "/medisync.identity.v1.IdentityService/SetCardToken"
+	// ProjectServiceCreateProjectProcedure is the fully-qualified name of the ProjectService's
+	// CreateProject RPC.
+	ProjectServiceCreateProjectProcedure = "/medisync.identity.v1.ProjectService/CreateProject"
+	// ProjectServiceUpdateProjectProcedure is the fully-qualified name of the ProjectService's
+	// UpdateProject RPC.
+	ProjectServiceUpdateProjectProcedure = "/medisync.identity.v1.ProjectService/UpdateProject"
+	// ProjectServiceListProjectsProcedure is the fully-qualified name of the ProjectService's
+	// ListProjects RPC.
+	ProjectServiceListProjectsProcedure = "/medisync.identity.v1.ProjectService/ListProjects"
+	// ProjectServiceGetProjectProcedure is the fully-qualified name of the ProjectService's GetProject
+	// RPC.
+	ProjectServiceGetProjectProcedure = "/medisync.identity.v1.ProjectService/GetProject"
 )
 
 // IdentityServiceClient is a client for the medisync.identity.v1.IdentityService service.
@@ -59,7 +73,8 @@ type IdentityServiceClient interface {
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	CardLogin(context.Context, *connect.Request[v1.CardLoginRequest]) (*connect.Response[v1.CardLoginResponse], error)
 	WhoAmI(context.Context, *connect.Request[v1.WhoAmIRequest]) (*connect.Response[v1.WhoAmIResponse], error)
-	// User management (admin-only).
+	// User management — project-scoped.
+	// SYSADMIN sees all users; project ADMIN sees only their project's users.
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
 	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
 	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
@@ -173,7 +188,8 @@ type IdentityServiceHandler interface {
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	CardLogin(context.Context, *connect.Request[v1.CardLoginRequest]) (*connect.Response[v1.CardLoginResponse], error)
 	WhoAmI(context.Context, *connect.Request[v1.WhoAmIRequest]) (*connect.Response[v1.WhoAmIResponse], error)
-	// User management (admin-only).
+	// User management — project-scoped.
+	// SYSADMIN sees all users; project ADMIN sees only their project's users.
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
 	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
 	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
@@ -280,4 +296,152 @@ func (UnimplementedIdentityServiceHandler) UpdateUser(context.Context, *connect.
 
 func (UnimplementedIdentityServiceHandler) SetCardToken(context.Context, *connect.Request[v1.SetCardTokenRequest]) (*connect.Response[v1.SetCardTokenResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.IdentityService.SetCardToken is not implemented"))
+}
+
+// ProjectServiceClient is a client for the medisync.identity.v1.ProjectService service.
+type ProjectServiceClient interface {
+	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
+	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error)
+	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
+	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error)
+}
+
+// NewProjectServiceClient constructs a client for the medisync.identity.v1.ProjectService service.
+// By default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped
+// responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
+// connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ProjectServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	projectServiceMethods := v1.File_medisync_identity_v1_identity_proto.Services().ByName("ProjectService").Methods()
+	return &projectServiceClient{
+		createProject: connect.NewClient[v1.CreateProjectRequest, v1.CreateProjectResponse](
+			httpClient,
+			baseURL+ProjectServiceCreateProjectProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("CreateProject")),
+			connect.WithClientOptions(opts...),
+		),
+		updateProject: connect.NewClient[v1.UpdateProjectRequest, v1.UpdateProjectResponse](
+			httpClient,
+			baseURL+ProjectServiceUpdateProjectProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("UpdateProject")),
+			connect.WithClientOptions(opts...),
+		),
+		listProjects: connect.NewClient[v1.ListProjectsRequest, v1.ListProjectsResponse](
+			httpClient,
+			baseURL+ProjectServiceListProjectsProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("ListProjects")),
+			connect.WithClientOptions(opts...),
+		),
+		getProject: connect.NewClient[v1.GetProjectRequest, v1.GetProjectResponse](
+			httpClient,
+			baseURL+ProjectServiceGetProjectProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("GetProject")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// projectServiceClient implements ProjectServiceClient.
+type projectServiceClient struct {
+	createProject *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
+	updateProject *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
+	listProjects  *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
+	getProject    *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
+}
+
+// CreateProject calls medisync.identity.v1.ProjectService.CreateProject.
+func (c *projectServiceClient) CreateProject(ctx context.Context, req *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
+	return c.createProject.CallUnary(ctx, req)
+}
+
+// UpdateProject calls medisync.identity.v1.ProjectService.UpdateProject.
+func (c *projectServiceClient) UpdateProject(ctx context.Context, req *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error) {
+	return c.updateProject.CallUnary(ctx, req)
+}
+
+// ListProjects calls medisync.identity.v1.ProjectService.ListProjects.
+func (c *projectServiceClient) ListProjects(ctx context.Context, req *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error) {
+	return c.listProjects.CallUnary(ctx, req)
+}
+
+// GetProject calls medisync.identity.v1.ProjectService.GetProject.
+func (c *projectServiceClient) GetProject(ctx context.Context, req *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error) {
+	return c.getProject.CallUnary(ctx, req)
+}
+
+// ProjectServiceHandler is an implementation of the medisync.identity.v1.ProjectService service.
+type ProjectServiceHandler interface {
+	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
+	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error)
+	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
+	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error)
+}
+
+// NewProjectServiceHandler builds an HTTP handler from the service implementation. It returns the
+// path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	projectServiceMethods := v1.File_medisync_identity_v1_identity_proto.Services().ByName("ProjectService").Methods()
+	projectServiceCreateProjectHandler := connect.NewUnaryHandler(
+		ProjectServiceCreateProjectProcedure,
+		svc.CreateProject,
+		connect.WithSchema(projectServiceMethods.ByName("CreateProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceUpdateProjectHandler := connect.NewUnaryHandler(
+		ProjectServiceUpdateProjectProcedure,
+		svc.UpdateProject,
+		connect.WithSchema(projectServiceMethods.ByName("UpdateProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceListProjectsHandler := connect.NewUnaryHandler(
+		ProjectServiceListProjectsProcedure,
+		svc.ListProjects,
+		connect.WithSchema(projectServiceMethods.ByName("ListProjects")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceGetProjectHandler := connect.NewUnaryHandler(
+		ProjectServiceGetProjectProcedure,
+		svc.GetProject,
+		connect.WithSchema(projectServiceMethods.ByName("GetProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/medisync.identity.v1.ProjectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case ProjectServiceCreateProjectProcedure:
+			projectServiceCreateProjectHandler.ServeHTTP(w, r)
+		case ProjectServiceUpdateProjectProcedure:
+			projectServiceUpdateProjectHandler.ServeHTTP(w, r)
+		case ProjectServiceListProjectsProcedure:
+			projectServiceListProjectsHandler.ServeHTTP(w, r)
+		case ProjectServiceGetProjectProcedure:
+			projectServiceGetProjectHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedProjectServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedProjectServiceHandler struct{}
+
+func (UnimplementedProjectServiceHandler) CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.ProjectService.CreateProject is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.ProjectService.UpdateProject is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.ProjectService.ListProjects is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.identity.v1.ProjectService.GetProject is not implemented"))
 }

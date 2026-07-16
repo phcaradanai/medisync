@@ -22,7 +22,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Roles are coarse; fine-grained access is ward-scoped via User.ward_ids.
+// Roles unchanged — SYSADMIN is not a separate proto role value.
+// Instead, sysadmin status is determined by role=ADMIN + project_id empty.
 type Role int32
 
 const (
@@ -85,9 +86,11 @@ type User struct {
 	DisplayName string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	Role        Role                   `protobuf:"varint,4,opt,name=role,proto3,enum=medisync.identity.v1.Role" json:"role,omitempty"`
 	// Wards this user may act in. Empty for ROLE_ADMIN means all wards.
-	WardIds       []string               `protobuf:"bytes,5,rep,name=ward_ids,json=wardIds,proto3" json:"ward_ids,omitempty"`
-	Active        bool                   `protobuf:"varint,6,opt,name=active,proto3" json:"active,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	WardIds   []string               `protobuf:"bytes,5,rep,name=ward_ids,json=wardIds,proto3" json:"ward_ids,omitempty"`
+	Active    bool                   `protobuf:"varint,6,opt,name=active,proto3" json:"active,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Project this user belongs to. Empty for SYSADMIN (cross-project).
+	ProjectId     string `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -169,6 +172,13 @@ func (x *User) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+func (x *User) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
 }
 
 type LoginRequest struct {
@@ -285,8 +295,11 @@ func (x *LoginResponse) GetUser() *User {
 
 // Authenticate by QR/NFC card scanned at the kiosk.
 type CardLoginRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CardToken     string                 `protobuf:"bytes,1,opt,name=card_token,json=cardToken,proto3" json:"card_token,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	CardToken string                 `protobuf:"bytes,1,opt,name=card_token,json=cardToken,proto3" json:"card_token,omitempty"`
+	// Optional project scope override for kiosk card login.
+	// When set, the user must belong to this project.
+	ProjectId     string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -324,6 +337,13 @@ func (*CardLoginRequest) Descriptor() ([]byte, []int) {
 func (x *CardLoginRequest) GetCardToken() string {
 	if x != nil {
 		return x.CardToken
+	}
+	return ""
+}
+
+func (x *CardLoginRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -471,7 +491,10 @@ func (x *WhoAmIResponse) GetUser() *User {
 type ListUsersRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Optional search query — matches username or display_name (partial).
-	Query         string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	// Filter by project. SYSADMIN can omit to see all.
+	// Project admins get this auto-populated by interceptor.
+	ProjectId     string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -509,6 +532,13 @@ func (*ListUsersRequest) Descriptor() ([]byte, []int) {
 func (x *ListUsersRequest) GetQuery() string {
 	if x != nil {
 		return x.Query
+	}
+	return ""
+}
+
+func (x *ListUsersRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -558,12 +588,14 @@ func (x *ListUsersResponse) GetUsers() []*User {
 }
 
 type CreateUserRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Role          Role                   `protobuf:"varint,4,opt,name=role,proto3,enum=medisync.identity.v1.Role" json:"role,omitempty"`
-	WardIds       []string               `protobuf:"bytes,5,rep,name=ward_ids,json=wardIds,proto3" json:"ward_ids,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Username    string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password    string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	DisplayName string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Role        Role                   `protobuf:"varint,4,opt,name=role,proto3,enum=medisync.identity.v1.Role" json:"role,omitempty"`
+	WardIds     []string               `protobuf:"bytes,5,rep,name=ward_ids,json=wardIds,proto3" json:"ward_ids,omitempty"`
+	// Project to assign user to. Required for non-SYSADMIN users.
+	ProjectId     string `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -633,6 +665,13 @@ func (x *CreateUserRequest) GetWardIds() []string {
 	return nil
 }
 
+func (x *CreateUserRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 type CreateUserResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
@@ -681,10 +720,12 @@ type UpdateUserRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Fields to update. Empty string / zero value means no change.
-	DisplayName   *string  `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
-	Role          *Role    `protobuf:"varint,3,opt,name=role,proto3,enum=medisync.identity.v1.Role,oneof" json:"role,omitempty"`
-	Active        *bool    `protobuf:"varint,4,opt,name=active,proto3,oneof" json:"active,omitempty"`
-	WardIds       []string `protobuf:"bytes,5,rep,name=ward_ids,json=wardIds,proto3" json:"ward_ids,omitempty"`
+	DisplayName *string  `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
+	Role        *Role    `protobuf:"varint,3,opt,name=role,proto3,enum=medisync.identity.v1.Role,oneof" json:"role,omitempty"`
+	Active      *bool    `protobuf:"varint,4,opt,name=active,proto3,oneof" json:"active,omitempty"`
+	WardIds     []string `protobuf:"bytes,5,rep,name=ward_ids,json=wardIds,proto3" json:"ward_ids,omitempty"`
+	// Move user to another project (SYSADMIN only).
+	ProjectId     *string `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -752,6 +793,13 @@ func (x *UpdateUserRequest) GetWardIds() []string {
 		return x.WardIds
 	}
 	return nil
+}
+
+func (x *UpdateUserRequest) GetProjectId() string {
+	if x != nil && x.ProjectId != nil {
+		return *x.ProjectId
+	}
+	return ""
 }
 
 type UpdateUserResponse struct {
@@ -894,11 +942,465 @@ func (x *SetCardTokenResponse) GetUser() *User {
 	return nil
 }
 
+type Project struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Slug          string                 `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
+	Active        bool                   `protobuf:"varint,4,opt,name=active,proto3" json:"active,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Project) Reset() {
+	*x = Project{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Project) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Project) ProtoMessage() {}
+
+func (x *Project) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Project.ProtoReflect.Descriptor instead.
+func (*Project) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *Project) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Project) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Project) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+func (x *Project) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+func (x *Project) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Project) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type CreateProjectRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional; auto-generated from name if empty.
+	Slug          string `protobuf:"bytes,2,opt,name=slug,proto3" json:"slug,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateProjectRequest) Reset() {
+	*x = CreateProjectRequest{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateProjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateProjectRequest) ProtoMessage() {}
+
+func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateProjectRequest.ProtoReflect.Descriptor instead.
+func (*CreateProjectRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *CreateProjectRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateProjectRequest) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+type CreateProjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Project       *Project               `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateProjectResponse) Reset() {
+	*x = CreateProjectResponse{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateProjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateProjectResponse) ProtoMessage() {}
+
+func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateProjectResponse.ProtoReflect.Descriptor instead.
+func (*CreateProjectResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CreateProjectResponse) GetProject() *Project {
+	if x != nil {
+		return x.Project
+	}
+	return nil
+}
+
+type UpdateProjectRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Active        *bool                  `protobuf:"varint,3,opt,name=active,proto3,oneof" json:"active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateProjectRequest) Reset() {
+	*x = UpdateProjectRequest{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateProjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateProjectRequest) ProtoMessage() {}
+
+func (x *UpdateProjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateProjectRequest.ProtoReflect.Descriptor instead.
+func (*UpdateProjectRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *UpdateProjectRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateProjectRequest) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *UpdateProjectRequest) GetActive() bool {
+	if x != nil && x.Active != nil {
+		return *x.Active
+	}
+	return false
+}
+
+type UpdateProjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Project       *Project               `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateProjectResponse) Reset() {
+	*x = UpdateProjectResponse{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateProjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateProjectResponse) ProtoMessage() {}
+
+func (x *UpdateProjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateProjectResponse.ProtoReflect.Descriptor instead.
+func (*UpdateProjectResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UpdateProjectResponse) GetProject() *Project {
+	if x != nil {
+		return x.Project
+	}
+	return nil
+}
+
+type ListProjectsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectsRequest) Reset() {
+	*x = ListProjectsRequest{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectsRequest) ProtoMessage() {}
+
+func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectsRequest.ProtoReflect.Descriptor instead.
+func (*ListProjectsRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{20}
+}
+
+type ListProjectsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Projects      []*Project             `protobuf:"bytes,1,rep,name=projects,proto3" json:"projects,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectsResponse) Reset() {
+	*x = ListProjectsResponse{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectsResponse) ProtoMessage() {}
+
+func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectsResponse.ProtoReflect.Descriptor instead.
+func (*ListProjectsResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListProjectsResponse) GetProjects() []*Project {
+	if x != nil {
+		return x.Projects
+	}
+	return nil
+}
+
+type GetProjectRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SYSADMIN: any project; others: only own project.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProjectRequest) Reset() {
+	*x = GetProjectRequest{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectRequest) ProtoMessage() {}
+
+func (x *GetProjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProjectRequest.ProtoReflect.Descriptor instead.
+func (*GetProjectRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetProjectRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type GetProjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Project       *Project               `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProjectResponse) Reset() {
+	*x = GetProjectResponse{}
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectResponse) ProtoMessage() {}
+
+func (x *GetProjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_identity_v1_identity_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProjectResponse.ProtoReflect.Descriptor instead.
+func (*GetProjectResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetProjectResponse) GetProject() *Project {
+	if x != nil {
+		return x.Project
+	}
+	return nil
+}
+
 var File_medisync_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
-	"#medisync/identity/v1/identity.proto\x12\x14medisync.identity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf3\x01\n" +
+	"#medisync/identity/v1/identity.proto\x12\x14medisync.identity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x92\x02\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -907,7 +1409,9 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\bward_ids\x18\x05 \x03(\tR\awardIds\x12\x16\n" +
 	"\x06active\x18\x06 \x01(\bR\x06active\x129\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"F\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\b \x01(\tR\tprojectId\"F\n" +
 	"\fLoginRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"\x9d\x01\n" +
@@ -915,10 +1419,12 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x129\n" +
 	"\n" +
 	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12.\n" +
-	"\x04user\x18\x03 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"1\n" +
+	"\x04user\x18\x03 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"P\n" +
 	"\x10CardLoginRequest\x12\x1d\n" +
 	"\n" +
-	"card_token\x18\x01 \x01(\tR\tcardToken\"\xa1\x01\n" +
+	"card_token\x18\x01 \x01(\tR\tcardToken\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\"\xa1\x01\n" +
 	"\x11CardLoginResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x129\n" +
 	"\n" +
@@ -926,28 +1432,35 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\x04user\x18\x03 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\x0f\n" +
 	"\rWhoAmIRequest\"@\n" +
 	"\x0eWhoAmIResponse\x12.\n" +
-	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"(\n" +
+	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"G\n" +
 	"\x10ListUsersRequest\x12\x14\n" +
-	"\x05query\x18\x01 \x01(\tR\x05query\"E\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\"E\n" +
 	"\x11ListUsersResponse\x120\n" +
-	"\x05users\x18\x01 \x03(\v2\x1a.medisync.identity.v1.UserR\x05users\"\xb9\x01\n" +
+	"\x05users\x18\x01 \x03(\v2\x1a.medisync.identity.v1.UserR\x05users\"\xd8\x01\n" +
 	"\x11CreateUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12.\n" +
 	"\x04role\x18\x04 \x01(\x0e2\x1a.medisync.identity.v1.RoleR\x04role\x12\x19\n" +
-	"\bward_ids\x18\x05 \x03(\tR\awardIds\"D\n" +
+	"\bward_ids\x18\x05 \x03(\tR\awardIds\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x06 \x01(\tR\tprojectId\"D\n" +
 	"\x12CreateUserResponse\x12.\n" +
-	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\xdd\x01\n" +
+	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\x90\x02\n" +
 	"\x11UpdateUserRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x123\n" +
 	"\x04role\x18\x03 \x01(\x0e2\x1a.medisync.identity.v1.RoleH\x01R\x04role\x88\x01\x01\x12\x1b\n" +
 	"\x06active\x18\x04 \x01(\bH\x02R\x06active\x88\x01\x01\x12\x19\n" +
-	"\bward_ids\x18\x05 \x03(\tR\awardIdsB\x0f\n" +
+	"\bward_ids\x18\x05 \x03(\tR\awardIds\x12\"\n" +
+	"\n" +
+	"project_id\x18\x06 \x01(\tH\x03R\tprojectId\x88\x01\x01B\x0f\n" +
 	"\r_display_nameB\a\n" +
 	"\x05_roleB\t\n" +
-	"\a_active\"D\n" +
+	"\a_activeB\r\n" +
+	"\v_project_id\"D\n" +
 	"\x12UpdateUserResponse\x12.\n" +
 	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"M\n" +
 	"\x13SetCardTokenRequest\x12\x17\n" +
@@ -955,7 +1468,36 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"card_token\x18\x02 \x01(\tR\tcardToken\"F\n" +
 	"\x14SetCardTokenResponse\x12.\n" +
-	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user*d\n" +
+	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\xcf\x01\n" +
+	"\aProject\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04slug\x18\x03 \x01(\tR\x04slug\x12\x16\n" +
+	"\x06active\x18\x04 \x01(\bR\x06active\x129\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\">\n" +
+	"\x14CreateProjectRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04slug\x18\x02 \x01(\tR\x04slug\"P\n" +
+	"\x15CreateProjectResponse\x127\n" +
+	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"p\n" +
+	"\x14UpdateProjectRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
+	"\x06active\x18\x03 \x01(\bH\x01R\x06active\x88\x01\x01B\a\n" +
+	"\x05_nameB\t\n" +
+	"\a_active\"P\n" +
+	"\x15UpdateProjectResponse\x127\n" +
+	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"\x15\n" +
+	"\x13ListProjectsRequest\"Q\n" +
+	"\x14ListProjectsResponse\x129\n" +
+	"\bprojects\x18\x01 \x03(\v2\x1d.medisync.identity.v1.ProjectR\bprojects\"#\n" +
+	"\x11GetProjectRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
+	"\x12GetProjectResponse\x127\n" +
+	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject*d\n" +
 	"\x04Role\x12\x14\n" +
 	"\x10ROLE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +
@@ -973,7 +1515,13 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"CreateUser\x12'.medisync.identity.v1.CreateUserRequest\x1a(.medisync.identity.v1.CreateUserResponse\x12_\n" +
 	"\n" +
 	"UpdateUser\x12'.medisync.identity.v1.UpdateUserRequest\x1a(.medisync.identity.v1.UpdateUserResponse\x12e\n" +
-	"\fSetCardToken\x12).medisync.identity.v1.SetCardTokenRequest\x1a*.medisync.identity.v1.SetCardTokenResponseB`Z^github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1;identityv1b\x06proto3"
+	"\fSetCardToken\x12).medisync.identity.v1.SetCardTokenRequest\x1a*.medisync.identity.v1.SetCardTokenResponse2\xac\x03\n" +
+	"\x0eProjectService\x12h\n" +
+	"\rCreateProject\x12*.medisync.identity.v1.CreateProjectRequest\x1a+.medisync.identity.v1.CreateProjectResponse\x12h\n" +
+	"\rUpdateProject\x12*.medisync.identity.v1.UpdateProjectRequest\x1a+.medisync.identity.v1.UpdateProjectResponse\x12e\n" +
+	"\fListProjects\x12).medisync.identity.v1.ListProjectsRequest\x1a*.medisync.identity.v1.ListProjectsResponse\x12_\n" +
+	"\n" +
+	"GetProject\x12'.medisync.identity.v1.GetProjectRequest\x1a(.medisync.identity.v1.GetProjectResponseB`Z^github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_medisync_identity_v1_identity_proto_rawDescOnce sync.Once
@@ -988,7 +1536,7 @@ func file_medisync_identity_v1_identity_proto_rawDescGZIP() []byte {
 }
 
 var file_medisync_identity_v1_identity_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_medisync_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_medisync_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_medisync_identity_v1_identity_proto_goTypes = []any{
 	(Role)(0),                     // 0: medisync.identity.v1.Role
 	(*User)(nil),                  // 1: medisync.identity.v1.User
@@ -1006,14 +1554,23 @@ var file_medisync_identity_v1_identity_proto_goTypes = []any{
 	(*UpdateUserResponse)(nil),    // 13: medisync.identity.v1.UpdateUserResponse
 	(*SetCardTokenRequest)(nil),   // 14: medisync.identity.v1.SetCardTokenRequest
 	(*SetCardTokenResponse)(nil),  // 15: medisync.identity.v1.SetCardTokenResponse
-	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
+	(*Project)(nil),               // 16: medisync.identity.v1.Project
+	(*CreateProjectRequest)(nil),  // 17: medisync.identity.v1.CreateProjectRequest
+	(*CreateProjectResponse)(nil), // 18: medisync.identity.v1.CreateProjectResponse
+	(*UpdateProjectRequest)(nil),  // 19: medisync.identity.v1.UpdateProjectRequest
+	(*UpdateProjectResponse)(nil), // 20: medisync.identity.v1.UpdateProjectResponse
+	(*ListProjectsRequest)(nil),   // 21: medisync.identity.v1.ListProjectsRequest
+	(*ListProjectsResponse)(nil),  // 22: medisync.identity.v1.ListProjectsResponse
+	(*GetProjectRequest)(nil),     // 23: medisync.identity.v1.GetProjectRequest
+	(*GetProjectResponse)(nil),    // 24: medisync.identity.v1.GetProjectResponse
+	(*timestamppb.Timestamp)(nil), // 25: google.protobuf.Timestamp
 }
 var file_medisync_identity_v1_identity_proto_depIdxs = []int32{
 	0,  // 0: medisync.identity.v1.User.role:type_name -> medisync.identity.v1.Role
-	16, // 1: medisync.identity.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	16, // 2: medisync.identity.v1.LoginResponse.expires_at:type_name -> google.protobuf.Timestamp
+	25, // 1: medisync.identity.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	25, // 2: medisync.identity.v1.LoginResponse.expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: medisync.identity.v1.LoginResponse.user:type_name -> medisync.identity.v1.User
-	16, // 4: medisync.identity.v1.CardLoginResponse.expires_at:type_name -> google.protobuf.Timestamp
+	25, // 4: medisync.identity.v1.CardLoginResponse.expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 5: medisync.identity.v1.CardLoginResponse.user:type_name -> medisync.identity.v1.User
 	1,  // 6: medisync.identity.v1.WhoAmIResponse.user:type_name -> medisync.identity.v1.User
 	1,  // 7: medisync.identity.v1.ListUsersResponse.users:type_name -> medisync.identity.v1.User
@@ -1022,25 +1579,39 @@ var file_medisync_identity_v1_identity_proto_depIdxs = []int32{
 	0,  // 10: medisync.identity.v1.UpdateUserRequest.role:type_name -> medisync.identity.v1.Role
 	1,  // 11: medisync.identity.v1.UpdateUserResponse.user:type_name -> medisync.identity.v1.User
 	1,  // 12: medisync.identity.v1.SetCardTokenResponse.user:type_name -> medisync.identity.v1.User
-	2,  // 13: medisync.identity.v1.IdentityService.Login:input_type -> medisync.identity.v1.LoginRequest
-	4,  // 14: medisync.identity.v1.IdentityService.CardLogin:input_type -> medisync.identity.v1.CardLoginRequest
-	6,  // 15: medisync.identity.v1.IdentityService.WhoAmI:input_type -> medisync.identity.v1.WhoAmIRequest
-	8,  // 16: medisync.identity.v1.IdentityService.ListUsers:input_type -> medisync.identity.v1.ListUsersRequest
-	10, // 17: medisync.identity.v1.IdentityService.CreateUser:input_type -> medisync.identity.v1.CreateUserRequest
-	12, // 18: medisync.identity.v1.IdentityService.UpdateUser:input_type -> medisync.identity.v1.UpdateUserRequest
-	14, // 19: medisync.identity.v1.IdentityService.SetCardToken:input_type -> medisync.identity.v1.SetCardTokenRequest
-	3,  // 20: medisync.identity.v1.IdentityService.Login:output_type -> medisync.identity.v1.LoginResponse
-	5,  // 21: medisync.identity.v1.IdentityService.CardLogin:output_type -> medisync.identity.v1.CardLoginResponse
-	7,  // 22: medisync.identity.v1.IdentityService.WhoAmI:output_type -> medisync.identity.v1.WhoAmIResponse
-	9,  // 23: medisync.identity.v1.IdentityService.ListUsers:output_type -> medisync.identity.v1.ListUsersResponse
-	11, // 24: medisync.identity.v1.IdentityService.CreateUser:output_type -> medisync.identity.v1.CreateUserResponse
-	13, // 25: medisync.identity.v1.IdentityService.UpdateUser:output_type -> medisync.identity.v1.UpdateUserResponse
-	15, // 26: medisync.identity.v1.IdentityService.SetCardToken:output_type -> medisync.identity.v1.SetCardTokenResponse
-	20, // [20:27] is the sub-list for method output_type
-	13, // [13:20] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	25, // 13: medisync.identity.v1.Project.created_at:type_name -> google.protobuf.Timestamp
+	25, // 14: medisync.identity.v1.Project.updated_at:type_name -> google.protobuf.Timestamp
+	16, // 15: medisync.identity.v1.CreateProjectResponse.project:type_name -> medisync.identity.v1.Project
+	16, // 16: medisync.identity.v1.UpdateProjectResponse.project:type_name -> medisync.identity.v1.Project
+	16, // 17: medisync.identity.v1.ListProjectsResponse.projects:type_name -> medisync.identity.v1.Project
+	16, // 18: medisync.identity.v1.GetProjectResponse.project:type_name -> medisync.identity.v1.Project
+	2,  // 19: medisync.identity.v1.IdentityService.Login:input_type -> medisync.identity.v1.LoginRequest
+	4,  // 20: medisync.identity.v1.IdentityService.CardLogin:input_type -> medisync.identity.v1.CardLoginRequest
+	6,  // 21: medisync.identity.v1.IdentityService.WhoAmI:input_type -> medisync.identity.v1.WhoAmIRequest
+	8,  // 22: medisync.identity.v1.IdentityService.ListUsers:input_type -> medisync.identity.v1.ListUsersRequest
+	10, // 23: medisync.identity.v1.IdentityService.CreateUser:input_type -> medisync.identity.v1.CreateUserRequest
+	12, // 24: medisync.identity.v1.IdentityService.UpdateUser:input_type -> medisync.identity.v1.UpdateUserRequest
+	14, // 25: medisync.identity.v1.IdentityService.SetCardToken:input_type -> medisync.identity.v1.SetCardTokenRequest
+	17, // 26: medisync.identity.v1.ProjectService.CreateProject:input_type -> medisync.identity.v1.CreateProjectRequest
+	19, // 27: medisync.identity.v1.ProjectService.UpdateProject:input_type -> medisync.identity.v1.UpdateProjectRequest
+	21, // 28: medisync.identity.v1.ProjectService.ListProjects:input_type -> medisync.identity.v1.ListProjectsRequest
+	23, // 29: medisync.identity.v1.ProjectService.GetProject:input_type -> medisync.identity.v1.GetProjectRequest
+	3,  // 30: medisync.identity.v1.IdentityService.Login:output_type -> medisync.identity.v1.LoginResponse
+	5,  // 31: medisync.identity.v1.IdentityService.CardLogin:output_type -> medisync.identity.v1.CardLoginResponse
+	7,  // 32: medisync.identity.v1.IdentityService.WhoAmI:output_type -> medisync.identity.v1.WhoAmIResponse
+	9,  // 33: medisync.identity.v1.IdentityService.ListUsers:output_type -> medisync.identity.v1.ListUsersResponse
+	11, // 34: medisync.identity.v1.IdentityService.CreateUser:output_type -> medisync.identity.v1.CreateUserResponse
+	13, // 35: medisync.identity.v1.IdentityService.UpdateUser:output_type -> medisync.identity.v1.UpdateUserResponse
+	15, // 36: medisync.identity.v1.IdentityService.SetCardToken:output_type -> medisync.identity.v1.SetCardTokenResponse
+	18, // 37: medisync.identity.v1.ProjectService.CreateProject:output_type -> medisync.identity.v1.CreateProjectResponse
+	20, // 38: medisync.identity.v1.ProjectService.UpdateProject:output_type -> medisync.identity.v1.UpdateProjectResponse
+	22, // 39: medisync.identity.v1.ProjectService.ListProjects:output_type -> medisync.identity.v1.ListProjectsResponse
+	24, // 40: medisync.identity.v1.ProjectService.GetProject:output_type -> medisync.identity.v1.GetProjectResponse
+	30, // [30:41] is the sub-list for method output_type
+	19, // [19:30] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_medisync_identity_v1_identity_proto_init() }
@@ -1049,15 +1620,16 @@ func file_medisync_identity_v1_identity_proto_init() {
 		return
 	}
 	file_medisync_identity_v1_identity_proto_msgTypes[11].OneofWrappers = []any{}
+	file_medisync_identity_v1_identity_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_medisync_identity_v1_identity_proto_rawDesc), len(file_medisync_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   24,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
 		GoTypes:           file_medisync_identity_v1_identity_proto_goTypes,
 		DependencyIndexes: file_medisync_identity_v1_identity_proto_depIdxs,

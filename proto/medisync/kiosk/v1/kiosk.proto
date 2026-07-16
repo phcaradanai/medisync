@@ -18,6 +18,8 @@ message Kiosk {
   // and is never readable via ListKiosks, UpdateKiosk, or any other
   // RPC. The admin must record or relay it at creation/reset time.
   optional string pin = 6;
+  // Project this kiosk belongs to.
+  string project_id = 7;
 }
 
 // ── Admin RPCs ─────────────────────────────────────────────────────
@@ -32,6 +34,8 @@ message CreateKioskRequest {
   string code = 1;
   string display_name = 2;
   string pin = 3;
+  // Project to assign this kiosk to. Required.
+  string project_id = 4;
 }
 
 message CreateKioskResponse {

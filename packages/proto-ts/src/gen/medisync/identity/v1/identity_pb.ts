@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/identity/v1/identity.proto.
  */
 export const file_medisync_identity_v1_identity: GenFile = /*@__PURE__*/
-  fileDesc("CiNtZWRpc3luYy9pZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxIUbWVkaXN5bmMuaWRlbnRpdHkudjEitgEKBFVzZXISCgoCaWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEigKBHJvbGUYBCABKA4yGi5tZWRpc3luYy5pZGVudGl0eS52MS5Sb2xlEhAKCHdhcmRfaWRzGAUgAygJEg4KBmFjdGl2ZRgGIAEoCBIuCgpjcmVhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIyCgxMb2dpblJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSEAoIcGFzc3dvcmQYAiABKAkifwoNTG9naW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoEdXNlchgDIAEoCzIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlVzZXIiJgoQQ2FyZExvZ2luUmVxdWVzdBISCgpjYXJkX3Rva2VuGAEgASgJIoMBChFDYXJkTG9naW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoEdXNlchgDIAEoCzIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlVzZXIiDwoNV2hvQW1JUmVxdWVzdCI6Cg5XaG9BbUlSZXNwb25zZRIoCgR1c2VyGAEgASgLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlciIhChBMaXN0VXNlcnNSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJIj4KEUxpc3RVc2Vyc1Jlc3BvbnNlEikKBXVzZXJzGAEgAygLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlciKJAQoRQ3JlYXRlVXNlclJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSEAoIcGFzc3dvcmQYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEigKBHJvbGUYBCABKA4yGi5tZWRpc3luYy5pZGVudGl0eS52MS5Sb2xlEhAKCHdhcmRfaWRzGAUgAygJIj4KEkNyZWF0ZVVzZXJSZXNwb25zZRIoCgR1c2VyGAEgASgLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlciK1AQoRVXBkYXRlVXNlclJlcXVlc3QSCgoCaWQYASABKAkSGQoMZGlzcGxheV9uYW1lGAIgASgJSACIAQESLQoEcm9sZRgDIAEoDjIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlJvbGVIAYgBARITCgZhY3RpdmUYBCABKAhIAogBARIQCgh3YXJkX2lkcxgFIAMoCUIPCg1fZGlzcGxheV9uYW1lQgcKBV9yb2xlQgkKB19hY3RpdmUiPgoSVXBkYXRlVXNlclJlc3BvbnNlEigKBHVzZXIYASABKAsyGi5tZWRpc3luYy5pZGVudGl0eS52MS5Vc2VyIjoKE1NldENhcmRUb2tlblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRISCgpjYXJkX3Rva2VuGAIgASgJIkAKFFNldENhcmRUb2tlblJlc3BvbnNlEigKBHVzZXIYASABKAsyGi5tZWRpc3luYy5pZGVudGl0eS52MS5Vc2VyKmQKBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfQURNSU4QARITCg9ST0xFX1BIQVJNQUNJU1QQAhIOCgpST0xFX05VUlNFEAMSEQoNUk9MRV9SRUZJTExFUhAEMp0FCg9JZGVudGl0eVNlcnZpY2USUAoFTG9naW4SIi5tZWRpc3luYy5pZGVudGl0eS52MS5Mb2dpblJlcXVlc3QaIy5tZWRpc3luYy5pZGVudGl0eS52MS5Mb2dpblJlc3BvbnNlElwKCUNhcmRMb2dpbhImLm1lZGlzeW5jLmlkZW50aXR5LnYxLkNhcmRMb2dpblJlcXVlc3QaJy5tZWRpc3luYy5pZGVudGl0eS52MS5DYXJkTG9naW5SZXNwb25zZRJTCgZXaG9BbUkSIy5tZWRpc3luYy5pZGVudGl0eS52MS5XaG9BbUlSZXF1ZXN0GiQubWVkaXN5bmMuaWRlbnRpdHkudjEuV2hvQW1JUmVzcG9uc2USXAoJTGlzdFVzZXJzEiYubWVkaXN5bmMuaWRlbnRpdHkudjEuTGlzdFVzZXJzUmVxdWVzdBonLm1lZGlzeW5jLmlkZW50aXR5LnYxLkxpc3RVc2Vyc1Jlc3BvbnNlEl8KCkNyZWF0ZVVzZXISJy5tZWRpc3luYy5pZGVudGl0eS52MS5DcmVhdGVVc2VyUmVxdWVzdBooLm1lZGlzeW5jLmlkZW50aXR5LnYxLkNyZWF0ZVVzZXJSZXNwb25zZRJfCgpVcGRhdGVVc2VyEicubWVkaXN5bmMuaWRlbnRpdHkudjEuVXBkYXRlVXNlclJlcXVlc3QaKC5tZWRpc3luYy5pZGVudGl0eS52MS5VcGRhdGVVc2VyUmVzcG9uc2USZQoMU2V0Q2FyZFRva2VuEikubWVkaXN5bmMuaWRlbnRpdHkudjEuU2V0Q2FyZFRva2VuUmVxdWVzdBoqLm1lZGlzeW5jLmlkZW50aXR5LnYxLlNldENhcmRUb2tlblJlc3BvbnNlQmBaXmdpdGh1Yi5jb20vYWRtLWNodXJhM2ludGVyL21lZGlzeW5jL3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL21lZGlzeW5jL2lkZW50aXR5L3YxO2lkZW50aXR5djFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("CiNtZWRpc3luYy9pZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxIUbWVkaXN5bmMuaWRlbnRpdHkudjEiygEKBFVzZXISCgoCaWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEigKBHJvbGUYBCABKA4yGi5tZWRpc3luYy5pZGVudGl0eS52MS5Sb2xlEhAKCHdhcmRfaWRzGAUgAygJEg4KBmFjdGl2ZRgGIAEoCBIuCgpjcmVhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpwcm9qZWN0X2lkGAggASgJIjIKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJ/Cg1Mb2dpblJlc3BvbnNlEhQKDGFjY2Vzc190b2tlbhgBIAEoCRIuCgpleHBpcmVzX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIoCgR1c2VyGAMgASgLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlciI6ChBDYXJkTG9naW5SZXF1ZXN0EhIKCmNhcmRfdG9rZW4YASABKAkSEgoKcHJvamVjdF9pZBgCIAEoCSKDAQoRQ2FyZExvZ2luUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEi4KCmV4cGlyZXNfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEigKBHVzZXIYAyABKAsyGi5tZWRpc3luYy5pZGVudGl0eS52MS5Vc2VyIg8KDVdob0FtSVJlcXVlc3QiOgoOV2hvQW1JUmVzcG9uc2USKAoEdXNlchgBIAEoCzIaLm1lZGlzeW5jLmlkZW50aXR5LnYxLlVzZXIiNQoQTGlzdFVzZXJzUmVxdWVzdBINCgVxdWVyeRgBIAEoCRISCgpwcm9qZWN0X2lkGAIgASgJIj4KEUxpc3RVc2Vyc1Jlc3BvbnNlEikKBXVzZXJzGAEgAygLMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuVXNlciKdAQoRQ3JlYXRlVXNlclJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSEAoIcGFzc3dvcmQYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEigKBHJvbGUYBCABKA4yGi5tZWRpc3luYy5pZGVudGl0eS52MS5Sb2xlEhAKCHdhcmRfaWRzGAUgAygJEhIKCnByb2plY3RfaWQYBiABKAkiPgoSQ3JlYXRlVXNlclJlc3BvbnNlEigKBHVzZXIYASABKAsyGi5tZWRpc3luYy5pZGVudGl0eS52MS5Vc2VyIt0BChFVcGRhdGVVc2VyUmVxdWVzdBIKCgJpZBgBIAEoCRIZCgxkaXNwbGF5X25hbWUYAiABKAlIAIgBARItCgRyb2xlGAMgASgOMhoubWVkaXN5bmMuaWRlbnRpdHkudjEuUm9sZUgBiAEBEhMKBmFjdGl2ZRgEIAEoCEgCiAEBEhAKCHdhcmRfaWRzGAUgAygJEhcKCnByb2plY3RfaWQYBiABKAlIA4gBAUIPCg1fZGlzcGxheV9uYW1lQgcKBV9yb2xlQgkKB19hY3RpdmVCDQoLX3Byb2plY3RfaWQiPgoSVXBkYXRlVXNlclJlc3BvbnNlEigKBHVzZXIYASABKAsyGi5tZWRpc3luYy5pZGVudGl0eS52MS5Vc2VyIjoKE1NldENhcmRUb2tlblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRISCgpjYXJkX3Rva2VuGAIgASgJIkAKFFNldENhcmRUb2tlblJlc3BvbnNlEigKBHVzZXIYASABKAsyGi5tZWRpc3luYy5pZGVudGl0eS52MS5Vc2VyIqEBCgdQcm9qZWN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDAoEc2x1ZxgDIAEoCRIOCgZhY3RpdmUYBCABKAgSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiMgoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCRIMCgRzbHVnGAIgASgJIkcKFUNyZWF0ZVByb2plY3RSZXNwb25zZRIuCgdwcm9qZWN0GAEgASgLMh0ubWVkaXN5bmMuaWRlbnRpdHkudjEuUHJvamVjdCJeChRVcGRhdGVQcm9qZWN0UmVxdWVzdBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESEwoGYWN0aXZlGAMgASgISAGIAQFCBwoFX25hbWVCCQoHX2FjdGl2ZSJHChVVcGRhdGVQcm9qZWN0UmVzcG9uc2USLgoHcHJvamVjdBgBIAEoCzIdLm1lZGlzeW5jLmlkZW50aXR5LnYxLlByb2plY3QiFQoTTGlzdFByb2plY3RzUmVxdWVzdCJHChRMaXN0UHJvamVjdHNSZXNwb25zZRIvCghwcm9qZWN0cxgBIAMoCzIdLm1lZGlzeW5jLmlkZW50aXR5LnYxLlByb2plY3QiHwoRR2V0UHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkiRAoSR2V0UHJvamVjdFJlc3BvbnNlEi4KB3Byb2plY3QYASABKAsyHS5tZWRpc3luYy5pZGVudGl0eS52MS5Qcm9qZWN0KmQKBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfQURNSU4QARITCg9ST0xFX1BIQVJNQUNJU1QQAhIOCgpST0xFX05VUlNFEAMSEQoNUk9MRV9SRUZJTExFUhAEMp0FCg9JZGVudGl0eVNlcnZpY2USUAoFTG9naW4SIi5tZWRpc3luYy5pZGVudGl0eS52MS5Mb2dpblJlcXVlc3QaIy5tZWRpc3luYy5pZGVudGl0eS52MS5Mb2dpblJlc3BvbnNlElwKCUNhcmRMb2dpbhImLm1lZGlzeW5jLmlkZW50aXR5LnYxLkNhcmRMb2dpblJlcXVlc3QaJy5tZWRpc3luYy5pZGVudGl0eS52MS5DYXJkTG9naW5SZXNwb25zZRJTCgZXaG9BbUkSIy5tZWRpc3luYy5pZGVudGl0eS52MS5XaG9BbUlSZXF1ZXN0GiQubWVkaXN5bmMuaWRlbnRpdHkudjEuV2hvQW1JUmVzcG9uc2USXAoJTGlzdFVzZXJzEiYubWVkaXN5bmMuaWRlbnRpdHkudjEuTGlzdFVzZXJzUmVxdWVzdBonLm1lZGlzeW5jLmlkZW50aXR5LnYxLkxpc3RVc2Vyc1Jlc3BvbnNlEl8KCkNyZWF0ZVVzZXISJy5tZWRpc3luYy5pZGVudGl0eS52MS5DcmVhdGVVc2VyUmVxdWVzdBooLm1lZGlzeW5jLmlkZW50aXR5LnYxLkNyZWF0ZVVzZXJSZXNwb25zZRJfCgpVcGRhdGVVc2VyEicubWVkaXN5bmMuaWRlbnRpdHkudjEuVXBkYXRlVXNlclJlcXVlc3QaKC5tZWRpc3luYy5pZGVudGl0eS52MS5VcGRhdGVVc2VyUmVzcG9uc2USZQoMU2V0Q2FyZFRva2VuEikubWVkaXN5bmMuaWRlbnRpdHkudjEuU2V0Q2FyZFRva2VuUmVxdWVzdBoqLm1lZGlzeW5jLmlkZW50aXR5LnYxLlNldENhcmRUb2tlblJlc3BvbnNlMqwDCg5Qcm9qZWN0U2VydmljZRJoCg1DcmVhdGVQcm9qZWN0EioubWVkaXN5bmMuaWRlbnRpdHkudjEuQ3JlYXRlUHJvamVjdFJlcXVlc3QaKy5tZWRpc3luYy5pZGVudGl0eS52MS5DcmVhdGVQcm9qZWN0UmVzcG9uc2USaAoNVXBkYXRlUHJvamVjdBIqLm1lZGlzeW5jLmlkZW50aXR5LnYxLlVwZGF0ZVByb2plY3RSZXF1ZXN0GisubWVkaXN5bmMuaWRlbnRpdHkudjEuVXBkYXRlUHJvamVjdFJlc3BvbnNlEmUKDExpc3RQcm9qZWN0cxIpLm1lZGlzeW5jLmlkZW50aXR5LnYxLkxpc3RQcm9qZWN0c1JlcXVlc3QaKi5tZWRpc3luYy5pZGVudGl0eS52MS5MaXN0UHJvamVjdHNSZXNwb25zZRJfCgpHZXRQcm9qZWN0EicubWVkaXN5bmMuaWRlbnRpdHkudjEuR2V0UHJvamVjdFJlcXVlc3QaKC5tZWRpc3luYy5pZGVudGl0eS52MS5HZXRQcm9qZWN0UmVzcG9uc2VCYFpeZ2l0aHViLmNvbS9hZG0tY2h1cmEzaW50ZXIvbWVkaXN5bmMvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vbWVkaXN5bmMvaWRlbnRpdHkvdjE7aWRlbnRpdHl2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.identity.v1.User
@@ -54,6 +54,13 @@ export type User = Message<"medisync.identity.v1.User"> & {
    * @generated from field: google.protobuf.Timestamp created_at = 7;
    */
   createdAt?: Timestamp | undefined;
+
+  /**
+   * Project this user belongs to. Empty for SYSADMIN (cross-project).
+   *
+   * @generated from field: string project_id = 8;
+   */
+  projectId: string;
 };
 
 /**
@@ -122,6 +129,14 @@ export type CardLoginRequest = Message<"medisync.identity.v1.CardLoginRequest"> 
    * @generated from field: string card_token = 1;
    */
   cardToken: string;
+
+  /**
+   * Optional project scope override for kiosk card login.
+   * When set, the user must belong to this project.
+   *
+   * @generated from field: string project_id = 2;
+   */
+  projectId: string;
 };
 
 /**
@@ -198,6 +213,14 @@ export type ListUsersRequest = Message<"medisync.identity.v1.ListUsersRequest"> 
    * @generated from field: string query = 1;
    */
   query: string;
+
+  /**
+   * Filter by project. SYSADMIN can omit to see all.
+   * Project admins get this auto-populated by interceptor.
+   *
+   * @generated from field: string project_id = 2;
+   */
+  projectId: string;
 };
 
 /**
@@ -252,6 +275,13 @@ export type CreateUserRequest = Message<"medisync.identity.v1.CreateUserRequest"
    * @generated from field: repeated string ward_ids = 5;
    */
   wardIds: string[];
+
+  /**
+   * Project to assign user to. Required for non-SYSADMIN users.
+   *
+   * @generated from field: string project_id = 6;
+   */
+  projectId: string;
 };
 
 /**
@@ -308,6 +338,13 @@ export type UpdateUserRequest = Message<"medisync.identity.v1.UpdateUserRequest"
    * @generated from field: repeated string ward_ids = 5;
    */
   wardIds: string[];
+
+  /**
+   * Move user to another project (SYSADMIN only).
+   *
+   * @generated from field: optional string project_id = 6;
+   */
+  projectId?: string | undefined;
 };
 
 /**
@@ -374,7 +411,204 @@ export const SetCardTokenResponseSchema: GenMessage<SetCardTokenResponse> = /*@_
   messageDesc(file_medisync_identity_v1_identity, 14);
 
 /**
- * Roles are coarse; fine-grained access is ward-scoped via User.ward_ids.
+ * @generated from message medisync.identity.v1.Project
+ */
+export type Project = Message<"medisync.identity.v1.Project"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug: string;
+
+  /**
+   * @generated from field: bool active = 4;
+   */
+  active: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 5;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 6;
+   */
+  updatedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message medisync.identity.v1.Project.
+ * Use `create(ProjectSchema)` to create a new message.
+ */
+export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 15);
+
+/**
+ * @generated from message medisync.identity.v1.CreateProjectRequest
+ */
+export type CreateProjectRequest = Message<"medisync.identity.v1.CreateProjectRequest"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * Optional; auto-generated from name if empty.
+   *
+   * @generated from field: string slug = 2;
+   */
+  slug: string;
+};
+
+/**
+ * Describes the message medisync.identity.v1.CreateProjectRequest.
+ * Use `create(CreateProjectRequestSchema)` to create a new message.
+ */
+export const CreateProjectRequestSchema: GenMessage<CreateProjectRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 16);
+
+/**
+ * @generated from message medisync.identity.v1.CreateProjectResponse
+ */
+export type CreateProjectResponse = Message<"medisync.identity.v1.CreateProjectResponse"> & {
+  /**
+   * @generated from field: medisync.identity.v1.Project project = 1;
+   */
+  project?: Project | undefined;
+};
+
+/**
+ * Describes the message medisync.identity.v1.CreateProjectResponse.
+ * Use `create(CreateProjectResponseSchema)` to create a new message.
+ */
+export const CreateProjectResponseSchema: GenMessage<CreateProjectResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 17);
+
+/**
+ * @generated from message medisync.identity.v1.UpdateProjectRequest
+ */
+export type UpdateProjectRequest = Message<"medisync.identity.v1.UpdateProjectRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: optional string name = 2;
+   */
+  name?: string | undefined;
+
+  /**
+   * @generated from field: optional bool active = 3;
+   */
+  active?: boolean | undefined;
+};
+
+/**
+ * Describes the message medisync.identity.v1.UpdateProjectRequest.
+ * Use `create(UpdateProjectRequestSchema)` to create a new message.
+ */
+export const UpdateProjectRequestSchema: GenMessage<UpdateProjectRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 18);
+
+/**
+ * @generated from message medisync.identity.v1.UpdateProjectResponse
+ */
+export type UpdateProjectResponse = Message<"medisync.identity.v1.UpdateProjectResponse"> & {
+  /**
+   * @generated from field: medisync.identity.v1.Project project = 1;
+   */
+  project?: Project | undefined;
+};
+
+/**
+ * Describes the message medisync.identity.v1.UpdateProjectResponse.
+ * Use `create(UpdateProjectResponseSchema)` to create a new message.
+ */
+export const UpdateProjectResponseSchema: GenMessage<UpdateProjectResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 19);
+
+/**
+ * SYSADMIN sees all. Project admins get back only their own project
+ * (auto-filtered by interceptor).
+ *
+ * @generated from message medisync.identity.v1.ListProjectsRequest
+ */
+export type ListProjectsRequest = Message<"medisync.identity.v1.ListProjectsRequest"> & {
+};
+
+/**
+ * Describes the message medisync.identity.v1.ListProjectsRequest.
+ * Use `create(ListProjectsRequestSchema)` to create a new message.
+ */
+export const ListProjectsRequestSchema: GenMessage<ListProjectsRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 20);
+
+/**
+ * @generated from message medisync.identity.v1.ListProjectsResponse
+ */
+export type ListProjectsResponse = Message<"medisync.identity.v1.ListProjectsResponse"> & {
+  /**
+   * @generated from field: repeated medisync.identity.v1.Project projects = 1;
+   */
+  projects: Project[];
+};
+
+/**
+ * Describes the message medisync.identity.v1.ListProjectsResponse.
+ * Use `create(ListProjectsResponseSchema)` to create a new message.
+ */
+export const ListProjectsResponseSchema: GenMessage<ListProjectsResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 21);
+
+/**
+ * @generated from message medisync.identity.v1.GetProjectRequest
+ */
+export type GetProjectRequest = Message<"medisync.identity.v1.GetProjectRequest"> & {
+  /**
+   * SYSADMIN: any project; others: only own project.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message medisync.identity.v1.GetProjectRequest.
+ * Use `create(GetProjectRequestSchema)` to create a new message.
+ */
+export const GetProjectRequestSchema: GenMessage<GetProjectRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 22);
+
+/**
+ * @generated from message medisync.identity.v1.GetProjectResponse
+ */
+export type GetProjectResponse = Message<"medisync.identity.v1.GetProjectResponse"> & {
+  /**
+   * @generated from field: medisync.identity.v1.Project project = 1;
+   */
+  project?: Project | undefined;
+};
+
+/**
+ * Describes the message medisync.identity.v1.GetProjectResponse.
+ * Use `create(GetProjectResponseSchema)` to create a new message.
+ */
+export const GetProjectResponseSchema: GenMessage<GetProjectResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_identity_v1_identity, 23);
+
+/**
+ * Roles unchanged — SYSADMIN is not a separate proto role value.
+ * Instead, sysadmin status is determined by role=ADMIN + project_id empty.
  *
  * @generated from enum medisync.identity.v1.Role
  */
@@ -440,7 +674,8 @@ export const IdentityService: GenService<{
     output: typeof WhoAmIResponseSchema;
   },
   /**
-   * User management (admin-only).
+   * User management — project-scoped.
+   * SYSADMIN sees all users; project ADMIN sees only their project's users.
    *
    * @generated from rpc medisync.identity.v1.IdentityService.ListUsers
    */
@@ -475,4 +710,46 @@ export const IdentityService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_medisync_identity_v1_identity, 0);
+
+/**
+ * ProjectService is a separate service in the same proto package.
+ * Only SYSADMIN can call these RPCs.
+ *
+ * @generated from service medisync.identity.v1.ProjectService
+ */
+export const ProjectService: GenService<{
+  /**
+   * @generated from rpc medisync.identity.v1.ProjectService.CreateProject
+   */
+  createProject: {
+    methodKind: "unary";
+    input: typeof CreateProjectRequestSchema;
+    output: typeof CreateProjectResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.identity.v1.ProjectService.UpdateProject
+   */
+  updateProject: {
+    methodKind: "unary";
+    input: typeof UpdateProjectRequestSchema;
+    output: typeof UpdateProjectResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.identity.v1.ProjectService.ListProjects
+   */
+  listProjects: {
+    methodKind: "unary";
+    input: typeof ListProjectsRequestSchema;
+    output: typeof ListProjectsResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.identity.v1.ProjectService.GetProject
+   */
+  getProject: {
+    methodKind: "unary";
+    input: typeof GetProjectRequestSchema;
+    output: typeof GetProjectResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_medisync_identity_v1_identity, 1);
 

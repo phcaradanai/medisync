@@ -86,6 +86,38 @@ services:
   #     - /dev/ttyUSB0:/dev/ttyUSB0
   #     - /dev/ttyUSB1:/dev/ttyUSB1
 
+  admin:
+    build:
+      context: ..
+      dockerfile: apps/admin/Dockerfile
+    image: medisync-admin:latest
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_PORT:-5174}:80"
+    depends_on:
+      - core
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  kiosk:
+    build:
+      context: ..
+      dockerfile: apps/kiosk/Dockerfile
+    image: medisync-kiosk:latest
+    restart: unless-stopped
+    ports:
+      - "${KIOSK_PORT:-5173}:80"
+    depends_on:
+      - core
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
 volumes:
   postgres-data:
   nats-data:

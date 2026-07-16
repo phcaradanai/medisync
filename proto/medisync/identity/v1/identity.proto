@@ -6,7 +6,8 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1;identityv1";
 
-// Roles are coarse; fine-grained access is ward-scoped via User.ward_ids.
+// Roles unchanged — SYSADMIN is not a separate proto role value.
+// Instead, sysadmin status is determined by role=ADMIN + project_id empty.
 enum Role {
   ROLE_UNSPECIFIED = 0;
   ROLE_ADMIN = 1;
@@ -24,6 +25,8 @@ message User {
   repeated string ward_ids = 5;
   bool active = 6;
   google.protobuf.Timestamp created_at = 7;
+  // Project this user belongs to. Empty for SYSADMIN (cross-project).
+  string project_id = 8;
 }
 
 message LoginRequest {
@@ -40,6 +43,9 @@ message LoginResponse {
 // Authenticate by QR/NFC card scanned at the kiosk.
 message CardLoginRequest {
   string card_token = 1;
+  // Optional project scope override for kiosk card login.
+  // When set, the user must belong to this project.
+  string project_id = 2;
 }
 
 message CardLoginResponse {
@@ -59,7 +65,8 @@ service IdentityService {
   rpc CardLogin(CardLoginRequest) returns (CardLoginResponse);
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
 
-  // User management (admin-only).
+  // User management — project-scoped.
+  // SYSADMIN sees all users; project ADMIN sees only their project's users.
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
@@ -69,6 +76,9 @@ service IdentityService {
 message ListUsersRequest {
   // Optional search query — matches username or display_name (partial).
   string query = 1;
+  // Filter by project. SYSADMIN can omit to see all.
+  // Project admins get this auto-populated by interceptor.
+  string project_id = 2;
 }
 
 message ListUsersResponse {
@@ -81,6 +91,8 @@ message CreateUserRequest {
   string display_name = 3;
   Role role = 4;
   repeated string ward_ids = 5;
+  // Project to assign user to. Required for non-SYSADMIN users.
+  string project_id = 6;
 }
 
 message CreateUserResponse {
@@ -94,6 +106,8 @@ message UpdateUserRequest {
   optional Role role = 3;
   optional bool active = 4;
   repeated string ward_ids = 5;
+  // Move user to another project (SYSADMIN only).
+  optional string project_id = 6;
 }
 
 message UpdateUserResponse {
@@ -107,4 +121,62 @@ message SetCardTokenRequest {
 
 message SetCardTokenResponse {
   User user = 1;
+}
+
+// ── Project management (SYSADMIN-only) ─────────────────────────
+
+message Project {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  bool active = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// ProjectService is a separate service in the same proto package.
+// Only SYSADMIN can call these RPCs.
+service ProjectService {
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+  rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+}
+
+message CreateProjectRequest {
+  string name = 1;
+  // Optional; auto-generated from name if empty.
+  string slug = 2;
+}
+
+message CreateProjectResponse {
+  Project project = 1;
+}
+
+message UpdateProjectRequest {
+  string id = 1;
+  optional string name = 2;
+  optional bool active = 3;
+}
+
+message UpdateProjectResponse {
+  Project project = 1;
+}
+
+message ListProjectsRequest {
+  // SYSADMIN sees all. Project admins get back only their own project
+  // (auto-filtered by interceptor).
+}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+}
+
+message GetProjectRequest {
+  // SYSADMIN: any project; others: only own project.
+  string id = 1;
+}
+
+message GetProjectResponse {
+  Project project = 1;
 }

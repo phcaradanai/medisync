@@ -34,7 +34,9 @@ type Kiosk struct {
 	// ResetKioskPin. It is never stored in the database in plaintext
 	// and is never readable via ListKiosks, UpdateKiosk, or any other
 	// RPC. The admin must record or relay it at creation/reset time.
-	Pin           *string `protobuf:"bytes,6,opt,name=pin,proto3,oneof" json:"pin,omitempty"`
+	Pin *string `protobuf:"bytes,6,opt,name=pin,proto3,oneof" json:"pin,omitempty"`
+	// Project this kiosk belongs to.
+	ProjectId     string `protobuf:"bytes,7,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -107,6 +109,13 @@ func (x *Kiosk) GetCreatedAt() *timestamppb.Timestamp {
 func (x *Kiosk) GetPin() string {
 	if x != nil && x.Pin != nil {
 		return *x.Pin
+	}
+	return ""
+}
+
+func (x *Kiosk) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -192,10 +201,12 @@ func (x *ListKiosksResponse) GetKiosks() []*Kiosk {
 }
 
 type CreateKioskRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Pin           string                 `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Code        string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	DisplayName string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Pin         string                 `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
+	// Project to assign this kiosk to. Required.
+	ProjectId     string `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -247,6 +258,13 @@ func (x *CreateKioskRequest) GetDisplayName() string {
 func (x *CreateKioskRequest) GetPin() string {
 	if x != nil {
 		return x.Pin
+	}
+	return ""
+}
+
+func (x *CreateKioskRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -691,7 +709,7 @@ var File_medisync_kiosk_v1_kiosk_proto protoreflect.FileDescriptor
 
 const file_medisync_kiosk_v1_kiosk_proto_rawDesc = "" +
 	"\n" +
-	"\x1dmedisync/kiosk/v1/kiosk.proto\x12\x11medisync.kiosk.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc0\x01\n" +
+	"\x1dmedisync/kiosk/v1/kiosk.proto\x12\x11medisync.kiosk.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdf\x01\n" +
 	"\x05Kiosk\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12!\n" +
@@ -699,15 +717,19 @@ const file_medisync_kiosk_v1_kiosk_proto_rawDesc = "" +
 	"\x06active\x18\x04 \x01(\bR\x06active\x129\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x15\n" +
-	"\x03pin\x18\x06 \x01(\tH\x00R\x03pin\x88\x01\x01B\x06\n" +
+	"\x03pin\x18\x06 \x01(\tH\x00R\x03pin\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\a \x01(\tR\tprojectIdB\x06\n" +
 	"\x04_pin\"\x13\n" +
 	"\x11ListKiosksRequest\"F\n" +
 	"\x12ListKiosksResponse\x120\n" +
-	"\x06kiosks\x18\x01 \x03(\v2\x18.medisync.kiosk.v1.KioskR\x06kiosks\"]\n" +
+	"\x06kiosks\x18\x01 \x03(\v2\x18.medisync.kiosk.v1.KioskR\x06kiosks\"|\n" +
 	"\x12CreateKioskRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x10\n" +
-	"\x03pin\x18\x03 \x01(\tR\x03pin\"E\n" +
+	"\x03pin\x18\x03 \x01(\tR\x03pin\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\"E\n" +
 	"\x13CreateKioskResponse\x12.\n" +
 	"\x05kiosk\x18\x01 \x01(\v2\x18.medisync.kiosk.v1.KioskR\x05kiosk\"\x85\x01\n" +
 	"\x12UpdateKioskRequest\x12\x0e\n" +

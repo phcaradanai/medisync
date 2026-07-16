@@ -46,8 +46,11 @@ services:
       LOG_LEVEL: info
       STARTUP_TIMEOUT_SECONDS: "60"
       PRINT_OPS_URL: http://print-ops:3000
-      PRINT_OPS_API_KEY: ${PRINT_OPS_API_KEY:-}
-      PRINT_OPS_FAKE: "true"
+      PRINT_OPS_API_KEY: ${PRINT_OPS_API_KEY:-printops-dev-apikey-2026}
+      PRINT_OPS_FAKE: "false"
+      VENDING_URL: http://vending:3000
+      VENDING_API_KEY: ${VENDING_API_KEY:-}
+      VENDING_FAKE: "false"
     ports:
       - "8080:8080"
     depends_on:
@@ -55,6 +58,24 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
+
+  admin:
+    build:
+      context: ..
+      dockerfile: apps/admin/Dockerfile
+    ports:
+      - "5174:80"
+    depends_on:
+      - core
+
+  kiosk:
+    build:
+      context: ..
+      dockerfile: apps/kiosk/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - core
 
 volumes:
   postgres-data:
