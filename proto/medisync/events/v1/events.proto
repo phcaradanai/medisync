@@ -69,15 +69,18 @@ message PrintRequested {
   string print_id = 1;
   string prescription_id = 2;
   string trace_id = 3;
+  string project_id = 4;
 }
 
 // Subject: medisync.print.completed
+// Published by sync-relay with REAL printer result (not fake).
 message PrintCompleted {
   string print_id = 1;
   string prescription_id = 2;
   bool success = 3;
   string detail = 4;
   string trace_id = 5;
+  string project_id = 6;
 }
 
 // Subject: medisync.fulfillment.requested

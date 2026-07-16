@@ -501,6 +501,7 @@ type PrintRequested struct {
 	PrintId        string                 `protobuf:"bytes,1,opt,name=print_id,json=printId,proto3" json:"print_id,omitempty"`
 	PrescriptionId string                 `protobuf:"bytes,2,opt,name=prescription_id,json=prescriptionId,proto3" json:"prescription_id,omitempty"`
 	TraceId        string                 `protobuf:"bytes,3,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -556,7 +557,15 @@ func (x *PrintRequested) GetTraceId() string {
 	return ""
 }
 
+func (x *PrintRequested) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 // Subject: medisync.print.completed
+// Published by sync-relay with REAL printer result (not fake).
 type PrintCompleted struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	PrintId        string                 `protobuf:"bytes,1,opt,name=print_id,json=printId,proto3" json:"print_id,omitempty"`
@@ -564,6 +573,7 @@ type PrintCompleted struct {
 	Success        bool                   `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
 	Detail         string                 `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
 	TraceId        string                 `protobuf:"bytes,5,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -629,6 +639,13 @@ func (x *PrintCompleted) GetDetail() string {
 func (x *PrintCompleted) GetTraceId() string {
 	if x != nil {
 		return x.TraceId
+	}
+	return ""
+}
+
+func (x *PrintCompleted) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -970,17 +987,21 @@ const file_medisync_events_v1_events_proto_rawDesc = "" +
 	"\tslot_code\x18\x03 \x01(\tR\bslotCode\x12\x16\n" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x16\n" +
 	"\x06detail\x18\x05 \x01(\tR\x06detail\x12\x19\n" +
-	"\btrace_id\x18\x06 \x01(\tR\atraceId\"o\n" +
+	"\btrace_id\x18\x06 \x01(\tR\atraceId\"\x8e\x01\n" +
 	"\x0ePrintRequested\x12\x19\n" +
 	"\bprint_id\x18\x01 \x01(\tR\aprintId\x12'\n" +
 	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x19\n" +
-	"\btrace_id\x18\x03 \x01(\tR\atraceId\"\xa1\x01\n" +
+	"\btrace_id\x18\x03 \x01(\tR\atraceId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\"\xc0\x01\n" +
 	"\x0ePrintCompleted\x12\x19\n" +
 	"\bprint_id\x18\x01 \x01(\tR\aprintId\x12'\n" +
 	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x18\n" +
 	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x16\n" +
 	"\x06detail\x18\x04 \x01(\tR\x06detail\x12\x19\n" +
-	"\btrace_id\x18\x05 \x01(\tR\atraceId\"\x81\x01\n" +
+	"\btrace_id\x18\x05 \x01(\tR\atraceId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x06 \x01(\tR\tprojectId\"\x81\x01\n" +
 	"\x14FulfillmentRequested\x12%\n" +
 	"\x0efulfillment_id\x18\x01 \x01(\tR\rfulfillmentId\x12'\n" +
 	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x19\n" +
