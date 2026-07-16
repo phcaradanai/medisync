@@ -22,6 +22,8 @@ message Drug {
   bool active = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  // Human-readable display name (Thai/English label).
+  string display_name = 12;
 }
 
 message CreateDrugRequest {
@@ -32,6 +34,7 @@ message CreateDrugRequest {
   string strength = 5;
   string unit = 6;
   string sticker_note = 7;
+  string display_name = 8;
 }
 
 message CreateDrugResponse {

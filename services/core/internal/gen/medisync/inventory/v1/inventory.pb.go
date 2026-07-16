@@ -37,6 +37,7 @@ type Slot struct {
 	// stock.low event fires when quantity drops to or below this.
 	LowThreshold  int32                  `protobuf:"varint,9,opt,name=low_threshold,json=lowThreshold,proto3" json:"low_threshold,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,11,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -139,6 +140,13 @@ func (x *Slot) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Slot) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
 }
 
 type ListSlotsRequest struct {
@@ -572,7 +580,7 @@ var File_medisync_inventory_v1_inventory_proto protoreflect.FileDescriptor
 
 const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
-	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb4\x02\n" +
+	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd7\x02\n" +
 	"\x04Slot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -586,7 +594,8 @@ const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\rlow_threshold\x18\t \x01(\x05R\flowThreshold\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"L\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12!\n" +
+	"\fdisplay_name\x18\v \x01(\tR\vdisplayName\"L\n" +
 	"\x10ListSlotsRequest\x12\x1d\n" +
 	"\n" +
 	"cabinet_id\x18\x01 \x01(\tR\tcabinetId\x12\x19\n" +

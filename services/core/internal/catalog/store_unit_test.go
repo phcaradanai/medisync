@@ -103,22 +103,23 @@ func (r *fakeRow) Scan(dest ...any) error {
 func rowWithDrug(d Drug) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 11 {
-				return fmt.Errorf("expected 11 dests, got %d", len(dest))
+			if len(dest) != 12 {
+				return fmt.Errorf("expected 12 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = d.ID
 			*(dest[1].(*string)) = d.Code
 			*(dest[2].(*string)) = d.Name
-			*(dest[3].(*string)) = d.GenericName
-			*(dest[4].(*string)) = d.Form
-			*(dest[5].(*string)) = d.Strength
-			*(dest[6].(*string)) = d.Unit
-			*(dest[7].(*string)) = d.StickerNote
-			*(dest[8].(*bool)) = d.Active
-			if dt, ok := dest[9].(*time.Time); ok {
+			*(dest[3].(*string)) = d.DisplayName
+			*(dest[4].(*string)) = d.GenericName
+			*(dest[5].(*string)) = d.Form
+			*(dest[6].(*string)) = d.Strength
+			*(dest[7].(*string)) = d.Unit
+			*(dest[8].(*string)) = d.StickerNote
+			*(dest[9].(*bool)) = d.Active
+			if dt, ok := dest[10].(*time.Time); ok {
 				*dt = d.CreatedAt
 			}
-			if dt, ok := dest[10].(*time.Time); ok {
+			if dt, ok := dest[11].(*time.Time); ok {
 				*dt = d.UpdatedAt
 			}
 			return nil
@@ -168,7 +169,7 @@ func (r *fakeRows) Scan(dest ...any) error {
 	}
 	d := r.drugs[r.current-1]
 	if len(dest) != 11 {
-		return fmt.Errorf("expected 11 dests, got %d", len(dest))
+		return fmt.Errorf("expected 12 dests, got %d", len(dest))
 	}
 	*(dest[0].(*string)) = d.ID
 	*(dest[1].(*string)) = d.Code
@@ -211,18 +212,19 @@ func TestScanDrugSuccess(t *testing.T) {
 
 	row := &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 11 {
-				return fmt.Errorf("expected 11 dests, got %d", len(dest))
+			if len(dest) != 12 {
+				return fmt.Errorf("expected 12 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = expected.ID
 			*(dest[1].(*string)) = expected.Code
 			*(dest[2].(*string)) = expected.Name
-			*(dest[3].(*string)) = expected.GenericName
-			*(dest[4].(*string)) = expected.Form
-			*(dest[5].(*string)) = expected.Strength
-			*(dest[6].(*string)) = expected.Unit
-			*(dest[7].(*string)) = expected.StickerNote
-			*(dest[8].(*bool)) = expected.Active
+			*(dest[3].(*string)) = expected.DisplayName
+			*(dest[4].(*string)) = expected.GenericName
+			*(dest[5].(*string)) = expected.Form
+			*(dest[6].(*string)) = expected.Strength
+			*(dest[7].(*string)) = expected.Unit
+			*(dest[8].(*string)) = expected.StickerNote
+			*(dest[9].(*bool)) = expected.Active
 			// CreatedAt and UpdatedAt at positions 9 and 10
 			return nil
 		},
@@ -312,8 +314,8 @@ func TestCreateDrugSuccess(t *testing.T) {
 	if !strings.Contains(call.sql, "INSERT INTO catalog.drug") {
 		t.Error("SQL should be INSERT INTO catalog.drug")
 	}
-	if len(call.args) != 7 {
-		t.Errorf("expected 7 args, got %d", len(call.args))
+	if len(call.args) != 8 {
+		t.Errorf("expected 8 args (with display_name), got %d", len(call.args))
 	}
 }
 

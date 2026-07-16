@@ -117,6 +117,7 @@ func (s *CatalogServer) CreateDrug(ctx context.Context, req *connect.Request[cat
 	drug, err := s.store.Create(ctx, Drug{
 		Code:        msg.Code,
 		Name:        msg.Name,
+		DisplayName: msg.DisplayName,
 		GenericName: msg.GenericName,
 		Form:        msg.Form,
 		Strength:    msg.Strength,
@@ -284,6 +285,7 @@ func toProtoDrug(d *Drug) *catalogv1.Drug {
 		Id:          d.ID,
 		Code:        d.Code,
 		Name:        d.Name,
+		DisplayName: d.DisplayName,
 		GenericName: d.GenericName,
 		Form:        d.Form,
 		Strength:    d.Strength,

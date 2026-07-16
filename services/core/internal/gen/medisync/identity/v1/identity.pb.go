@@ -950,6 +950,8 @@ type Project struct {
 	Active        bool                   `protobuf:"varint,4,opt,name=active,proto3" json:"active,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Code          string                 `protobuf:"bytes,7,opt,name=code,proto3" json:"code,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,8,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1024,6 +1026,20 @@ func (x *Project) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Project) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *Project) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
 }
 
 type CreateProjectRequest struct {
@@ -1468,7 +1484,7 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"card_token\x18\x02 \x01(\tR\tcardToken\"F\n" +
 	"\x14SetCardTokenResponse\x12.\n" +
-	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\xcf\x01\n" +
+	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\x86\x02\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -1477,7 +1493,9 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\">\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x12\n" +
+	"\x04code\x18\a \x01(\tR\x04code\x12!\n" +
+	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\">\n" +
 	"\x14CreateProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04slug\x18\x02 \x01(\tR\x04slug\"P\n" +

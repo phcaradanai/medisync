@@ -132,6 +132,8 @@ message Project {
   bool active = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
+  string code = 7;
+  string display_name = 8;
 }
 
 // ProjectService is a separate service in the same proto package.

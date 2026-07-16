@@ -11,6 +11,7 @@ type Drug struct {
 	ID          string
 	Code        string
 	Name        string
+	DisplayName string
 	GenericName string
 	Form        string
 	Strength    string

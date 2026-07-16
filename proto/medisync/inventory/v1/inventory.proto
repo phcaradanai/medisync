@@ -20,6 +20,7 @@ message Slot {
   // stock.low event fires when quantity drops to or below this.
   int32 low_threshold = 9;
   google.protobuf.Timestamp updated_at = 10;
+  string display_name = 11;
 }
 
 message ListSlotsRequest {

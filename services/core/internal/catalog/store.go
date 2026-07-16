@@ -47,11 +47,11 @@ func NewStoreWithDB(db dbConn, aw *audit.Writer) *Store {
 // with server-generated fields (id, timestamps).
 func (s *Store) Create(ctx context.Context, d Drug) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO catalog.drug (code, name, generic_name, form, strength, unit, sticker_note)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)
-		 RETURNING id, code, name, generic_name, form, strength, unit, sticker_note,
+		`INSERT INTO catalog.drug (code, name, display_name, generic_name, form, strength, unit, sticker_note)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		 RETURNING id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
 		           active, created_at, updated_at`,
-		d.Code, d.Name, d.GenericName, d.Form, d.Strength, d.Unit, d.StickerNote)
+		d.Code, d.Name, d.DisplayName, d.GenericName, d.Form, d.Strength, d.Unit, d.StickerNote)
 	return scanDrug(row)
 }
 
@@ -192,12 +192,11 @@ func (s *Store) writeAudit(ctx context.Context, e audit.Entry) {
 	_ = s.auditWriter.Write(ctx, e)
 }
 
-// scanDrug maps a pgx.Row to a Drug from an 11-column result (10 fields + updated_at).
-// Returns nil when the row is empty (pgx.ErrNoRows).
+// scanDrug maps a pgx.Row to a Drug from a 12-column result.
 func scanDrug(row pgx.Row) (*Drug, error) {
 	var d Drug
 	var createdAt, updatedAt time.Time
-	err := row.Scan(&d.ID, &d.Code, &d.Name, &d.GenericName,
+	err := row.Scan(&d.ID, &d.Code, &d.Name, &d.DisplayName, &d.GenericName,
 		&d.Form, &d.Strength, &d.Unit, &d.StickerNote,
 		&d.Active, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {

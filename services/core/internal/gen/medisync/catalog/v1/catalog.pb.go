@@ -35,10 +35,12 @@ type Drug struct {
 	// Dispensing unit, e.g. "tab", "amp", "bottle".
 	Unit string `protobuf:"bytes,7,opt,name=unit,proto3" json:"unit,omitempty"`
 	// Extra line printed on the medication sticker (warnings, storage).
-	StickerNote   string                 `protobuf:"bytes,8,opt,name=sticker_note,json=stickerNote,proto3" json:"sticker_note,omitempty"`
-	Active        bool                   `protobuf:"varint,9,opt,name=active,proto3" json:"active,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	StickerNote string                 `protobuf:"bytes,8,opt,name=sticker_note,json=stickerNote,proto3" json:"sticker_note,omitempty"`
+	Active      bool                   `protobuf:"varint,9,opt,name=active,proto3" json:"active,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Human-readable display name (Thai/English label).
+	DisplayName   string `protobuf:"bytes,12,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -150,6 +152,13 @@ func (x *Drug) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Drug) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
 type CreateDrugRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
@@ -159,6 +168,7 @@ type CreateDrugRequest struct {
 	Strength      string                 `protobuf:"bytes,5,opt,name=strength,proto3" json:"strength,omitempty"`
 	Unit          string                 `protobuf:"bytes,6,opt,name=unit,proto3" json:"unit,omitempty"`
 	StickerNote   string                 `protobuf:"bytes,7,opt,name=sticker_note,json=stickerNote,proto3" json:"sticker_note,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,8,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -238,6 +248,13 @@ func (x *CreateDrugRequest) GetUnit() string {
 func (x *CreateDrugRequest) GetStickerNote() string {
 	if x != nil {
 		return x.StickerNote
+	}
+	return ""
+}
+
+func (x *CreateDrugRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
 	}
 	return ""
 }
@@ -675,7 +692,7 @@ var File_medisync_catalog_v1_catalog_proto protoreflect.FileDescriptor
 
 const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
-	"!medisync/catalog/v1/catalog.proto\x12\x13medisync.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd6\x02\n" +
+	"!medisync/catalog/v1/catalog.proto\x12\x13medisync.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf9\x02\n" +
 	"\x04Drug\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -690,7 +707,8 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xc5\x01\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12!\n" +
+	"\fdisplay_name\x18\f \x01(\tR\vdisplayName\"\xe8\x01\n" +
 	"\x11CreateDrugRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -698,7 +716,8 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x04form\x18\x04 \x01(\tR\x04form\x12\x1a\n" +
 	"\bstrength\x18\x05 \x01(\tR\bstrength\x12\x12\n" +
 	"\x04unit\x18\x06 \x01(\tR\x04unit\x12!\n" +
-	"\fsticker_note\x18\a \x01(\tR\vstickerNote\"C\n" +
+	"\fsticker_note\x18\a \x01(\tR\vstickerNote\x12!\n" +
+	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"C\n" +
 	"\x12CreateDrugResponse\x12-\n" +
 	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug\" \n" +
 	"\x0eGetDrugRequest\x12\x0e\n" +

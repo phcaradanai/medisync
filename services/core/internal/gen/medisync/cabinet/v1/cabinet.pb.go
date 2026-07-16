@@ -33,6 +33,7 @@ type Cabinet struct {
 	Active        bool                   `protobuf:"varint,4,opt,name=active,proto3" json:"active,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -107,6 +108,13 @@ func (x *Cabinet) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Cabinet) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
 }
 
 type ListCabinetsRequest struct {
@@ -393,7 +401,7 @@ var File_medisync_cabinet_v1_cabinet_proto protoreflect.FileDescriptor
 
 const file_medisync_cabinet_v1_cabinet_proto_rawDesc = "" +
 	"\n" +
-	"!medisync/cabinet/v1/cabinet.proto\x12\x13medisync.cabinet.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcf\x01\n" +
+	"!medisync/cabinet/v1/cabinet.proto\x12\x13medisync.cabinet.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf2\x01\n" +
 	"\aCabinet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -402,7 +410,8 @@ const file_medisync_cabinet_v1_cabinet_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x15\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12!\n" +
+	"\fdisplay_name\x18\a \x01(\tR\vdisplayName\"\x15\n" +
 	"\x13ListCabinetsRequest\"P\n" +
 	"\x14ListCabinetsResponse\x128\n" +
 	"\bcabinets\x18\x01 \x03(\v2\x1c.medisync.cabinet.v1.CabinetR\bcabinets\">\n" +
