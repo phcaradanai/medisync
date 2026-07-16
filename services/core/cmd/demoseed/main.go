@@ -31,12 +31,13 @@ import (
 // Demo identifiers — kept as constants so downstream tests can reference them.
 // All demo data is prefixed "DEMO-" for easy cleanup.
 const (
-	demoPrefix    = "DEMO-"
-	demoSource    = "demo-seed"
-	demoKioskCode = "DEMO-K1"
-	demoKioskPIN  = "123456"
-	demoWard      = "WARD-3A"
-	demoCabinetID = "CAB1"
+	demoPrefix       = "DEMO-"
+	demoSource       = "demo-seed"
+	demoKioskCode    = "DEMO-K1"
+	demoKioskPIN     = "123456"
+	demoWard         = "WARD-3A"
+	demoCabinetID    = "CAB1"
+	defaultProjectID = "00000000-0000-0000-0000-000000000001"
 )
 
 // demoUser holds the fields for a seed user.
@@ -201,14 +202,16 @@ func seedUsers(ctx context.Context, pool *pgxpool.Pool) error {
 		// admin is seeded by core/main.go with SeedAdmin — we use
 		// ON CONFLICT DO NOTHING so re-running is safe.
 		wardIDs := "{}"
+		projectID := "NULL"
 		if u.Role != "ADMIN" {
 			wardIDs = fmt.Sprintf(`{"%s"}`, demoWard)
+			projectID = fmt.Sprintf(`'%s'`, defaultProjectID)
 		}
 		sql := fmt.Sprintf(
-			`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
-			 VALUES ('%s', '%s', '%s', '%s', '%s', true)
+			`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, project_id, active)
+			 VALUES ('%s', '%s', '%s', '%s', '%s', %s, true)
 			 ON CONFLICT (username) DO NOTHING`,
-			u.Username, hash, u.DisplayName, u.Role, wardIDs)
+			u.Username, hash, u.DisplayName, u.Role, wardIDs, projectID)
 		if _, err := pool.Exec(ctx, sql); err != nil {
 			return fmt.Errorf("insert user %q: %w", u.Username, err)
 		}
