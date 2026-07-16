@@ -62,10 +62,13 @@ type Config struct {
 	PrintOpsFake bool
 	// VendingURL is the base URL of the vending-3d-ctl-agent API.
 	VendingURL string
-	// VendingAPIKey is the Bearer token sent to vending-3d-ctl-agent.
-	VendingAPIKey string
+	// VendingAPIBearerToken is the Bearer token sent to vending-3d-ctl-agent.
+	VendingAPIBearerToken string
 	// VendingFake, when true, uses a no-op fake vending client (for dev/testing).
+	// Deprecated: use FulfillmentFake instead.
 	VendingFake bool
+	// FulfillmentFake, when true, uses a no-op fake vending client (for dev/testing).
+	FulfillmentFake bool
 }
 
 // Load reads configuration from environment variables. It rejects missing,
@@ -147,10 +150,13 @@ func Load() (Config, error) {
 
 	// ── Vending ──────────────────────────────────────────────────────
 	cfg.VendingURL = getenv("VENDING_URL", "http://localhost:3000")
-	cfg.VendingAPIKey = os.Getenv("VENDING_API_KEY")
+	cfg.VendingAPIBearerToken = os.Getenv("VENDING_API_BEARER_TOKEN")
 
 	vendingFakeStr := strings.ToLower(getenv("VENDING_FAKE", "false"))
 	cfg.VendingFake = vendingFakeStr == "true" || vendingFakeStr == "1"
+
+	fulfillmentFakeStr := strings.ToLower(getenv("FULFILLMENT_FAKE", "false"))
+	cfg.FulfillmentFake = fulfillmentFakeStr == "true" || fulfillmentFakeStr == "1"
 
 	return cfg, nil
 }

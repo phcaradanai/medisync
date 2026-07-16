@@ -28,7 +28,7 @@ vi.mock("../api/client", () => ({
 
 // ── Import the component after mocks are set up ─────────────────
 
-import { DrugsPage } from "../pages/DrugsPage";
+import { DrugsPage } from "../features/drugs/DrugsPage";
 
 // ── Test fixtures ───────────────────────────────────────────────
 

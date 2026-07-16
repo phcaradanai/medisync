@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package medisync.cabinet.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1;cabinetv1";
+
+// Cabinet is a physical vending machine. Slots belong to cabinets
+// via inventory.slot.cabinet_id.
+message Cabinet {
+  string id = 1;
+  // Unique machine code, e.g. "CAB-01".
+  string code = 2;
+  string name = 3;
+  bool active = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListCabinetsRequest {}
+
+message ListCabinetsResponse {
+  repeated Cabinet cabinets = 1;
+}
+
+message CreateCabinetRequest {
+  string code = 1;
+  string name = 2;
+}
+
+message CreateCabinetResponse {
+  Cabinet cabinet = 1;
+}
+
+message UpdateCabinetRequest {
+  string id = 1;
+  optional string name = 2;
+  optional bool active = 3;
+}
+
+message UpdateCabinetResponse {
+  Cabinet cabinet = 1;
+}
+
+service CabinetService {
+  rpc ListCabinets(ListCabinetsRequest) returns (ListCabinetsResponse);
+  rpc CreateCabinet(CreateCabinetRequest) returns (CreateCabinetResponse);
+  rpc UpdateCabinet(UpdateCabinetRequest) returns (UpdateCabinetResponse);
+}

@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.tsx";
 import LoginScreen from "./LoginScreen.tsx";
-import WithdrawFlow from "./WithdrawFlow.tsx";
-import RefillFlow from "./RefillFlow.tsx";
+import WithdrawFlow from "./features/withdraw/WithdrawFlow";
+import RefillFlow from "./features/refill/RefillFlow";
 
-type Mode = "withdraw" | "refill";
-
-function AppShell() {
+function KioskShell() {
   const { state, loading, logout } = useAuth();
-  const [mode, setMode] = useState<Mode>("withdraw");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isRefill = location.pathname.startsWith("/refill");
 
   if (loading) {
     return (
@@ -25,45 +25,37 @@ function AppShell() {
     return <LoginScreen />;
   }
 
-  const isRefill = mode === "refill";
-
   return (
     <>
-      <header className={`kiosk-header${isRefill ? " kiosk-header--refill" : ""}`}>
-        <div className="kiosk-header__user">
-          <span>{state.kiosk.displayName}</span>
-          <span style={{ fontSize: "0.8rem", opacity: 0.6 }}>
-            {state.kiosk.code}
-          </span>
+      <header className="kiosk-header">
+        <div className="flex flex-col">
+          <span className="text-white text-lg font-bold">{state.kiosk.displayName}</span>
+          <span className="text-sm text-gray-400">{state.kiosk.code}</span>
         </div>
-        <div style={{ display: "flex", gap: "var(--space-md)", alignItems: "center" }}>
+        <div className="flex gap-3 items-center">
           <button
-            type="button"
-            className={`kiosk-header__mode-btn${!isRefill ? " kiosk-header__mode-btn--active" : ""}`}
-            onClick={() => setMode("withdraw")}
+            className={`kiosk-header__mode-btn ${!isRefill ? "kiosk-header__mode-btn--active" : ""}`}
+            onClick={() => navigate("/withdraw")}
           >
             💊 เบิกยา
           </button>
           <button
-            type="button"
-            className={`kiosk-header__mode-btn${isRefill ? " kiosk-header__mode-btn--refill-active" : ""}`}
-            onClick={() => setMode("refill")}
+            className={`kiosk-header__mode-btn ${isRefill ? "kiosk-header__mode-btn--refill-active" : ""}`}
+            onClick={() => navigate("/refill")}
           >
             📦 เติมยา
           </button>
-          <button
-            type="button"
-            className="kiosk-header__logout"
-            onClick={logout}
-          >
+          <button className="text-sm text-gray-400 hover:text-white transition-colors" onClick={logout}>
             ออกจากระบบ
           </button>
         </div>
       </header>
-      {isRefill && (
-        <div className="kiosk-refill-banner">🔄 โหมดเติมยา</div>
-      )}
-      {mode === "withdraw" ? <WithdrawFlow /> : <RefillFlow />}
+      {isRefill && <div className="kiosk-refill-banner">🔄 โหมดเติมยา</div>}
+      <Routes>
+        <Route index element={<Navigate to="/withdraw" replace />} />
+        <Route path="withdraw" element={<WithdrawFlow />} />
+        <Route path="refill" element={<RefillFlow />} />
+      </Routes>
     </>
   );
 }
@@ -71,7 +63,7 @@ function AppShell() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppShell />
+      <KioskShell />
     </AuthProvider>
   );
 }

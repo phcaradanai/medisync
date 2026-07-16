@@ -19,14 +19,16 @@ const (
 	StreamMedisync = "MEDISYNC"
 
 	SubjectPrescriptionCreated = "rx.prescription.created"
-	SubjectDispenseRequested   = "medisync.dispense.requested"
-	SubjectDispenseCompleted   = "medisync.dispense.completed"
-	SubjectDispenseFailed      = "medisync.dispense.failed"
-	SubjectPrintRequested      = "medisync.print.requested"
-	SubjectPrintCompleted      = "medisync.print.completed"
-	SubjectStockChanged        = "medisync.stock.changed"
-	SubjectStockLow            = "medisync.stock.low"
-	SubjectDLQPrefix           = "medisync.dlq."
+	SubjectDispenseRequested     = "medisync.dispense.requested"
+	SubjectDispenseCompleted     = "medisync.dispense.completed"
+	SubjectDispenseFailed        = "medisync.dispense.failed"
+	SubjectFulfillmentRequested  = "medisync.fulfillment.requested"
+	SubjectFulfillmentCompleted  = "medisync.fulfillment.completed"
+	SubjectPrintRequested        = "medisync.print.requested"
+	SubjectPrintCompleted        = "medisync.print.completed"
+	SubjectStockChanged          = "medisync.stock.changed"
+	SubjectStockLow              = "medisync.stock.low"
+	SubjectDLQPrefix             = "medisync.dlq."
 )
 
 // Connect dials NATS, retrying until ctx expires.

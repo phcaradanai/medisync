@@ -19,6 +19,8 @@ Wire format: **protojson** of the messages in `proto/medisync/events/v1/events.p
 | `medisync.dispense.failed` | `DispenseFailed` | core/fulfillment | core/dispensing | M3 |
 | `medisync.print.requested` | `PrintRequested` | core/dispensing | core/printing | M3 |
 | `medisync.print.completed` | `PrintCompleted` | core/printing | core/dispensing | M3 |
+| `medisync.fulfillment.requested` | `FulfillmentRequested` | core/dispensing (future) | core/vending | M3 |
+| `medisync.fulfillment.completed` | `FulfillmentCompleted` | core/vending | core/dispensing (future) | M3 |
 | `medisync.stock.changed` | `StockChanged` | core/inventory | admin app, audit | M2 |
 | `medisync.stock.low` | `StockLow` | core/inventory | admin app | M2 |
 | `medisync.dlq.<original>` | raw bytes of the rejected message | any consumer | operators (manual) | **live (M1)** |

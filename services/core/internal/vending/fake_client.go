@@ -46,7 +46,7 @@ func (f *FakeClient) Dispense(ctx context.Context, req DispenseRequest) (*Dispen
 	}
 
 	return &DispenseResponse{
-		OK: true,
+		OK: 1,
 		Data: DispenseData{
 			PrescriptionNo: req.Prescription,
 			Status:         "success",
@@ -114,7 +114,7 @@ func NewTimeoutClient() *FakeClient {
 	f := NewFakeClient()
 	f.DispenseFn = func(_ context.Context, req DispenseRequest) (*DispenseResponse, error) {
 		return &DispenseResponse{
-			OK: false,
+			OK: 0,
 			Data: DispenseData{
 				PrescriptionNo: req.Prescription,
 				Status:         "failed",
@@ -134,7 +134,7 @@ func NewSuccessClient(status string) *FakeClient {
 	f := NewFakeClient()
 	f.DispenseFn = func(_ context.Context, req DispenseRequest) (*DispenseResponse, error) {
 		return &DispenseResponse{
-			OK: true,
+			OK: 1,
 			Data: DispenseData{
 				PrescriptionNo: req.Prescription,
 				Status:         status,
@@ -156,7 +156,7 @@ func TimeoutWait(d time.Duration) *FakeClient {
 		case <-time.After(d):
 		}
 		return &DispenseResponse{
-			OK: true,
+			OK: 1,
 			Data: DispenseData{
 				PrescriptionNo: req.Prescription,
 				Status:         "success",

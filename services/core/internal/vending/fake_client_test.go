@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/config"
 )
 
 func TestFakeClient_Dispense_RecordsRequest(t *testing.T) {
@@ -21,7 +23,7 @@ func TestFakeClient_Dispense_RecordsRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !resp.OK {
+	if resp.OK != 1 {
 		t.Fatal("expected OK response from fake")
 	}
 	if resp.Data.Status != "success" {
@@ -76,7 +78,7 @@ func TestFakeClient_Dispense_CustomFn(t *testing.T) {
 	f := NewFakeClient()
 	f.DispenseFn = func(_ context.Context, _ DispenseRequest) (*DispenseResponse, error) {
 		return &DispenseResponse{
-			OK: true,
+			OK: 1,
 			Data: DispenseData{
 				PrescriptionNo: "custom",
 				Status:         "success",
@@ -142,7 +144,7 @@ func TestTimeoutClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.OK {
+	if resp.OK != 0 {
 		t.Fatal("expected !OK for timeout client")
 	}
 	if resp.Data.Status != "failed" {
@@ -163,7 +165,7 @@ func TestSuccessClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !resp.OK {
+	if resp.OK != 1 {
 		t.Fatal("expected OK")
 	}
 	if resp.Data.Status != "dispensed" {
@@ -178,7 +180,7 @@ func TestTimeoutWait_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !resp.OK {
+	if resp.OK != 1 {
 		t.Fatal("expected OK")
 	}
 }
@@ -194,11 +196,15 @@ func TestTimeoutWait_ContextCanceled(t *testing.T) {
 }
 
 func TestNewClientFromConfig_Real(t *testing.T) {
-	c := NewClientFromConfig("http://localhost:4000", "secret", false)
+	cfg := config.Config{
+		VendingURL:            "http://localhost:4000",
+		VendingAPIBearerToken: "secret",
+		FulfillmentFake:       false,
+	}
+	c := NewClientFromConfig(cfg)
 	if c == nil {
 		t.Fatal("expected non-nil client")
 	}
-	// Should NOT be a FakeClient (but we can't easily check without reflect).
 	_, isFake := c.(*FakeClient)
 	if isFake {
 		t.Fatal("expected real client, got FakeClient")
@@ -206,7 +212,12 @@ func TestNewClientFromConfig_Real(t *testing.T) {
 }
 
 func TestNewClientFromConfig_Fake(t *testing.T) {
-	c := NewClientFromConfig("http://localhost:4000", "secret", true)
+	cfg := config.Config{
+		VendingURL:            "http://localhost:4000",
+		VendingAPIBearerToken: "secret",
+		FulfillmentFake:       true,
+	}
+	c := NewClientFromConfig(cfg)
 	if c == nil {
 		t.Fatal("expected non-nil client")
 	}

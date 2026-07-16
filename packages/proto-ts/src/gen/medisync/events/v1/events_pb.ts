@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/events/v1/events.proto.
  */
 export const file_medisync_events_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("Ch9tZWRpc3luYy9ldmVudHMvdjEvZXZlbnRzLnByb3RvEhJtZWRpc3luYy5ldmVudHMudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIu4BChNQcmVzY3JpcHRpb25DcmVhdGVkEhcKD3ByZXNjcmlwdGlvbl9pZBgBIAEoCRIVCg1zb3VyY2Vfc3lzdGVtGAIgASgJEgoKAmhuGAMgASgJEhQKDHBhdGllbnRfbmFtZRgEIAEoCRIPCgd3YXJkX2lkGAUgASgJEjMKBWl0ZW1zGAYgAygLMiQubWVkaXN5bmMuZXZlbnRzLnYxLlByZXNjcmlwdGlvbkl0ZW0SLQoJaXNzdWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCgh0cmFjZV9pZBgIIAEoCSJ4ChFEaXNwZW5zZVJlcXVlc3RlZBITCgtkaXNwZW5zZV9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEQoJc2xvdF9jb2RlGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEhAKCHRyYWNlX2lkGAUgASgJIqoBChFEaXNwZW5zZUNvbXBsZXRlZBITCgtkaXNwZW5zZV9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEQoJc2xvdF9jb2RlGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEjAKDGNvbXBsZXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIdHJhY2VfaWQYBiABKAkigwEKDkRpc3BlbnNlRmFpbGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSDgoGcmVhc29uGAQgASgJEg4KBmRldGFpbBgFIAEoCRIQCgh0cmFjZV9pZBgGIAEoCSJNCg5QcmludFJlcXVlc3RlZBIQCghwcmludF9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEAoIdHJhY2VfaWQYAyABKAkibgoOUHJpbnRDb21wbGV0ZWQSEAoIcHJpbnRfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEg8KB3N1Y2Nlc3MYAyABKAgSDgoGZGV0YWlsGAQgASgJEhAKCHRyYWNlX2lkGAUgASgJIqQBCgxTdG9ja0NoYW5nZWQSEQoJc2xvdF9jb2RlGAEgASgJEhEKCWRydWdfY29kZRgCIAEoCRINCgVkZWx0YRgDIAEoBRIWCg5xdWFudGl0eV9hZnRlchgEIAEoBRI1CgZyZWFzb24YBSABKA4yJS5tZWRpc3luYy5ldmVudHMudjEuU3RvY2tDaGFuZ2VSZWFzb24SEAoIdHJhY2VfaWQYBiABKAkiVQoIU3RvY2tMb3cSEQoJc2xvdF9jb2RlGAEgASgJEhEKCWRydWdfY29kZRgCIAEoCRIQCghxdWFudGl0eRgDIAEoBRIRCgl0aHJlc2hvbGQYBCABKAUqmgEKEVN0b2NrQ2hhbmdlUmVhc29uEiMKH1NUT0NLX0NIQU5HRV9SRUFTT05fVU5TUEVDSUZJRUQQABIgChxTVE9DS19DSEFOR0VfUkVBU09OX0RJU1BFTlNFEAESHgoaU1RPQ0tfQ0hBTkdFX1JFQVNPTl9SRUZJTEwQAhIeChpTVE9DS19DSEFOR0VfUkVBU09OX0FESlVTVBADQlxaWmdpdGh1Yi5jb20vYWRtLWNodXJhM2ludGVyL21lZGlzeW5jL3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL21lZGlzeW5jL2V2ZW50cy92MTtldmVudHN2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("Ch9tZWRpc3luYy9ldmVudHMvdjEvZXZlbnRzLnByb3RvEhJtZWRpc3luYy5ldmVudHMudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIu4BChNQcmVzY3JpcHRpb25DcmVhdGVkEhcKD3ByZXNjcmlwdGlvbl9pZBgBIAEoCRIVCg1zb3VyY2Vfc3lzdGVtGAIgASgJEgoKAmhuGAMgASgJEhQKDHBhdGllbnRfbmFtZRgEIAEoCRIPCgd3YXJkX2lkGAUgASgJEjMKBWl0ZW1zGAYgAygLMiQubWVkaXN5bmMuZXZlbnRzLnYxLlByZXNjcmlwdGlvbkl0ZW0SLQoJaXNzdWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCgh0cmFjZV9pZBgIIAEoCSJ4ChFEaXNwZW5zZVJlcXVlc3RlZBITCgtkaXNwZW5zZV9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEQoJc2xvdF9jb2RlGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEhAKCHRyYWNlX2lkGAUgASgJIqoBChFEaXNwZW5zZUNvbXBsZXRlZBITCgtkaXNwZW5zZV9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEQoJc2xvdF9jb2RlGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEjAKDGNvbXBsZXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIdHJhY2VfaWQYBiABKAkigwEKDkRpc3BlbnNlRmFpbGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSDgoGcmVhc29uGAQgASgJEg4KBmRldGFpbBgFIAEoCRIQCgh0cmFjZV9pZBgGIAEoCSJNCg5QcmludFJlcXVlc3RlZBIQCghwcmludF9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEAoIdHJhY2VfaWQYAyABKAkibgoOUHJpbnRDb21wbGV0ZWQSEAoIcHJpbnRfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEg8KB3N1Y2Nlc3MYAyABKAgSDgoGZGV0YWlsGAQgASgJEhAKCHRyYWNlX2lkGAUgASgJIlkKFEZ1bGZpbGxtZW50UmVxdWVzdGVkEhYKDmZ1bGZpbGxtZW50X2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIQCgh0cmFjZV9pZBgDIAEoCSJ6ChRGdWxmaWxsbWVudENvbXBsZXRlZBIWCg5mdWxmaWxsbWVudF9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZkZXRhaWwYBCABKAkSEAoIdHJhY2VfaWQYBSABKAkipAEKDFN0b2NrQ2hhbmdlZBIRCglzbG90X2NvZGUYASABKAkSEQoJZHJ1Z19jb2RlGAIgASgJEg0KBWRlbHRhGAMgASgFEhYKDnF1YW50aXR5X2FmdGVyGAQgASgFEjUKBnJlYXNvbhgFIAEoDjIlLm1lZGlzeW5jLmV2ZW50cy52MS5TdG9ja0NoYW5nZVJlYXNvbhIQCgh0cmFjZV9pZBgGIAEoCSJVCghTdG9ja0xvdxIRCglzbG90X2NvZGUYASABKAkSEQoJZHJ1Z19jb2RlGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhEKCXRocmVzaG9sZBgEIAEoBSqaAQoRU3RvY2tDaGFuZ2VSZWFzb24SIwofU1RPQ0tfQ0hBTkdFX1JFQVNPTl9VTlNQRUNJRklFRBAAEiAKHFNUT0NLX0NIQU5HRV9SRUFTT05fRElTUEVOU0UQARIeChpTVE9DS19DSEFOR0VfUkVBU09OX1JFRklMTBACEh4KGlNUT0NLX0NIQU5HRV9SRUFTT05fQURKVVNUEANCXFpaZ2l0aHViLmNvbS9hZG0tY2h1cmEzaW50ZXIvbWVkaXN5bmMvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vbWVkaXN5bmMvZXZlbnRzL3YxO2V2ZW50c3YxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.events.v1.PrescriptionItem
@@ -303,6 +303,77 @@ export const PrintCompletedSchema: GenMessage<PrintCompleted> = /*@__PURE__*/
   messageDesc(file_medisync_events_v1_events, 6);
 
 /**
+ * Subject: medisync.fulfillment.requested
+ * Mirrors PrintRequested — the fulfillment anti-corruption layer consumes
+ * this event and drives the vending-3d-ctl-agent hardware.
+ *
+ * @generated from message medisync.events.v1.FulfillmentRequested
+ */
+export type FulfillmentRequested = Message<"medisync.events.v1.FulfillmentRequested"> & {
+  /**
+   * @generated from field: string fulfillment_id = 1;
+   */
+  fulfillmentId: string;
+
+  /**
+   * @generated from field: string prescription_id = 2;
+   */
+  prescriptionId: string;
+
+  /**
+   * @generated from field: string trace_id = 3;
+   */
+  traceId: string;
+};
+
+/**
+ * Describes the message medisync.events.v1.FulfillmentRequested.
+ * Use `create(FulfillmentRequestedSchema)` to create a new message.
+ */
+export const FulfillmentRequestedSchema: GenMessage<FulfillmentRequested> = /*@__PURE__*/
+  messageDesc(file_medisync_events_v1_events, 7);
+
+/**
+ * Subject: medisync.fulfillment.completed
+ * Emitted after a hardware-confirmed dispense (or permanent failure).
+ *
+ * @generated from message medisync.events.v1.FulfillmentCompleted
+ */
+export type FulfillmentCompleted = Message<"medisync.events.v1.FulfillmentCompleted"> & {
+  /**
+   * @generated from field: string fulfillment_id = 1;
+   */
+  fulfillmentId: string;
+
+  /**
+   * @generated from field: string prescription_id = 2;
+   */
+  prescriptionId: string;
+
+  /**
+   * @generated from field: bool success = 3;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: string detail = 4;
+   */
+  detail: string;
+
+  /**
+   * @generated from field: string trace_id = 5;
+   */
+  traceId: string;
+};
+
+/**
+ * Describes the message medisync.events.v1.FulfillmentCompleted.
+ * Use `create(FulfillmentCompletedSchema)` to create a new message.
+ */
+export const FulfillmentCompletedSchema: GenMessage<FulfillmentCompleted> = /*@__PURE__*/
+  messageDesc(file_medisync_events_v1_events, 8);
+
+/**
  * Subject: medisync.stock.changed
  *
  * @generated from message medisync.events.v1.StockChanged
@@ -344,7 +415,7 @@ export type StockChanged = Message<"medisync.events.v1.StockChanged"> & {
  * Use `create(StockChangedSchema)` to create a new message.
  */
 export const StockChangedSchema: GenMessage<StockChanged> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 7);
+  messageDesc(file_medisync_events_v1_events, 9);
 
 /**
  * Subject: medisync.stock.low
@@ -378,7 +449,7 @@ export type StockLow = Message<"medisync.events.v1.StockLow"> & {
  * Use `create(StockLowSchema)` to create a new message.
  */
 export const StockLowSchema: GenMessage<StockLow> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 8);
+  messageDesc(file_medisync_events_v1_events, 10);
 
 /**
  * @generated from enum medisync.events.v1.StockChangeReason

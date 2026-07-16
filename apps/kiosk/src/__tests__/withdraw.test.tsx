@@ -55,7 +55,7 @@ vi.mock("@connectrpc/connect", async (importOriginal) => {
 
 // ── Now import the component ───────────────────────────────────
 
-import WithdrawFlow from "../WithdrawFlow.tsx";
+import WithdrawFlow from "../features/withdraw/WithdrawFlow";
 
 // ── Test fixtures ───────────────────────────────────────────────
 

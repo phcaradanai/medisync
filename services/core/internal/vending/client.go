@@ -31,9 +31,10 @@ type DispenseStep struct {
 }
 
 // DispenseResponse is the high-level dispense result from the vending agent.
+// The ok field is numeric (1 = success, 0 = failure) per the vending-3d-ctl-agent contract.
 type DispenseResponse struct {
-	OK   bool              `json:"ok"`
-	Data DispenseData      `json:"data"`
+	OK   int          `json:"ok"`
+	Data DispenseData `json:"data"`
 }
 
 // DispenseData contains the detailed dispense outcome.

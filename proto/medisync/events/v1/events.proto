@@ -80,6 +80,25 @@ message PrintCompleted {
   string trace_id = 5;
 }
 
+// Subject: medisync.fulfillment.requested
+// Mirrors PrintRequested — the fulfillment anti-corruption layer consumes
+// this event and drives the vending-3d-ctl-agent hardware.
+message FulfillmentRequested {
+  string fulfillment_id = 1;
+  string prescription_id = 2;
+  string trace_id = 3;
+}
+
+// Subject: medisync.fulfillment.completed
+// Emitted after a hardware-confirmed dispense (or permanent failure).
+message FulfillmentCompleted {
+  string fulfillment_id = 1;
+  string prescription_id = 2;
+  bool success = 3;
+  string detail = 4;
+  string trace_id = 5;
+}
+
 enum StockChangeReason {
   STOCK_CHANGE_REASON_UNSPECIFIED = 0;
   STOCK_CHANGE_REASON_DISPENSE = 1;

@@ -18,6 +18,7 @@ import (
 
 	"github.com/adm-chura3inter/medisync/services/core/internal/catalog"
 	"github.com/adm-chura3inter/medisync/services/core/internal/dispensing"
+	cabinetv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1/cabinetv1connect"
 	catalogv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/catalog/v1/catalogv1connect"
 	dispensingv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1/dispensingv1connect"
 	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
@@ -25,6 +26,7 @@ import (
 	kioskv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1/kioskv1connect"
 	"github.com/adm-chura3inter/medisync/services/core/internal/identity"
 	"github.com/adm-chura3inter/medisync/services/core/internal/inventory"
+	"github.com/adm-chura3inter/medisync/services/core/internal/cabinet"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/config"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/logging"
@@ -63,7 +65,7 @@ func run() (runErr error) {
 		"print_ops_url", cfg.PrintOpsURL,
 		"print_ops_fake", cfg.PrintOpsFake,
 		"vending_url", cfg.VendingURL,
-		"vending_fake", cfg.VendingFake,
+		"fulfillment_fake", cfg.FulfillmentFake,
 	)
 
 	startupCtx, cancelStartup := context.WithTimeout(context.Background(),
@@ -148,6 +150,12 @@ func run() (runErr error) {
 	kioskPath, kioskHandler := newKioskHandler(kioskStore, jwtMgr, cfg)
 	mux.Handle(kioskPath, kioskHandler)
 
+	// ── Cabinet ──────────────────────────────────────────────────────
+	cabinetStore := cabinet.NewStore(pool)
+	cabinetServer := cabinet.NewServer(cabinetStore, newCabinetTokenParser(jwtMgr))
+	cabinetPath, cabinetHandler := cabinetv1connect.NewCabinetServiceHandler(cabinetServer)
+	mux.Handle(cabinetPath, cabinetHandler)
+
 	// ── Catalog ─────────────────────────────────────────────────────
 	catalogStore := catalog.NewStore(pool, auditw)
 	catalogServer := catalog.NewCatalogServer(catalogStore, auditw)
@@ -196,7 +204,7 @@ func run() (runErr error) {
 	defer stopPrintConsumer()
 
 	// ── Vending ───────────────────────────────────────────────────────
-	vendingClient := vending.NewClientFromConfig(cfg.VendingURL, cfg.VendingAPIKey, cfg.VendingFake)
+	vendingClient := vending.NewClientFromConfig(cfg)
 	vendingConsumer := vending.NewConsumer(js, vendingClient, auditw, log)
 	stopVendingConsumer, err := vendingConsumer.Start(startupCtx)
 	if err != nil {
@@ -305,6 +313,28 @@ func (p *dispensingTokenParser) Parse(tokenString string) (*dispensing.TokenClai
 		return nil, err
 	}
 	return &dispensing.TokenClaims{
+		Subject: claims.Subject,
+		Role:    claims.Role,
+		WardIDs: claims.WardIDs,
+	}, nil
+}
+
+// ── Cabinet token parser adapter ──────────────────────────────────
+
+func newCabinetTokenParser(mgr *identity.JWTManager) *cabinetTokenParser {
+	return &cabinetTokenParser{mgr: mgr}
+}
+
+type cabinetTokenParser struct {
+	mgr *identity.JWTManager
+}
+
+func (p *cabinetTokenParser) Parse(tokenString string) (*cabinet.TokenClaims, error) {
+	claims, err := p.mgr.Parse(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	return &cabinet.TokenClaims{
 		Subject: claims.Subject,
 		Role:    claims.Role,
 		WardIDs: claims.WardIDs,

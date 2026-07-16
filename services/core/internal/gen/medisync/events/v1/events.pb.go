@@ -633,6 +633,147 @@ func (x *PrintCompleted) GetTraceId() string {
 	return ""
 }
 
+// Subject: medisync.fulfillment.requested
+// Mirrors PrintRequested — the fulfillment anti-corruption layer consumes
+// this event and drives the vending-3d-ctl-agent hardware.
+type FulfillmentRequested struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	FulfillmentId  string                 `protobuf:"bytes,1,opt,name=fulfillment_id,json=fulfillmentId,proto3" json:"fulfillment_id,omitempty"`
+	PrescriptionId string                 `protobuf:"bytes,2,opt,name=prescription_id,json=prescriptionId,proto3" json:"prescription_id,omitempty"`
+	TraceId        string                 `protobuf:"bytes,3,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *FulfillmentRequested) Reset() {
+	*x = FulfillmentRequested{}
+	mi := &file_medisync_events_v1_events_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FulfillmentRequested) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FulfillmentRequested) ProtoMessage() {}
+
+func (x *FulfillmentRequested) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_events_v1_events_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FulfillmentRequested.ProtoReflect.Descriptor instead.
+func (*FulfillmentRequested) Descriptor() ([]byte, []int) {
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FulfillmentRequested) GetFulfillmentId() string {
+	if x != nil {
+		return x.FulfillmentId
+	}
+	return ""
+}
+
+func (x *FulfillmentRequested) GetPrescriptionId() string {
+	if x != nil {
+		return x.PrescriptionId
+	}
+	return ""
+}
+
+func (x *FulfillmentRequested) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
+// Subject: medisync.fulfillment.completed
+// Emitted after a hardware-confirmed dispense (or permanent failure).
+type FulfillmentCompleted struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	FulfillmentId  string                 `protobuf:"bytes,1,opt,name=fulfillment_id,json=fulfillmentId,proto3" json:"fulfillment_id,omitempty"`
+	PrescriptionId string                 `protobuf:"bytes,2,opt,name=prescription_id,json=prescriptionId,proto3" json:"prescription_id,omitempty"`
+	Success        bool                   `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
+	Detail         string                 `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
+	TraceId        string                 `protobuf:"bytes,5,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *FulfillmentCompleted) Reset() {
+	*x = FulfillmentCompleted{}
+	mi := &file_medisync_events_v1_events_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FulfillmentCompleted) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FulfillmentCompleted) ProtoMessage() {}
+
+func (x *FulfillmentCompleted) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_events_v1_events_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FulfillmentCompleted.ProtoReflect.Descriptor instead.
+func (*FulfillmentCompleted) Descriptor() ([]byte, []int) {
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FulfillmentCompleted) GetFulfillmentId() string {
+	if x != nil {
+		return x.FulfillmentId
+	}
+	return ""
+}
+
+func (x *FulfillmentCompleted) GetPrescriptionId() string {
+	if x != nil {
+		return x.PrescriptionId
+	}
+	return ""
+}
+
+func (x *FulfillmentCompleted) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *FulfillmentCompleted) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+func (x *FulfillmentCompleted) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
 // Subject: medisync.stock.changed
 type StockChanged struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -648,7 +789,7 @@ type StockChanged struct {
 
 func (x *StockChanged) Reset() {
 	*x = StockChanged{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[7]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -660,7 +801,7 @@ func (x *StockChanged) String() string {
 func (*StockChanged) ProtoMessage() {}
 
 func (x *StockChanged) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[7]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -673,7 +814,7 @@ func (x *StockChanged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockChanged.ProtoReflect.Descriptor instead.
 func (*StockChanged) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{7}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *StockChanged) GetSlotCode() string {
@@ -731,7 +872,7 @@ type StockLow struct {
 
 func (x *StockLow) Reset() {
 	*x = StockLow{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[8]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -743,7 +884,7 @@ func (x *StockLow) String() string {
 func (*StockLow) ProtoMessage() {}
 
 func (x *StockLow) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[8]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -756,7 +897,7 @@ func (x *StockLow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockLow.ProtoReflect.Descriptor instead.
 func (*StockLow) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{8}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *StockLow) GetSlotCode() string {
@@ -839,6 +980,16 @@ const file_medisync_events_v1_events_proto_rawDesc = "" +
 	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x18\n" +
 	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x16\n" +
 	"\x06detail\x18\x04 \x01(\tR\x06detail\x12\x19\n" +
+	"\btrace_id\x18\x05 \x01(\tR\atraceId\"\x81\x01\n" +
+	"\x14FulfillmentRequested\x12%\n" +
+	"\x0efulfillment_id\x18\x01 \x01(\tR\rfulfillmentId\x12'\n" +
+	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x19\n" +
+	"\btrace_id\x18\x03 \x01(\tR\atraceId\"\xb3\x01\n" +
+	"\x14FulfillmentCompleted\x12%\n" +
+	"\x0efulfillment_id\x18\x01 \x01(\tR\rfulfillmentId\x12'\n" +
+	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x18\n" +
+	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x16\n" +
+	"\x06detail\x18\x04 \x01(\tR\x06detail\x12\x19\n" +
 	"\btrace_id\x18\x05 \x01(\tR\atraceId\"\xdf\x01\n" +
 	"\fStockChanged\x12\x1b\n" +
 	"\tslot_code\x18\x01 \x01(\tR\bslotCode\x12\x1b\n" +
@@ -871,7 +1022,7 @@ func file_medisync_events_v1_events_proto_rawDescGZIP() []byte {
 }
 
 var file_medisync_events_v1_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_medisync_events_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_medisync_events_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_medisync_events_v1_events_proto_goTypes = []any{
 	(StockChangeReason)(0),        // 0: medisync.events.v1.StockChangeReason
 	(*PrescriptionItem)(nil),      // 1: medisync.events.v1.PrescriptionItem
@@ -881,14 +1032,16 @@ var file_medisync_events_v1_events_proto_goTypes = []any{
 	(*DispenseFailed)(nil),        // 5: medisync.events.v1.DispenseFailed
 	(*PrintRequested)(nil),        // 6: medisync.events.v1.PrintRequested
 	(*PrintCompleted)(nil),        // 7: medisync.events.v1.PrintCompleted
-	(*StockChanged)(nil),          // 8: medisync.events.v1.StockChanged
-	(*StockLow)(nil),              // 9: medisync.events.v1.StockLow
-	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
+	(*FulfillmentRequested)(nil),  // 8: medisync.events.v1.FulfillmentRequested
+	(*FulfillmentCompleted)(nil),  // 9: medisync.events.v1.FulfillmentCompleted
+	(*StockChanged)(nil),          // 10: medisync.events.v1.StockChanged
+	(*StockLow)(nil),              // 11: medisync.events.v1.StockLow
+	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
 }
 var file_medisync_events_v1_events_proto_depIdxs = []int32{
 	1,  // 0: medisync.events.v1.PrescriptionCreated.items:type_name -> medisync.events.v1.PrescriptionItem
-	10, // 1: medisync.events.v1.PrescriptionCreated.issued_at:type_name -> google.protobuf.Timestamp
-	10, // 2: medisync.events.v1.DispenseCompleted.completed_at:type_name -> google.protobuf.Timestamp
+	12, // 1: medisync.events.v1.PrescriptionCreated.issued_at:type_name -> google.protobuf.Timestamp
+	12, // 2: medisync.events.v1.DispenseCompleted.completed_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: medisync.events.v1.StockChanged.reason:type_name -> medisync.events.v1.StockChangeReason
 	4,  // [4:4] is the sub-list for method output_type
 	4,  // [4:4] is the sub-list for method input_type
@@ -908,7 +1061,7 @@ func file_medisync_events_v1_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_medisync_events_v1_events_proto_rawDesc), len(file_medisync_events_v1_events_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

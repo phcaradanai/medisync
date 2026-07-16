@@ -1,12 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import UnoCSS from "@unocss/vite";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), UnoCSS()],
   server: {
     port: 5173,
     proxy: {
-      // Connect-RPC routes are /<package>.<Service>/<Method> on the Go core.
       "^/medisync\\.": {
         target: "http://localhost:8080",
         changeOrigin: true,
