@@ -36,6 +36,9 @@ const (
 	// InventoryServiceListSlotsProcedure is the fully-qualified name of the InventoryService's
 	// ListSlots RPC.
 	InventoryServiceListSlotsProcedure = "/medisync.inventory.v1.InventoryService/ListSlots"
+	// InventoryServiceCreateSlotProcedure is the fully-qualified name of the InventoryService's
+	// CreateSlot RPC.
+	InventoryServiceCreateSlotProcedure = "/medisync.inventory.v1.InventoryService/CreateSlot"
 	// InventoryServiceAssignDrugProcedure is the fully-qualified name of the InventoryService's
 	// AssignDrug RPC.
 	InventoryServiceAssignDrugProcedure = "/medisync.inventory.v1.InventoryService/AssignDrug"
@@ -49,6 +52,7 @@ const (
 // InventoryServiceClient is a client for the medisync.inventory.v1.InventoryService service.
 type InventoryServiceClient interface {
 	ListSlots(context.Context, *connect.Request[v1.ListSlotsRequest]) (*connect.Response[v1.ListSlotsResponse], error)
+	CreateSlot(context.Context, *connect.Request[v1.CreateSlotRequest]) (*connect.Response[v1.CreateSlotResponse], error)
 	AssignDrug(context.Context, *connect.Request[v1.AssignDrugRequest]) (*connect.Response[v1.AssignDrugResponse], error)
 	Refill(context.Context, *connect.Request[v1.RefillRequest]) (*connect.Response[v1.RefillResponse], error)
 	AdjustStock(context.Context, *connect.Request[v1.AdjustStockRequest]) (*connect.Response[v1.AdjustStockResponse], error)
@@ -69,6 +73,12 @@ func NewInventoryServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			httpClient,
 			baseURL+InventoryServiceListSlotsProcedure,
 			connect.WithSchema(inventoryServiceMethods.ByName("ListSlots")),
+			connect.WithClientOptions(opts...),
+		),
+		createSlot: connect.NewClient[v1.CreateSlotRequest, v1.CreateSlotResponse](
+			httpClient,
+			baseURL+InventoryServiceCreateSlotProcedure,
+			connect.WithSchema(inventoryServiceMethods.ByName("CreateSlot")),
 			connect.WithClientOptions(opts...),
 		),
 		assignDrug: connect.NewClient[v1.AssignDrugRequest, v1.AssignDrugResponse](
@@ -95,6 +105,7 @@ func NewInventoryServiceClient(httpClient connect.HTTPClient, baseURL string, op
 // inventoryServiceClient implements InventoryServiceClient.
 type inventoryServiceClient struct {
 	listSlots   *connect.Client[v1.ListSlotsRequest, v1.ListSlotsResponse]
+	createSlot  *connect.Client[v1.CreateSlotRequest, v1.CreateSlotResponse]
 	assignDrug  *connect.Client[v1.AssignDrugRequest, v1.AssignDrugResponse]
 	refill      *connect.Client[v1.RefillRequest, v1.RefillResponse]
 	adjustStock *connect.Client[v1.AdjustStockRequest, v1.AdjustStockResponse]
@@ -103,6 +114,11 @@ type inventoryServiceClient struct {
 // ListSlots calls medisync.inventory.v1.InventoryService.ListSlots.
 func (c *inventoryServiceClient) ListSlots(ctx context.Context, req *connect.Request[v1.ListSlotsRequest]) (*connect.Response[v1.ListSlotsResponse], error) {
 	return c.listSlots.CallUnary(ctx, req)
+}
+
+// CreateSlot calls medisync.inventory.v1.InventoryService.CreateSlot.
+func (c *inventoryServiceClient) CreateSlot(ctx context.Context, req *connect.Request[v1.CreateSlotRequest]) (*connect.Response[v1.CreateSlotResponse], error) {
+	return c.createSlot.CallUnary(ctx, req)
 }
 
 // AssignDrug calls medisync.inventory.v1.InventoryService.AssignDrug.
@@ -124,6 +140,7 @@ func (c *inventoryServiceClient) AdjustStock(ctx context.Context, req *connect.R
 // service.
 type InventoryServiceHandler interface {
 	ListSlots(context.Context, *connect.Request[v1.ListSlotsRequest]) (*connect.Response[v1.ListSlotsResponse], error)
+	CreateSlot(context.Context, *connect.Request[v1.CreateSlotRequest]) (*connect.Response[v1.CreateSlotResponse], error)
 	AssignDrug(context.Context, *connect.Request[v1.AssignDrugRequest]) (*connect.Response[v1.AssignDrugResponse], error)
 	Refill(context.Context, *connect.Request[v1.RefillRequest]) (*connect.Response[v1.RefillResponse], error)
 	AdjustStock(context.Context, *connect.Request[v1.AdjustStockRequest]) (*connect.Response[v1.AdjustStockResponse], error)
@@ -140,6 +157,12 @@ func NewInventoryServiceHandler(svc InventoryServiceHandler, opts ...connect.Han
 		InventoryServiceListSlotsProcedure,
 		svc.ListSlots,
 		connect.WithSchema(inventoryServiceMethods.ByName("ListSlots")),
+		connect.WithHandlerOptions(opts...),
+	)
+	inventoryServiceCreateSlotHandler := connect.NewUnaryHandler(
+		InventoryServiceCreateSlotProcedure,
+		svc.CreateSlot,
+		connect.WithSchema(inventoryServiceMethods.ByName("CreateSlot")),
 		connect.WithHandlerOptions(opts...),
 	)
 	inventoryServiceAssignDrugHandler := connect.NewUnaryHandler(
@@ -164,6 +187,8 @@ func NewInventoryServiceHandler(svc InventoryServiceHandler, opts ...connect.Han
 		switch r.URL.Path {
 		case InventoryServiceListSlotsProcedure:
 			inventoryServiceListSlotsHandler.ServeHTTP(w, r)
+		case InventoryServiceCreateSlotProcedure:
+			inventoryServiceCreateSlotHandler.ServeHTTP(w, r)
 		case InventoryServiceAssignDrugProcedure:
 			inventoryServiceAssignDrugHandler.ServeHTTP(w, r)
 		case InventoryServiceRefillProcedure:
@@ -181,6 +206,10 @@ type UnimplementedInventoryServiceHandler struct{}
 
 func (UnimplementedInventoryServiceHandler) ListSlots(context.Context, *connect.Request[v1.ListSlotsRequest]) (*connect.Response[v1.ListSlotsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.inventory.v1.InventoryService.ListSlots is not implemented"))
+}
+
+func (UnimplementedInventoryServiceHandler) CreateSlot(context.Context, *connect.Request[v1.CreateSlotRequest]) (*connect.Response[v1.CreateSlotResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.inventory.v1.InventoryService.CreateSlot is not implemented"))
 }
 
 func (UnimplementedInventoryServiceHandler) AssignDrug(context.Context, *connect.Request[v1.AssignDrugRequest]) (*connect.Response[v1.AssignDrugResponse], error) {

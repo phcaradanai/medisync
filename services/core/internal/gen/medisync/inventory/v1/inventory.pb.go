@@ -585,6 +585,136 @@ func (x *AdjustStockResponse) GetSlot() *Slot {
 	return nil
 }
 
+// Create a new slot in a cabinet. Requires admin role.
+type CreateSlotRequest struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	CabinetId    string                 `protobuf:"bytes,1,opt,name=cabinet_id,json=cabinetId,proto3" json:"cabinet_id,omitempty"`
+	Code         string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	DisplayName  string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Capacity     int32                  `protobuf:"varint,4,opt,name=capacity,proto3" json:"capacity,omitempty"`
+	LowThreshold int32                  `protobuf:"varint,5,opt,name=low_threshold,json=lowThreshold,proto3" json:"low_threshold,omitempty"`
+	// Required for SYSADMIN; project-scoped users inherit from JWT.
+	ProjectId     string `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSlotRequest) Reset() {
+	*x = CreateSlotRequest{}
+	mi := &file_medisync_inventory_v1_inventory_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSlotRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSlotRequest) ProtoMessage() {}
+
+func (x *CreateSlotRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_inventory_v1_inventory_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSlotRequest.ProtoReflect.Descriptor instead.
+func (*CreateSlotRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_inventory_v1_inventory_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CreateSlotRequest) GetCabinetId() string {
+	if x != nil {
+		return x.CabinetId
+	}
+	return ""
+}
+
+func (x *CreateSlotRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *CreateSlotRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *CreateSlotRequest) GetCapacity() int32 {
+	if x != nil {
+		return x.Capacity
+	}
+	return 0
+}
+
+func (x *CreateSlotRequest) GetLowThreshold() int32 {
+	if x != nil {
+		return x.LowThreshold
+	}
+	return 0
+}
+
+func (x *CreateSlotRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type CreateSlotResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Slot          *Slot                  `protobuf:"bytes,1,opt,name=slot,proto3" json:"slot,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSlotResponse) Reset() {
+	*x = CreateSlotResponse{}
+	mi := &file_medisync_inventory_v1_inventory_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSlotResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSlotResponse) ProtoMessage() {}
+
+func (x *CreateSlotResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_inventory_v1_inventory_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSlotResponse.ProtoReflect.Descriptor instead.
+func (*CreateSlotResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_inventory_v1_inventory_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *CreateSlotResponse) GetSlot() *Slot {
+	if x != nil {
+		return x.Slot
+	}
+	return nil
+}
+
 var File_medisync_inventory_v1_inventory_proto protoreflect.FileDescriptor
 
 const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
@@ -632,9 +762,22 @@ const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12\x19\n" +
 	"\btrace_id\x18\x04 \x01(\tR\atraceId\"F\n" +
 	"\x13AdjustStockResponse\x12/\n" +
-	"\x04slot\x18\x01 \x01(\v2\x1b.medisync.inventory.v1.SlotR\x04slot2\x92\x03\n" +
+	"\x04slot\x18\x01 \x01(\v2\x1b.medisync.inventory.v1.SlotR\x04slot\"\xc9\x01\n" +
+	"\x11CreateSlotRequest\x12\x1d\n" +
+	"\n" +
+	"cabinet_id\x18\x01 \x01(\tR\tcabinetId\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1a\n" +
+	"\bcapacity\x18\x04 \x01(\x05R\bcapacity\x12#\n" +
+	"\rlow_threshold\x18\x05 \x01(\x05R\flowThreshold\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x06 \x01(\tR\tprojectId\"E\n" +
+	"\x12CreateSlotResponse\x12/\n" +
+	"\x04slot\x18\x01 \x01(\v2\x1b.medisync.inventory.v1.SlotR\x04slot2\xf5\x03\n" +
 	"\x10InventoryService\x12^\n" +
 	"\tListSlots\x12'.medisync.inventory.v1.ListSlotsRequest\x1a(.medisync.inventory.v1.ListSlotsResponse\x12a\n" +
+	"\n" +
+	"CreateSlot\x12(.medisync.inventory.v1.CreateSlotRequest\x1a).medisync.inventory.v1.CreateSlotResponse\x12a\n" +
 	"\n" +
 	"AssignDrug\x12(.medisync.inventory.v1.AssignDrugRequest\x1a).medisync.inventory.v1.AssignDrugResponse\x12U\n" +
 	"\x06Refill\x12$.medisync.inventory.v1.RefillRequest\x1a%.medisync.inventory.v1.RefillResponse\x12d\n" +
@@ -652,7 +795,7 @@ func file_medisync_inventory_v1_inventory_proto_rawDescGZIP() []byte {
 	return file_medisync_inventory_v1_inventory_proto_rawDescData
 }
 
-var file_medisync_inventory_v1_inventory_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_medisync_inventory_v1_inventory_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_medisync_inventory_v1_inventory_proto_goTypes = []any{
 	(*Slot)(nil),                  // 0: medisync.inventory.v1.Slot
 	(*ListSlotsRequest)(nil),      // 1: medisync.inventory.v1.ListSlotsRequest
@@ -663,27 +806,32 @@ var file_medisync_inventory_v1_inventory_proto_goTypes = []any{
 	(*RefillResponse)(nil),        // 6: medisync.inventory.v1.RefillResponse
 	(*AdjustStockRequest)(nil),    // 7: medisync.inventory.v1.AdjustStockRequest
 	(*AdjustStockResponse)(nil),   // 8: medisync.inventory.v1.AdjustStockResponse
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*CreateSlotRequest)(nil),     // 9: medisync.inventory.v1.CreateSlotRequest
+	(*CreateSlotResponse)(nil),    // 10: medisync.inventory.v1.CreateSlotResponse
+	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
 }
 var file_medisync_inventory_v1_inventory_proto_depIdxs = []int32{
-	9, // 0: medisync.inventory.v1.Slot.updated_at:type_name -> google.protobuf.Timestamp
-	0, // 1: medisync.inventory.v1.ListSlotsResponse.slots:type_name -> medisync.inventory.v1.Slot
-	0, // 2: medisync.inventory.v1.AssignDrugResponse.slot:type_name -> medisync.inventory.v1.Slot
-	0, // 3: medisync.inventory.v1.RefillResponse.slot:type_name -> medisync.inventory.v1.Slot
-	0, // 4: medisync.inventory.v1.AdjustStockResponse.slot:type_name -> medisync.inventory.v1.Slot
-	1, // 5: medisync.inventory.v1.InventoryService.ListSlots:input_type -> medisync.inventory.v1.ListSlotsRequest
-	3, // 6: medisync.inventory.v1.InventoryService.AssignDrug:input_type -> medisync.inventory.v1.AssignDrugRequest
-	5, // 7: medisync.inventory.v1.InventoryService.Refill:input_type -> medisync.inventory.v1.RefillRequest
-	7, // 8: medisync.inventory.v1.InventoryService.AdjustStock:input_type -> medisync.inventory.v1.AdjustStockRequest
-	2, // 9: medisync.inventory.v1.InventoryService.ListSlots:output_type -> medisync.inventory.v1.ListSlotsResponse
-	4, // 10: medisync.inventory.v1.InventoryService.AssignDrug:output_type -> medisync.inventory.v1.AssignDrugResponse
-	6, // 11: medisync.inventory.v1.InventoryService.Refill:output_type -> medisync.inventory.v1.RefillResponse
-	8, // 12: medisync.inventory.v1.InventoryService.AdjustStock:output_type -> medisync.inventory.v1.AdjustStockResponse
-	9, // [9:13] is the sub-list for method output_type
-	5, // [5:9] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	11, // 0: medisync.inventory.v1.Slot.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 1: medisync.inventory.v1.ListSlotsResponse.slots:type_name -> medisync.inventory.v1.Slot
+	0,  // 2: medisync.inventory.v1.AssignDrugResponse.slot:type_name -> medisync.inventory.v1.Slot
+	0,  // 3: medisync.inventory.v1.RefillResponse.slot:type_name -> medisync.inventory.v1.Slot
+	0,  // 4: medisync.inventory.v1.AdjustStockResponse.slot:type_name -> medisync.inventory.v1.Slot
+	0,  // 5: medisync.inventory.v1.CreateSlotResponse.slot:type_name -> medisync.inventory.v1.Slot
+	1,  // 6: medisync.inventory.v1.InventoryService.ListSlots:input_type -> medisync.inventory.v1.ListSlotsRequest
+	9,  // 7: medisync.inventory.v1.InventoryService.CreateSlot:input_type -> medisync.inventory.v1.CreateSlotRequest
+	3,  // 8: medisync.inventory.v1.InventoryService.AssignDrug:input_type -> medisync.inventory.v1.AssignDrugRequest
+	5,  // 9: medisync.inventory.v1.InventoryService.Refill:input_type -> medisync.inventory.v1.RefillRequest
+	7,  // 10: medisync.inventory.v1.InventoryService.AdjustStock:input_type -> medisync.inventory.v1.AdjustStockRequest
+	2,  // 11: medisync.inventory.v1.InventoryService.ListSlots:output_type -> medisync.inventory.v1.ListSlotsResponse
+	10, // 12: medisync.inventory.v1.InventoryService.CreateSlot:output_type -> medisync.inventory.v1.CreateSlotResponse
+	4,  // 13: medisync.inventory.v1.InventoryService.AssignDrug:output_type -> medisync.inventory.v1.AssignDrugResponse
+	6,  // 14: medisync.inventory.v1.InventoryService.Refill:output_type -> medisync.inventory.v1.RefillResponse
+	8,  // 15: medisync.inventory.v1.InventoryService.AdjustStock:output_type -> medisync.inventory.v1.AdjustStockResponse
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_medisync_inventory_v1_inventory_proto_init() }
@@ -697,7 +845,7 @@ func file_medisync_inventory_v1_inventory_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_medisync_inventory_v1_inventory_proto_rawDesc), len(file_medisync_inventory_v1_inventory_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

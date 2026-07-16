@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/inventory/v1/inventory.proto.
  */
 export const file_medisync_inventory_v1_inventory: GenFile = /*@__PURE__*/
-  fileDesc("CiVtZWRpc3luYy9pbnZlbnRvcnkvdjEvaW52ZW50b3J5LnByb3RvEhVtZWRpc3luYy5pbnZlbnRvcnkudjEigAIKBFNsb3QSCgoCaWQYASABKAkSEgoKY2FiaW5ldF9pZBgCIAEoCRIMCgRjb2RlGAMgASgJEg8KB2RydWdfaWQYBCABKAkSEQoJZHJ1Z19jb2RlGAUgASgJEhEKCWRydWdfbmFtZRgGIAEoCRIQCghjYXBhY2l0eRgHIAEoBRIQCghxdWFudGl0eRgIIAEoBRIVCg1sb3dfdGhyZXNob2xkGAkgASgFEi4KCnVwZGF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDGRpc3BsYXlfbmFtZRgLIAEoCRISCgpwcm9qZWN0X2lkGAwgASgJIjgKEExpc3RTbG90c1JlcXVlc3QSEgoKY2FiaW5ldF9pZBgBIAEoCRIQCghsb3dfb25seRgCIAEoCCI/ChFMaXN0U2xvdHNSZXNwb25zZRIqCgVzbG90cxgBIAMoCzIbLm1lZGlzeW5jLmludmVudG9yeS52MS5TbG90Il4KEUFzc2lnbkRydWdSZXF1ZXN0Eg8KB3Nsb3RfaWQYASABKAkSDwoHZHJ1Z19pZBgCIAEoCRIQCghjYXBhY2l0eRgDIAEoBRIVCg1sb3dfdGhyZXNob2xkGAQgASgFIj8KEkFzc2lnbkRydWdSZXNwb25zZRIpCgRzbG90GAEgASgLMhsubWVkaXN5bmMuaW52ZW50b3J5LnYxLlNsb3QiSgoNUmVmaWxsUmVxdWVzdBIPCgdzbG90X2lkGAEgASgJEhYKDnF1YW50aXR5X2FkZGVkGAIgASgFEhAKCHRyYWNlX2lkGAMgASgJIjsKDlJlZmlsbFJlc3BvbnNlEikKBHNsb3QYASABKAsyGy5tZWRpc3luYy5pbnZlbnRvcnkudjEuU2xvdCJdChJBZGp1c3RTdG9ja1JlcXVlc3QSDwoHc2xvdF9pZBgBIAEoCRIUCgxuZXdfcXVhbnRpdHkYAiABKAUSDgoGcmVhc29uGAMgASgJEhAKCHRyYWNlX2lkGAQgASgJIkAKE0FkanVzdFN0b2NrUmVzcG9uc2USKQoEc2xvdBgBIAEoCzIbLm1lZGlzeW5jLmludmVudG9yeS52MS5TbG90MpIDChBJbnZlbnRvcnlTZXJ2aWNlEl4KCUxpc3RTbG90cxInLm1lZGlzeW5jLmludmVudG9yeS52MS5MaXN0U2xvdHNSZXF1ZXN0GigubWVkaXN5bmMuaW52ZW50b3J5LnYxLkxpc3RTbG90c1Jlc3BvbnNlEmEKCkFzc2lnbkRydWcSKC5tZWRpc3luYy5pbnZlbnRvcnkudjEuQXNzaWduRHJ1Z1JlcXVlc3QaKS5tZWRpc3luYy5pbnZlbnRvcnkudjEuQXNzaWduRHJ1Z1Jlc3BvbnNlElUKBlJlZmlsbBIkLm1lZGlzeW5jLmludmVudG9yeS52MS5SZWZpbGxSZXF1ZXN0GiUubWVkaXN5bmMuaW52ZW50b3J5LnYxLlJlZmlsbFJlc3BvbnNlEmQKC0FkanVzdFN0b2NrEikubWVkaXN5bmMuaW52ZW50b3J5LnYxLkFkanVzdFN0b2NrUmVxdWVzdBoqLm1lZGlzeW5jLmludmVudG9yeS52MS5BZGp1c3RTdG9ja1Jlc3BvbnNlQmJaYGdpdGh1Yi5jb20vYWRtLWNodXJhM2ludGVyL21lZGlzeW5jL3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL21lZGlzeW5jL2ludmVudG9yeS92MTtpbnZlbnRvcnl2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("CiVtZWRpc3luYy9pbnZlbnRvcnkvdjEvaW52ZW50b3J5LnByb3RvEhVtZWRpc3luYy5pbnZlbnRvcnkudjEigAIKBFNsb3QSCgoCaWQYASABKAkSEgoKY2FiaW5ldF9pZBgCIAEoCRIMCgRjb2RlGAMgASgJEg8KB2RydWdfaWQYBCABKAkSEQoJZHJ1Z19jb2RlGAUgASgJEhEKCWRydWdfbmFtZRgGIAEoCRIQCghjYXBhY2l0eRgHIAEoBRIQCghxdWFudGl0eRgIIAEoBRIVCg1sb3dfdGhyZXNob2xkGAkgASgFEi4KCnVwZGF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDGRpc3BsYXlfbmFtZRgLIAEoCRISCgpwcm9qZWN0X2lkGAwgASgJIjgKEExpc3RTbG90c1JlcXVlc3QSEgoKY2FiaW5ldF9pZBgBIAEoCRIQCghsb3dfb25seRgCIAEoCCI/ChFMaXN0U2xvdHNSZXNwb25zZRIqCgVzbG90cxgBIAMoCzIbLm1lZGlzeW5jLmludmVudG9yeS52MS5TbG90Il4KEUFzc2lnbkRydWdSZXF1ZXN0Eg8KB3Nsb3RfaWQYASABKAkSDwoHZHJ1Z19pZBgCIAEoCRIQCghjYXBhY2l0eRgDIAEoBRIVCg1sb3dfdGhyZXNob2xkGAQgASgFIj8KEkFzc2lnbkRydWdSZXNwb25zZRIpCgRzbG90GAEgASgLMhsubWVkaXN5bmMuaW52ZW50b3J5LnYxLlNsb3QiSgoNUmVmaWxsUmVxdWVzdBIPCgdzbG90X2lkGAEgASgJEhYKDnF1YW50aXR5X2FkZGVkGAIgASgFEhAKCHRyYWNlX2lkGAMgASgJIjsKDlJlZmlsbFJlc3BvbnNlEikKBHNsb3QYASABKAsyGy5tZWRpc3luYy5pbnZlbnRvcnkudjEuU2xvdCJdChJBZGp1c3RTdG9ja1JlcXVlc3QSDwoHc2xvdF9pZBgBIAEoCRIUCgxuZXdfcXVhbnRpdHkYAiABKAUSDgoGcmVhc29uGAMgASgJEhAKCHRyYWNlX2lkGAQgASgJIkAKE0FkanVzdFN0b2NrUmVzcG9uc2USKQoEc2xvdBgBIAEoCzIbLm1lZGlzeW5jLmludmVudG9yeS52MS5TbG90IogBChFDcmVhdGVTbG90UmVxdWVzdBISCgpjYWJpbmV0X2lkGAEgASgJEgwKBGNvZGUYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGNhcGFjaXR5GAQgASgFEhUKDWxvd190aHJlc2hvbGQYBSABKAUSEgoKcHJvamVjdF9pZBgGIAEoCSI/ChJDcmVhdGVTbG90UmVzcG9uc2USKQoEc2xvdBgBIAEoCzIbLm1lZGlzeW5jLmludmVudG9yeS52MS5TbG90MvUDChBJbnZlbnRvcnlTZXJ2aWNlEl4KCUxpc3RTbG90cxInLm1lZGlzeW5jLmludmVudG9yeS52MS5MaXN0U2xvdHNSZXF1ZXN0GigubWVkaXN5bmMuaW52ZW50b3J5LnYxLkxpc3RTbG90c1Jlc3BvbnNlEmEKCkNyZWF0ZVNsb3QSKC5tZWRpc3luYy5pbnZlbnRvcnkudjEuQ3JlYXRlU2xvdFJlcXVlc3QaKS5tZWRpc3luYy5pbnZlbnRvcnkudjEuQ3JlYXRlU2xvdFJlc3BvbnNlEmEKCkFzc2lnbkRydWcSKC5tZWRpc3luYy5pbnZlbnRvcnkudjEuQXNzaWduRHJ1Z1JlcXVlc3QaKS5tZWRpc3luYy5pbnZlbnRvcnkudjEuQXNzaWduRHJ1Z1Jlc3BvbnNlElUKBlJlZmlsbBIkLm1lZGlzeW5jLmludmVudG9yeS52MS5SZWZpbGxSZXF1ZXN0GiUubWVkaXN5bmMuaW52ZW50b3J5LnYxLlJlZmlsbFJlc3BvbnNlEmQKC0FkanVzdFN0b2NrEikubWVkaXN5bmMuaW52ZW50b3J5LnYxLkFkanVzdFN0b2NrUmVxdWVzdBoqLm1lZGlzeW5jLmludmVudG9yeS52MS5BZGp1c3RTdG9ja1Jlc3BvbnNlQmJaYGdpdGh1Yi5jb20vYWRtLWNodXJhM2ludGVyL21lZGlzeW5jL3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL21lZGlzeW5jL2ludmVudG9yeS92MTtpbnZlbnRvcnl2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.inventory.v1.Slot
@@ -282,6 +282,69 @@ export const AdjustStockResponseSchema: GenMessage<AdjustStockResponse> = /*@__P
   messageDesc(file_medisync_inventory_v1_inventory, 8);
 
 /**
+ * Create a new slot in a cabinet. Requires admin role.
+ *
+ * @generated from message medisync.inventory.v1.CreateSlotRequest
+ */
+export type CreateSlotRequest = Message<"medisync.inventory.v1.CreateSlotRequest"> & {
+  /**
+   * @generated from field: string cabinet_id = 1;
+   */
+  cabinetId: string;
+
+  /**
+   * @generated from field: string code = 2;
+   */
+  code: string;
+
+  /**
+   * @generated from field: string display_name = 3;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: int32 capacity = 4;
+   */
+  capacity: number;
+
+  /**
+   * @generated from field: int32 low_threshold = 5;
+   */
+  lowThreshold: number;
+
+  /**
+   * Required for SYSADMIN; project-scoped users inherit from JWT.
+   *
+   * @generated from field: string project_id = 6;
+   */
+  projectId: string;
+};
+
+/**
+ * Describes the message medisync.inventory.v1.CreateSlotRequest.
+ * Use `create(CreateSlotRequestSchema)` to create a new message.
+ */
+export const CreateSlotRequestSchema: GenMessage<CreateSlotRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_inventory_v1_inventory, 9);
+
+/**
+ * @generated from message medisync.inventory.v1.CreateSlotResponse
+ */
+export type CreateSlotResponse = Message<"medisync.inventory.v1.CreateSlotResponse"> & {
+  /**
+   * @generated from field: medisync.inventory.v1.Slot slot = 1;
+   */
+  slot?: Slot | undefined;
+};
+
+/**
+ * Describes the message medisync.inventory.v1.CreateSlotResponse.
+ * Use `create(CreateSlotResponseSchema)` to create a new message.
+ */
+export const CreateSlotResponseSchema: GenMessage<CreateSlotResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_inventory_v1_inventory, 10);
+
+/**
  * @generated from service medisync.inventory.v1.InventoryService
  */
 export const InventoryService: GenService<{
@@ -292,6 +355,14 @@ export const InventoryService: GenService<{
     methodKind: "unary";
     input: typeof ListSlotsRequestSchema;
     output: typeof ListSlotsResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.inventory.v1.InventoryService.CreateSlot
+   */
+  createSlot: {
+    methodKind: "unary";
+    input: typeof CreateSlotRequestSchema;
+    output: typeof CreateSlotResponseSchema;
   },
   /**
    * @generated from rpc medisync.inventory.v1.InventoryService.AssignDrug

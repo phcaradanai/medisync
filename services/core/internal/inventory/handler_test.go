@@ -33,6 +33,8 @@ func newAuthedRequest[T any](msg *T) *connect.Request[T] {
 type fakeSlotStore struct {
 	listResult    []*Slot
 	listErr       error
+	createResult  *Slot
+	createErr     error
 	getByIDResult *Slot
 	getByIDErr    error
 	assignResult  *Slot
@@ -68,6 +70,10 @@ type assignCall struct {
 
 func (s *fakeSlotStore) ListSlots(_ context.Context, cabinetID, projectID string, lowOnly bool) ([]*Slot, error) {
 	return s.listResult, s.listErr
+}
+
+func (s *fakeSlotStore) CreateSlot(_ context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32) (*Slot, error) {
+	return s.createResult, s.createErr
 }
 
 func (s *fakeSlotStore) GetByID(_ context.Context, id string) (*Slot, error) {

@@ -69,8 +69,24 @@ message AdjustStockResponse {
   Slot slot = 1;
 }
 
+// Create a new slot in a cabinet. Requires admin role.
+message CreateSlotRequest {
+  string cabinet_id = 1;
+  string code = 2;
+  string display_name = 3;
+  int32 capacity = 4;
+  int32 low_threshold = 5;
+  // Required for SYSADMIN; project-scoped users inherit from JWT.
+  string project_id = 6;
+}
+
+message CreateSlotResponse {
+  Slot slot = 1;
+}
+
 service InventoryService {
   rpc ListSlots(ListSlotsRequest) returns (ListSlotsResponse);
+  rpc CreateSlot(CreateSlotRequest) returns (CreateSlotResponse);
   rpc AssignDrug(AssignDrugRequest) returns (AssignDrugResponse);
   rpc Refill(RefillRequest) returns (RefillResponse);
   rpc AdjustStock(AdjustStockRequest) returns (AdjustStockResponse);

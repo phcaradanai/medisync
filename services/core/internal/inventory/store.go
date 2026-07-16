@@ -165,6 +165,25 @@ func (s *Store) Refill(ctx context.Context, id string, delta int32) (*Slot, erro
 	return slot, nil
 }
 
+// CreateSlot inserts a new empty slot into a cabinet.
+func (s *Store) CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`INSERT INTO inventory.slot (cabinet_id, code, display_name, capacity, quantity, low_threshold, project_id)
+		 VALUES ($1, $2, $3, $4, 0, $5, $6)
+		 ON CONFLICT (cabinet_id, code) DO NOTHING
+		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		           capacity, quantity, low_threshold, project_id, created_at, updated_at`,
+		cabinetID, code, displayName, capacity, lowThreshold, projectID)
+	slot, err := scanSlot(row)
+	if err != nil {
+		return nil, fmt.Errorf("create slot: %w", err)
+	}
+	if slot == nil {
+		return nil, ErrDuplicateSlot
+	}
+	return slot, nil
+}
+
 // AdjustStock atomically sets a slot's quantity to a new value.
 // Used for audit corrections; requires a reason which is recorded
 // in the audit log. Returns the updated slot, or nil if not found.
@@ -213,6 +232,9 @@ func scanSlot(row pgx.Row) (*Slot, error) {
 // ErrInsufficientStock is returned when a refill delta would result in
 // a negative quantity.
 var ErrInsufficientStock = errors.New("insufficient stock")
+
+// ErrDuplicateSlot is returned when a (cabinet_id, code) pair already exists.
+var ErrDuplicateSlot = errors.New("slot already exists in cabinet")
 
 // toJSON safely marshals a value to JSON bytes, returning {} on error.
 func toJSON(v any) json.RawMessage {

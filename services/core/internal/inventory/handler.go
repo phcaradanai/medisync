@@ -51,6 +51,7 @@ type TokenParser interface{ Parse(tokenString string) (TokenClaimser, error) }
 type SlotStore interface {
 	ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool) ([]*Slot, error)
 	GetByID(ctx context.Context, id string) (*Slot, error)
+	CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32) (*Slot, error)
 	AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugName string, capacity, lowThreshold int32) (*Slot, error)
 	Refill(ctx context.Context, id string, delta int32) (*Slot, error)
 	AdjustStock(ctx context.Context, id string, newQuantity int32) (*Slot, error)
@@ -116,6 +117,53 @@ func (s *InventoryServer) ListSlots(ctx context.Context, req *connect.Request[in
 		pbSlots = append(pbSlots, toProtoSlot(slot))
 	}
 	return connect.NewResponse(&inventoryv1.ListSlotsResponse{Slots: pbSlots}), nil
+}
+
+func (s *InventoryServer) CreateSlot(ctx context.Context, req *connect.Request[inventoryv1.CreateSlotRequest]) (*connect.Response[inventoryv1.CreateSlotResponse], error) {
+	claims, cerr := s.authenticate(req.Header())
+	if cerr != nil {
+		return nil, cerr
+	}
+	msg := req.Msg
+	if msg == nil || msg.CabinetId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrSlotIDRequired)
+	}
+	if msg.Code == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("slot code is required"))
+	}
+	if msg.Capacity <= 0 {
+		msg.Capacity = 100
+	}
+	if msg.LowThreshold <= 0 {
+		msg.LowThreshold = 10
+	}
+
+	projectID := claims.GetProjectID()
+	if projectID == "" {
+		projectID = msg.ProjectId
+	}
+	if projectID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project_id is required"))
+	}
+
+	slot, err := s.store.CreateSlot(ctx, msg.CabinetId, msg.Code, msg.DisplayName, projectID, msg.Capacity, msg.LowThreshold)
+	if err != nil {
+		if errors.Is(err, ErrDuplicateSlot) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, ErrDuplicateSlot)
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create slot: %w", err))
+	}
+
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.GetSubject(),
+		Action:    "slot.created",
+		Entity:    "slot",
+		EntityID:  slot.ID,
+		ProjectID: projectID,
+		Detail:    auditDetail{SlotCode: slot.Code, CabinetID: slot.CabinetID},
+	})
+
+	return connect.NewResponse(&inventoryv1.CreateSlotResponse{Slot: toProtoSlot(slot)}), nil
 }
 
 func (s *InventoryServer) AssignDrug(ctx context.Context, req *connect.Request[inventoryv1.AssignDrugRequest]) (*connect.Response[inventoryv1.AssignDrugResponse], error) {
