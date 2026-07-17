@@ -25,6 +25,8 @@ type fakeDB struct {
 	queryCalls    []queryCall
 	queryRows     pgx.Rows
 	queryErr      error
+	countResult   int64
+	returnCount   bool
 }
 
 type execCall struct {
@@ -49,6 +51,12 @@ func (f *fakeDB) Exec(_ context.Context, sql string, arguments ...any) (pgconn.C
 
 func (f *fakeDB) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
 	f.queryRowCalls = append(f.queryRowCalls, queryRowCall{sql: sql, args: args})
+	if f.returnCount && strings.Contains(strings.ToUpper(sql), "COUNT(*)") {
+		return &fakeRow{scanFn: func(dest ...any) error {
+			*(dest[0].(*int64)) = f.countResult
+			return nil
+		}}
+	}
 	return f.queryRow
 }
 

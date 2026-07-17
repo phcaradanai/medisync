@@ -7,6 +7,7 @@
 package kioskv1
 
 import (
+	v1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -122,6 +123,7 @@ func (x *Kiosk) GetProjectId() string {
 
 type ListKiosksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pagination    *v1.CursorPagination   `protobuf:"bytes,1,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -156,9 +158,18 @@ func (*ListKiosksRequest) Descriptor() ([]byte, []int) {
 	return file_medisync_kiosk_v1_kiosk_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *ListKiosksRequest) GetPagination() *v1.CursorPagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 type ListKiosksResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kiosks        []*Kiosk               `protobuf:"bytes,1,rep,name=kiosks,proto3" json:"kiosks,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -198,6 +209,20 @@ func (x *ListKiosksResponse) GetKiosks() []*Kiosk {
 		return x.Kiosks
 	}
 	return nil
+}
+
+func (x *ListKiosksResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListKiosksResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
 }
 
 type CreateKioskRequest struct {
@@ -709,7 +734,7 @@ var File_medisync_kiosk_v1_kiosk_proto protoreflect.FileDescriptor
 
 const file_medisync_kiosk_v1_kiosk_proto_rawDesc = "" +
 	"\n" +
-	"\x1dmedisync/kiosk/v1/kiosk.proto\x12\x11medisync.kiosk.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdf\x01\n" +
+	"\x1dmedisync/kiosk/v1/kiosk.proto\x12\x11medisync.kiosk.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#medisync/common/v1/pagination.proto\"\xdf\x01\n" +
 	"\x05Kiosk\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12!\n" +
@@ -720,10 +745,16 @@ const file_medisync_kiosk_v1_kiosk_proto_rawDesc = "" +
 	"\x03pin\x18\x06 \x01(\tH\x00R\x03pin\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\a \x01(\tR\tprojectIdB\x06\n" +
-	"\x04_pin\"\x13\n" +
-	"\x11ListKiosksRequest\"F\n" +
+	"\x04_pin\"Y\n" +
+	"\x11ListKiosksRequest\x12D\n" +
+	"\n" +
+	"pagination\x18\x01 \x01(\v2$.medisync.common.v1.CursorPaginationR\n" +
+	"pagination\"\x8f\x01\n" +
 	"\x12ListKiosksResponse\x120\n" +
-	"\x06kiosks\x18\x01 \x03(\v2\x18.medisync.kiosk.v1.KioskR\x06kiosks\"|\n" +
+	"\x06kiosks\x18\x01 \x03(\v2\x18.medisync.kiosk.v1.KioskR\x06kiosks\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount\"|\n" +
 	"\x12CreateKioskRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x10\n" +
@@ -794,33 +825,35 @@ var file_medisync_kiosk_v1_kiosk_proto_goTypes = []any{
 	(*KioskValidateRequest)(nil),  // 11: medisync.kiosk.v1.KioskValidateRequest
 	(*KioskValidateResponse)(nil), // 12: medisync.kiosk.v1.KioskValidateResponse
 	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(*v1.CursorPagination)(nil),   // 14: medisync.common.v1.CursorPagination
 }
 var file_medisync_kiosk_v1_kiosk_proto_depIdxs = []int32{
 	13, // 0: medisync.kiosk.v1.Kiosk.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 1: medisync.kiosk.v1.ListKiosksResponse.kiosks:type_name -> medisync.kiosk.v1.Kiosk
-	0,  // 2: medisync.kiosk.v1.CreateKioskResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
-	0,  // 3: medisync.kiosk.v1.UpdateKioskResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
-	0,  // 4: medisync.kiosk.v1.ResetKioskPinResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
-	13, // 5: medisync.kiosk.v1.KioskLoginResponse.expires_at:type_name -> google.protobuf.Timestamp
-	0,  // 6: medisync.kiosk.v1.KioskLoginResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
-	0,  // 7: medisync.kiosk.v1.KioskValidateResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
-	1,  // 8: medisync.kiosk.v1.KioskService.ListKiosks:input_type -> medisync.kiosk.v1.ListKiosksRequest
-	3,  // 9: medisync.kiosk.v1.KioskService.CreateKiosk:input_type -> medisync.kiosk.v1.CreateKioskRequest
-	5,  // 10: medisync.kiosk.v1.KioskService.UpdateKiosk:input_type -> medisync.kiosk.v1.UpdateKioskRequest
-	7,  // 11: medisync.kiosk.v1.KioskService.ResetKioskPin:input_type -> medisync.kiosk.v1.ResetKioskPinRequest
-	9,  // 12: medisync.kiosk.v1.KioskService.KioskLogin:input_type -> medisync.kiosk.v1.KioskLoginRequest
-	11, // 13: medisync.kiosk.v1.KioskService.KioskValidate:input_type -> medisync.kiosk.v1.KioskValidateRequest
-	2,  // 14: medisync.kiosk.v1.KioskService.ListKiosks:output_type -> medisync.kiosk.v1.ListKiosksResponse
-	4,  // 15: medisync.kiosk.v1.KioskService.CreateKiosk:output_type -> medisync.kiosk.v1.CreateKioskResponse
-	6,  // 16: medisync.kiosk.v1.KioskService.UpdateKiosk:output_type -> medisync.kiosk.v1.UpdateKioskResponse
-	8,  // 17: medisync.kiosk.v1.KioskService.ResetKioskPin:output_type -> medisync.kiosk.v1.ResetKioskPinResponse
-	10, // 18: medisync.kiosk.v1.KioskService.KioskLogin:output_type -> medisync.kiosk.v1.KioskLoginResponse
-	12, // 19: medisync.kiosk.v1.KioskService.KioskValidate:output_type -> medisync.kiosk.v1.KioskValidateResponse
-	14, // [14:20] is the sub-list for method output_type
-	8,  // [8:14] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	14, // 1: medisync.kiosk.v1.ListKiosksRequest.pagination:type_name -> medisync.common.v1.CursorPagination
+	0,  // 2: medisync.kiosk.v1.ListKiosksResponse.kiosks:type_name -> medisync.kiosk.v1.Kiosk
+	0,  // 3: medisync.kiosk.v1.CreateKioskResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
+	0,  // 4: medisync.kiosk.v1.UpdateKioskResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
+	0,  // 5: medisync.kiosk.v1.ResetKioskPinResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
+	13, // 6: medisync.kiosk.v1.KioskLoginResponse.expires_at:type_name -> google.protobuf.Timestamp
+	0,  // 7: medisync.kiosk.v1.KioskLoginResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
+	0,  // 8: medisync.kiosk.v1.KioskValidateResponse.kiosk:type_name -> medisync.kiosk.v1.Kiosk
+	1,  // 9: medisync.kiosk.v1.KioskService.ListKiosks:input_type -> medisync.kiosk.v1.ListKiosksRequest
+	3,  // 10: medisync.kiosk.v1.KioskService.CreateKiosk:input_type -> medisync.kiosk.v1.CreateKioskRequest
+	5,  // 11: medisync.kiosk.v1.KioskService.UpdateKiosk:input_type -> medisync.kiosk.v1.UpdateKioskRequest
+	7,  // 12: medisync.kiosk.v1.KioskService.ResetKioskPin:input_type -> medisync.kiosk.v1.ResetKioskPinRequest
+	9,  // 13: medisync.kiosk.v1.KioskService.KioskLogin:input_type -> medisync.kiosk.v1.KioskLoginRequest
+	11, // 14: medisync.kiosk.v1.KioskService.KioskValidate:input_type -> medisync.kiosk.v1.KioskValidateRequest
+	2,  // 15: medisync.kiosk.v1.KioskService.ListKiosks:output_type -> medisync.kiosk.v1.ListKiosksResponse
+	4,  // 16: medisync.kiosk.v1.KioskService.CreateKiosk:output_type -> medisync.kiosk.v1.CreateKioskResponse
+	6,  // 17: medisync.kiosk.v1.KioskService.UpdateKiosk:output_type -> medisync.kiosk.v1.UpdateKioskResponse
+	8,  // 18: medisync.kiosk.v1.KioskService.ResetKioskPin:output_type -> medisync.kiosk.v1.ResetKioskPinResponse
+	10, // 19: medisync.kiosk.v1.KioskService.KioskLogin:output_type -> medisync.kiosk.v1.KioskLoginResponse
+	12, // 20: medisync.kiosk.v1.KioskService.KioskValidate:output_type -> medisync.kiosk.v1.KioskValidateResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_medisync_kiosk_v1_kiosk_proto_init() }

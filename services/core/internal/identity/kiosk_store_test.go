@@ -181,34 +181,41 @@ func TestKioskStoreGetByIDNotFound(t *testing.T) {
 func TestKioskStoreList(t *testing.T) {
 	k1 := &Kiosk{ID: "a", Code: "A", DisplayName: "First"}
 	k2 := &Kiosk{ID: "b", Code: "B", DisplayName: "Second"}
-	db := &fakeDB{queryRows: &fakeKioskRows{kiosks: []*Kiosk{k1, k2}}}
+	db := &fakeDB{
+		queryRows:   &fakeKioskRows{kiosks: []*Kiosk{k1, k2}},
+		countResult: 2,
+		returnCount: true,
+	}
 	store := NewKioskStoreWithDB(db)
 
-	got, err := store.List(context.Background())
+	got, nextToken, totalCount, err := store.List(context.Background(), "", 1, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("expected 2 kiosks, got %d", len(got))
+	if len(got) != 1 {
+		t.Fatalf("expected 1 kiosk, got %d", len(got))
 	}
 	if got[0].Code != "A" {
 		t.Errorf("got[0].Code = %q", got[0].Code)
 	}
-	if got[1].Code != "B" {
-		t.Errorf("got[1].Code = %q", got[1].Code)
+	if nextToken != "a" || totalCount != 2 {
+		t.Errorf("pagination = token %q, total %d", nextToken, totalCount)
 	}
 }
 
 func TestKioskStoreListEmpty(t *testing.T) {
-	db := &fakeDB{queryRows: &fakeKioskRows{}}
+	db := &fakeDB{queryRows: &fakeKioskRows{}, returnCount: true}
 	store := NewKioskStoreWithDB(db)
 
-	got, err := store.List(context.Background())
+	got, nextToken, totalCount, err := store.List(context.Background(), "", 50, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(got) != 0 {
 		t.Errorf("expected empty list, got %d", len(got))
+	}
+	if nextToken != "" || totalCount != 0 {
+		t.Errorf("pagination = token %q, total %d", nextToken, totalCount)
 	}
 }
 

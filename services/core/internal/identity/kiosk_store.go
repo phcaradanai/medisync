@@ -9,13 +9,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 )
 
 // KioskStore is the narrow interface for kiosk persistence consumed by
 // the kiosk handler. The concrete KioskPGStore satisfies this interface.
 type KioskStore interface {
-	List(ctx context.Context) ([]*Kiosk, error)
-	ListByProject(ctx context.Context, projectID string) ([]*Kiosk, error)
+	List(ctx context.Context, projectID string, pageSize int32, pageToken string) ([]*Kiosk, string, int64, error)
 	Create(ctx context.Context, k *Kiosk) error
 	GetByCode(ctx context.Context, code string) (*Kiosk, error)
 	GetByID(ctx context.Context, id string) (*Kiosk, error)
@@ -38,28 +39,61 @@ func NewKioskStoreWithDB(db dbConn) *KioskPGStore {
 	return &KioskPGStore{db: db}
 }
 
-// List returns all kiosks ordered by creation time.
-func (s *KioskPGStore) List(ctx context.Context) ([]*Kiosk, error) {
-	rows, err := s.db.Query(ctx,
-		`SELECT id, code, display_name, pin_hash, active, project_id, created_at, updated_at
-		   FROM identity.kiosks ORDER BY created_at`)
-	if err != nil {
-		return nil, fmt.Errorf("list kiosks: %w", err)
+// List returns kiosks scoped to a project, using a created_at cursor whose
+// token is the last kiosk ID. An empty projectID lists all kiosks.
+func (s *KioskPGStore) List(ctx context.Context, projectID string, pageSize int32, pageToken string) ([]*Kiosk, string, int64, error) {
+	pageSize = pagination.NormalizePageSize(pageSize)
+	args := []any{}
+	whereSQL := ""
+	argIdx := 1
+	if projectID != "" {
+		whereSQL = "WHERE project_id = $1"
+		args = append(args, projectID)
+		argIdx++
 	}
-	defer rows.Close()
-	return scanKiosks(rows)
-}
 
-// ListByProject returns kiosks scoped to a project.
-func (s *KioskPGStore) ListByProject(ctx context.Context, projectID string) ([]*Kiosk, error) {
-	rows, err := s.db.Query(ctx,
+	var totalCount int64
+	countQuery := "SELECT COUNT(*) FROM identity.kiosks " + whereSQL
+	if err := s.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		return nil, "", 0, fmt.Errorf("count kiosks: %w", err)
+	}
+
+	if pageToken != "" {
+		cursorClause := fmt.Sprintf(
+			"created_at < (SELECT created_at FROM identity.kiosks WHERE id = $%d)",
+			argIdx,
+		)
+		if whereSQL == "" {
+			whereSQL = "WHERE " + cursorClause
+		} else {
+			whereSQL += " AND " + cursorClause
+		}
+		args = append(args, pageToken)
+		argIdx++
+	}
+	query := fmt.Sprintf(
 		`SELECT id, code, display_name, pin_hash, active, project_id, created_at, updated_at
-		   FROM identity.kiosks WHERE project_id = $1 ORDER BY created_at`, projectID)
+		   FROM identity.kiosks %s ORDER BY created_at DESC, id DESC LIMIT $%d`,
+		whereSQL, argIdx,
+	)
+	args = append(args, pageSize+1)
+
+	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list kiosks by project: %w", err)
+		return nil, "", 0, fmt.Errorf("list kiosks: %w", err)
 	}
 	defer rows.Close()
-	return scanKiosks(rows)
+	kiosks, err := scanKiosks(rows)
+	if err != nil {
+		return nil, "", 0, err
+	}
+
+	var nextPageToken string
+	if len(kiosks) > int(pageSize) {
+		nextPageToken = kiosks[pageSize-1].ID
+		kiosks = kiosks[:pageSize]
+	}
+	return kiosks, nextPageToken, totalCount, nil
 }
 
 // Create inserts a new kiosk. Returns ErrDuplicateKioskCode on conflict.

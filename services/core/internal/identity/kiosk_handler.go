@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	kioskv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1"
 	kioskv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1/kioskv1connect"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -30,12 +31,12 @@ type UserTokenParser interface {
 
 // KioskServer is the Connect-RPC handler for KioskService.
 type KioskServer struct {
-	store       KioskStore
-	passwd      *passwordHelper
-	jwt         KioskTokenManager
-	userParser  UserTokenParser
-	idLimiter   LoginRateLimiter
-	ipLimiter   LoginRateLimiter
+	store      KioskStore
+	passwd     *passwordHelper
+	jwt        KioskTokenManager
+	userParser UserTokenParser
+	idLimiter  LoginRateLimiter
+	ipLimiter  LoginRateLimiter
 }
 
 // NewKioskServer creates a KioskServer without rate limiting.
@@ -76,14 +77,15 @@ func (s *KioskServer) ListKiosks(
 		return nil, connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
 	}
 
-	projectID := claims.ProjectID
-	var kiosks []*Kiosk
-	var listErr error
-	if projectID != "" {
-		kiosks, listErr = s.store.ListByProject(ctx, projectID)
-	} else {
-		kiosks, listErr = s.store.List(ctx)
+	pageSize, pageToken := pagination.DefaultPageSize, ""
+	if req.Msg != nil && req.Msg.Pagination != nil {
+		pageSize = pagination.NormalizePageSize(req.Msg.Pagination.PageSize)
+		pageToken = req.Msg.Pagination.PageToken
 	}
+
+	kiosks, nextToken, totalCount, listErr := s.store.List(
+		ctx, claims.ProjectID, pageSize, pageToken,
+	)
 	if listErr != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
@@ -94,7 +96,9 @@ func (s *KioskServer) ListKiosks(
 	}
 
 	return connect.NewResponse(&kioskv1.ListKiosksResponse{
-		Kiosks: pbKiosks,
+		Kiosks:        pbKiosks,
+		NextPageToken: nextToken,
+		TotalCount:    totalCount,
 	}), nil
 }
 

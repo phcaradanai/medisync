@@ -3,6 +3,7 @@ syntax = "proto3";
 package medisync.kiosk.v1;
 
 import "google/protobuf/timestamp.proto";
+import "medisync/common/v1/pagination.proto";
 
 option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1;kioskv1";
 
@@ -24,10 +25,14 @@ message Kiosk {
 
 // ── Admin RPCs ─────────────────────────────────────────────────────
 
-message ListKiosksRequest {}
+message ListKiosksRequest {
+  medisync.common.v1.CursorPagination pagination = 1;
+}
 
 message ListKiosksResponse {
   repeated Kiosk kiosks = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
 }
 
 message CreateKioskRequest {

@@ -15,33 +15,28 @@ import (
 // --- Fakes for kiosk handler tests ---
 
 type fakeKioskStore struct {
-	kiosksByCode map[string]*Kiosk
-	kiosksByID   map[string]*Kiosk
-	allKiosks    []*Kiosk
+	kiosksByCode   map[string]*Kiosk
+	kiosksByID     map[string]*Kiosk
+	allKiosks      []*Kiosk
+	listNextToken  string
+	listTotalCount int64
 
 	createErr error
 	listErr   error
 	updateErr error
 }
 
-func (s *fakeKioskStore) List(_ context.Context) ([]*Kiosk, error) {
+func (s *fakeKioskStore) List(_ context.Context, projectID string, pageSize int32, pageToken string) ([]*Kiosk, string, int64, error) {
 	if s.listErr != nil {
-		return nil, s.listErr
-	}
-	return s.allKiosks, nil
-}
-
-func (s *fakeKioskStore) ListByProject(_ context.Context, projectID string) ([]*Kiosk, error) {
-	if s.listErr != nil {
-		return nil, s.listErr
+		return nil, "", 0, s.listErr
 	}
 	var result []*Kiosk
 	for _, k := range s.allKiosks {
-		if k.ProjectID == projectID {
+		if projectID == "" || k.ProjectID == projectID {
 			result = append(result, k)
 		}
 	}
-	return result, nil
+	return result, s.listNextToken, s.listTotalCount, nil
 }
 
 func (s *fakeKioskStore) Create(_ context.Context, k *Kiosk) error {
@@ -92,11 +87,11 @@ func (s *fakeKioskStore) UpdatePIN(_ context.Context, id, pinHash string) error 
 }
 
 type fakeKioskJWT struct {
-	issueToken    string
-	issueExpires  time.Time
-	issueErr      error
-	parseClaims   *KioskTokenClaims
-	parseErr      error
+	issueToken   string
+	issueExpires time.Time
+	issueErr     error
+	parseClaims  *KioskTokenClaims
+	parseErr     error
 }
 
 func (m *fakeKioskJWT) IssueKiosk(_ *Kiosk) (string, time.Time, error) {
@@ -407,6 +402,8 @@ func TestListKiosksSuccess(t *testing.T) {
 			{ID: "a", Code: "A", DisplayName: "First", ProjectID: "proj-1"},
 			{ID: "b", Code: "B", DisplayName: "Second", ProjectID: "proj-1"},
 		},
+		listNextToken:  "b",
+		listTotalCount: 2,
 	}
 	h := setupKioskHandler(t, store, &fakeKioskJWT{}, nil)
 
@@ -418,6 +415,9 @@ func TestListKiosksSuccess(t *testing.T) {
 	}
 	if len(resp.Msg.Kiosks) != 2 {
 		t.Fatalf("expected 2 kiosks, got %d", len(resp.Msg.Kiosks))
+	}
+	if resp.Msg.NextPageToken != "b" || resp.Msg.TotalCount != 2 {
+		t.Errorf("pagination = token %q, total %d", resp.Msg.NextPageToken, resp.Msg.TotalCount)
 	}
 }
 
@@ -502,5 +502,3 @@ func TestResetKioskPinRequiresAdmin(t *testing.T) {
 	_, err := h.ResetKioskPin(context.Background(), req)
 	assertConnectCode(t, err, connect.CodePermissionDenied)
 }
-
-
