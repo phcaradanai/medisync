@@ -12,6 +12,7 @@ import (
 	"connectrpc.com/connect"
 	identityv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1"
 	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -201,7 +202,14 @@ func (s *IdentityServer) ListUsers(ctx context.Context, req *connect.Request[ide
 		projectID = claims.ProjectID
 	}
 
-	users, err := s.store.ListUsers(ctx, req.Msg.GetQuery(), projectID)
+	pageSize, pageToken := pagination.DefaultPageSize, ""
+	if req.Msg.GetPagination() != nil {
+		pageSize = pagination.NormalizePageSize(req.Msg.GetPagination().GetPageSize())
+		pageToken = req.Msg.GetPagination().GetPageToken()
+	}
+	users, nextToken, totalCount, err := s.store.ListUsers(
+		ctx, req.Msg.GetQuery(), projectID, pageSize, pageToken,
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list users: %w", err))
 	}
@@ -209,7 +217,11 @@ func (s *IdentityServer) ListUsers(ctx context.Context, req *connect.Request[ide
 	for i, u := range users {
 		pbUsers[i] = toProtoUser(u)
 	}
-	return connect.NewResponse(&identityv1.ListUsersResponse{Users: pbUsers}), nil
+	return connect.NewResponse(&identityv1.ListUsersResponse{
+		Users:         pbUsers,
+		NextPageToken: nextToken,
+		TotalCount:    totalCount,
+	}), nil
 }
 
 func (s *IdentityServer) CreateUser(ctx context.Context, req *connect.Request[identityv1.CreateUserRequest]) (*connect.Response[identityv1.CreateUserResponse], error) {
@@ -427,7 +439,12 @@ func (s *ProjectServer) UpdateProject(ctx context.Context, req *connect.Request[
 }
 
 func (s *ProjectServer) ListProjects(ctx context.Context, req *connect.Request[identityv1.ListProjectsRequest]) (*connect.Response[identityv1.ListProjectsResponse], error) {
-	projects, err := s.store.ListProjects(ctx)
+	pageSize, pageToken := pagination.DefaultPageSize, ""
+	if req.Msg.GetPagination() != nil {
+		pageSize = pagination.NormalizePageSize(req.Msg.GetPagination().GetPageSize())
+		pageToken = req.Msg.GetPagination().GetPageToken()
+	}
+	projects, nextToken, totalCount, err := s.store.ListProjects(ctx, pageSize, pageToken)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list projects: %w", err))
 	}
@@ -435,7 +452,11 @@ func (s *ProjectServer) ListProjects(ctx context.Context, req *connect.Request[i
 	for i, p := range projects {
 		pb[i] = toProtoProject(p)
 	}
-	return connect.NewResponse(&identityv1.ListProjectsResponse{Projects: pb}), nil
+	return connect.NewResponse(&identityv1.ListProjectsResponse{
+		Projects:      pb,
+		NextPageToken: nextToken,
+		TotalCount:    totalCount,
+	}), nil
 }
 
 func (s *ProjectServer) GetProject(ctx context.Context, req *connect.Request[identityv1.GetProjectRequest]) (*connect.Response[identityv1.GetProjectResponse], error) {

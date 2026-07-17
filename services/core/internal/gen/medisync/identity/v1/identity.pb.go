@@ -7,6 +7,7 @@
 package identityv1
 
 import (
+	v1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -494,7 +495,8 @@ type ListUsersRequest struct {
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// Filter by project. SYSADMIN can omit to see all.
 	// Project admins get this auto-populated by interceptor.
-	ProjectId     string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ProjectId     string               `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Pagination    *v1.CursorPagination `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -543,9 +545,18 @@ func (x *ListUsersRequest) GetProjectId() string {
 	return ""
 }
 
+func (x *ListUsersRequest) GetPagination() *v1.CursorPagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 type ListUsersResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Users         []*User                `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -585,6 +596,20 @@ func (x *ListUsersResponse) GetUsers() []*User {
 		return x.Users
 	}
 	return nil
+}
+
+func (x *ListUsersResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListUsersResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
 }
 
 type CreateUserRequest struct {
@@ -1253,7 +1278,10 @@ func (x *UpdateProjectResponse) GetProject() *Project {
 }
 
 type ListProjectsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SYSADMIN sees all. Project admins get back only their own project
+	// (auto-filtered by interceptor).
+	Pagination    *v1.CursorPagination `protobuf:"bytes,1,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1288,9 +1316,18 @@ func (*ListProjectsRequest) Descriptor() ([]byte, []int) {
 	return file_medisync_identity_v1_identity_proto_rawDescGZIP(), []int{20}
 }
 
+func (x *ListProjectsRequest) GetPagination() *v1.CursorPagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 type ListProjectsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Projects      []*Project             `protobuf:"bytes,1,rep,name=projects,proto3" json:"projects,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1330,6 +1367,20 @@ func (x *ListProjectsResponse) GetProjects() []*Project {
 		return x.Projects
 	}
 	return nil
+}
+
+func (x *ListProjectsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListProjectsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
 }
 
 type GetProjectRequest struct {
@@ -1425,7 +1476,7 @@ var File_medisync_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
-	"#medisync/identity/v1/identity.proto\x12\x14medisync.identity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x92\x02\n" +
+	"#medisync/identity/v1/identity.proto\x12\x14medisync.identity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#medisync/common/v1/pagination.proto\"\x92\x02\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -1457,13 +1508,19 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\x04user\x18\x03 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\x0f\n" +
 	"\rWhoAmIRequest\"@\n" +
 	"\x0eWhoAmIResponse\x12.\n" +
-	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"G\n" +
+	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\x8d\x01\n" +
 	"\x10ListUsersRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tR\tprojectId\"E\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12D\n" +
+	"\n" +
+	"pagination\x18\x03 \x01(\v2$.medisync.common.v1.CursorPaginationR\n" +
+	"pagination\"\x8e\x01\n" +
 	"\x11ListUsersResponse\x120\n" +
-	"\x05users\x18\x01 \x03(\v2\x1a.medisync.identity.v1.UserR\x05users\"\xd8\x01\n" +
+	"\x05users\x18\x01 \x03(\v2\x1a.medisync.identity.v1.UserR\x05users\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount\"\xd8\x01\n" +
 	"\x11CreateUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12!\n" +
@@ -1518,10 +1575,16 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\x05_nameB\t\n" +
 	"\a_active\"P\n" +
 	"\x15UpdateProjectResponse\x127\n" +
-	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"\x15\n" +
-	"\x13ListProjectsRequest\"Q\n" +
+	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"[\n" +
+	"\x13ListProjectsRequest\x12D\n" +
+	"\n" +
+	"pagination\x18\x01 \x01(\v2$.medisync.common.v1.CursorPaginationR\n" +
+	"pagination\"\x9a\x01\n" +
 	"\x14ListProjectsResponse\x129\n" +
-	"\bprojects\x18\x01 \x03(\v2\x1d.medisync.identity.v1.ProjectR\bprojects\"#\n" +
+	"\bprojects\x18\x01 \x03(\v2\x1d.medisync.identity.v1.ProjectR\bprojects\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount\"#\n" +
 	"\x11GetProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
 	"\x12GetProjectResponse\x127\n" +
@@ -1592,6 +1655,7 @@ var file_medisync_identity_v1_identity_proto_goTypes = []any{
 	(*GetProjectRequest)(nil),     // 23: medisync.identity.v1.GetProjectRequest
 	(*GetProjectResponse)(nil),    // 24: medisync.identity.v1.GetProjectResponse
 	(*timestamppb.Timestamp)(nil), // 25: google.protobuf.Timestamp
+	(*v1.CursorPagination)(nil),   // 26: medisync.common.v1.CursorPagination
 }
 var file_medisync_identity_v1_identity_proto_depIdxs = []int32{
 	0,  // 0: medisync.identity.v1.User.role:type_name -> medisync.identity.v1.Role
@@ -1601,45 +1665,47 @@ var file_medisync_identity_v1_identity_proto_depIdxs = []int32{
 	25, // 4: medisync.identity.v1.CardLoginResponse.expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 5: medisync.identity.v1.CardLoginResponse.user:type_name -> medisync.identity.v1.User
 	1,  // 6: medisync.identity.v1.WhoAmIResponse.user:type_name -> medisync.identity.v1.User
-	1,  // 7: medisync.identity.v1.ListUsersResponse.users:type_name -> medisync.identity.v1.User
-	0,  // 8: medisync.identity.v1.CreateUserRequest.role:type_name -> medisync.identity.v1.Role
-	1,  // 9: medisync.identity.v1.CreateUserResponse.user:type_name -> medisync.identity.v1.User
-	0,  // 10: medisync.identity.v1.UpdateUserRequest.role:type_name -> medisync.identity.v1.Role
-	1,  // 11: medisync.identity.v1.UpdateUserResponse.user:type_name -> medisync.identity.v1.User
-	1,  // 12: medisync.identity.v1.SetCardTokenResponse.user:type_name -> medisync.identity.v1.User
-	25, // 13: medisync.identity.v1.Project.created_at:type_name -> google.protobuf.Timestamp
-	25, // 14: medisync.identity.v1.Project.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 15: medisync.identity.v1.CreateProjectResponse.project:type_name -> medisync.identity.v1.Project
-	16, // 16: medisync.identity.v1.UpdateProjectResponse.project:type_name -> medisync.identity.v1.Project
-	16, // 17: medisync.identity.v1.ListProjectsResponse.projects:type_name -> medisync.identity.v1.Project
-	16, // 18: medisync.identity.v1.GetProjectResponse.project:type_name -> medisync.identity.v1.Project
-	2,  // 19: medisync.identity.v1.IdentityService.Login:input_type -> medisync.identity.v1.LoginRequest
-	4,  // 20: medisync.identity.v1.IdentityService.CardLogin:input_type -> medisync.identity.v1.CardLoginRequest
-	6,  // 21: medisync.identity.v1.IdentityService.WhoAmI:input_type -> medisync.identity.v1.WhoAmIRequest
-	8,  // 22: medisync.identity.v1.IdentityService.ListUsers:input_type -> medisync.identity.v1.ListUsersRequest
-	10, // 23: medisync.identity.v1.IdentityService.CreateUser:input_type -> medisync.identity.v1.CreateUserRequest
-	12, // 24: medisync.identity.v1.IdentityService.UpdateUser:input_type -> medisync.identity.v1.UpdateUserRequest
-	14, // 25: medisync.identity.v1.IdentityService.SetCardToken:input_type -> medisync.identity.v1.SetCardTokenRequest
-	17, // 26: medisync.identity.v1.ProjectService.CreateProject:input_type -> medisync.identity.v1.CreateProjectRequest
-	19, // 27: medisync.identity.v1.ProjectService.UpdateProject:input_type -> medisync.identity.v1.UpdateProjectRequest
-	21, // 28: medisync.identity.v1.ProjectService.ListProjects:input_type -> medisync.identity.v1.ListProjectsRequest
-	23, // 29: medisync.identity.v1.ProjectService.GetProject:input_type -> medisync.identity.v1.GetProjectRequest
-	3,  // 30: medisync.identity.v1.IdentityService.Login:output_type -> medisync.identity.v1.LoginResponse
-	5,  // 31: medisync.identity.v1.IdentityService.CardLogin:output_type -> medisync.identity.v1.CardLoginResponse
-	7,  // 32: medisync.identity.v1.IdentityService.WhoAmI:output_type -> medisync.identity.v1.WhoAmIResponse
-	9,  // 33: medisync.identity.v1.IdentityService.ListUsers:output_type -> medisync.identity.v1.ListUsersResponse
-	11, // 34: medisync.identity.v1.IdentityService.CreateUser:output_type -> medisync.identity.v1.CreateUserResponse
-	13, // 35: medisync.identity.v1.IdentityService.UpdateUser:output_type -> medisync.identity.v1.UpdateUserResponse
-	15, // 36: medisync.identity.v1.IdentityService.SetCardToken:output_type -> medisync.identity.v1.SetCardTokenResponse
-	18, // 37: medisync.identity.v1.ProjectService.CreateProject:output_type -> medisync.identity.v1.CreateProjectResponse
-	20, // 38: medisync.identity.v1.ProjectService.UpdateProject:output_type -> medisync.identity.v1.UpdateProjectResponse
-	22, // 39: medisync.identity.v1.ProjectService.ListProjects:output_type -> medisync.identity.v1.ListProjectsResponse
-	24, // 40: medisync.identity.v1.ProjectService.GetProject:output_type -> medisync.identity.v1.GetProjectResponse
-	30, // [30:41] is the sub-list for method output_type
-	19, // [19:30] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	26, // 7: medisync.identity.v1.ListUsersRequest.pagination:type_name -> medisync.common.v1.CursorPagination
+	1,  // 8: medisync.identity.v1.ListUsersResponse.users:type_name -> medisync.identity.v1.User
+	0,  // 9: medisync.identity.v1.CreateUserRequest.role:type_name -> medisync.identity.v1.Role
+	1,  // 10: medisync.identity.v1.CreateUserResponse.user:type_name -> medisync.identity.v1.User
+	0,  // 11: medisync.identity.v1.UpdateUserRequest.role:type_name -> medisync.identity.v1.Role
+	1,  // 12: medisync.identity.v1.UpdateUserResponse.user:type_name -> medisync.identity.v1.User
+	1,  // 13: medisync.identity.v1.SetCardTokenResponse.user:type_name -> medisync.identity.v1.User
+	25, // 14: medisync.identity.v1.Project.created_at:type_name -> google.protobuf.Timestamp
+	25, // 15: medisync.identity.v1.Project.updated_at:type_name -> google.protobuf.Timestamp
+	16, // 16: medisync.identity.v1.CreateProjectResponse.project:type_name -> medisync.identity.v1.Project
+	16, // 17: medisync.identity.v1.UpdateProjectResponse.project:type_name -> medisync.identity.v1.Project
+	26, // 18: medisync.identity.v1.ListProjectsRequest.pagination:type_name -> medisync.common.v1.CursorPagination
+	16, // 19: medisync.identity.v1.ListProjectsResponse.projects:type_name -> medisync.identity.v1.Project
+	16, // 20: medisync.identity.v1.GetProjectResponse.project:type_name -> medisync.identity.v1.Project
+	2,  // 21: medisync.identity.v1.IdentityService.Login:input_type -> medisync.identity.v1.LoginRequest
+	4,  // 22: medisync.identity.v1.IdentityService.CardLogin:input_type -> medisync.identity.v1.CardLoginRequest
+	6,  // 23: medisync.identity.v1.IdentityService.WhoAmI:input_type -> medisync.identity.v1.WhoAmIRequest
+	8,  // 24: medisync.identity.v1.IdentityService.ListUsers:input_type -> medisync.identity.v1.ListUsersRequest
+	10, // 25: medisync.identity.v1.IdentityService.CreateUser:input_type -> medisync.identity.v1.CreateUserRequest
+	12, // 26: medisync.identity.v1.IdentityService.UpdateUser:input_type -> medisync.identity.v1.UpdateUserRequest
+	14, // 27: medisync.identity.v1.IdentityService.SetCardToken:input_type -> medisync.identity.v1.SetCardTokenRequest
+	17, // 28: medisync.identity.v1.ProjectService.CreateProject:input_type -> medisync.identity.v1.CreateProjectRequest
+	19, // 29: medisync.identity.v1.ProjectService.UpdateProject:input_type -> medisync.identity.v1.UpdateProjectRequest
+	21, // 30: medisync.identity.v1.ProjectService.ListProjects:input_type -> medisync.identity.v1.ListProjectsRequest
+	23, // 31: medisync.identity.v1.ProjectService.GetProject:input_type -> medisync.identity.v1.GetProjectRequest
+	3,  // 32: medisync.identity.v1.IdentityService.Login:output_type -> medisync.identity.v1.LoginResponse
+	5,  // 33: medisync.identity.v1.IdentityService.CardLogin:output_type -> medisync.identity.v1.CardLoginResponse
+	7,  // 34: medisync.identity.v1.IdentityService.WhoAmI:output_type -> medisync.identity.v1.WhoAmIResponse
+	9,  // 35: medisync.identity.v1.IdentityService.ListUsers:output_type -> medisync.identity.v1.ListUsersResponse
+	11, // 36: medisync.identity.v1.IdentityService.CreateUser:output_type -> medisync.identity.v1.CreateUserResponse
+	13, // 37: medisync.identity.v1.IdentityService.UpdateUser:output_type -> medisync.identity.v1.UpdateUserResponse
+	15, // 38: medisync.identity.v1.IdentityService.SetCardToken:output_type -> medisync.identity.v1.SetCardTokenResponse
+	18, // 39: medisync.identity.v1.ProjectService.CreateProject:output_type -> medisync.identity.v1.CreateProjectResponse
+	20, // 40: medisync.identity.v1.ProjectService.UpdateProject:output_type -> medisync.identity.v1.UpdateProjectResponse
+	22, // 41: medisync.identity.v1.ProjectService.ListProjects:output_type -> medisync.identity.v1.ListProjectsResponse
+	24, // 42: medisync.identity.v1.ProjectService.GetProject:output_type -> medisync.identity.v1.GetProjectResponse
+	32, // [32:43] is the sub-list for method output_type
+	21, // [21:32] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_medisync_identity_v1_identity_proto_init() }

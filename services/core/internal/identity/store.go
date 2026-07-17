@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 )
 
 // dbConn is the narrow database interface for the identity store.
@@ -138,9 +140,11 @@ func (s *Store) SeedAdmin(ctx context.Context, passwordHash string) (bool, error
 	return true, nil
 }
 
-// ListUsers returns users, optionally filtered by search query and project.
+// ListUsers returns users, optionally filtered by search query and project,
+// using the username as a descending cursor.
 // When projectID is non-empty, only users in that project are returned.
-func (s *Store) ListUsers(ctx context.Context, query, projectID string) ([]*User, error) {
+func (s *Store) ListUsers(ctx context.Context, query, projectID string, pageSize int32, pageToken string) ([]*User, string, int64, error) {
+	pageSize = pagination.NormalizePageSize(pageSize)
 	var rows pgx.Rows
 	var err error
 
@@ -162,18 +166,35 @@ func (s *Store) ListUsers(ctx context.Context, query, projectID string) ([]*User
 		argIdx++
 	}
 
-	sql := baseSQL
+	whereSQL := ""
 	if len(conditions) > 0 {
-		sql += " WHERE " + conditions[0]
+		whereSQL = " WHERE " + conditions[0]
 		for i := 1; i < len(conditions); i++ {
-			sql += " AND " + conditions[i]
+			whereSQL += " AND " + conditions[i]
 		}
 	}
-	sql += " ORDER BY username ASC"
+
+	var totalCount int64
+	countSQL := "SELECT COUNT(*) FROM identity.users" + whereSQL
+	if err := s.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
+		return nil, "", 0, fmt.Errorf("count users: %w", err)
+	}
+
+	if pageToken != "" {
+		if whereSQL == "" {
+			whereSQL = fmt.Sprintf(" WHERE username < $%d", argIdx)
+		} else {
+			whereSQL += fmt.Sprintf(" AND username < $%d", argIdx)
+		}
+		args = append(args, pageToken)
+		argIdx++
+	}
+	sql := baseSQL + whereSQL + fmt.Sprintf(" ORDER BY username DESC LIMIT $%d", argIdx)
+	args = append(args, pageSize+1)
 
 	rows, err = s.db.Query(ctx, sql, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list users: %w", err)
+		return nil, "", 0, fmt.Errorf("list users: %w", err)
 	}
 	defer rows.Close()
 
@@ -183,16 +204,22 @@ func (s *Store) ListUsers(ctx context.Context, query, projectID string) ([]*User
 		var createdAt, updatedAt time.Time
 		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName,
 			(*roleScanner)(&u.Role), &u.WardIDs, &u.ProjectID, &u.Active, &createdAt, &updatedAt); err != nil {
-			return nil, fmt.Errorf("scan user row: %w", err)
+			return nil, "", 0, fmt.Errorf("scan user row: %w", err)
 		}
 		u.CreatedAt = createdAt
 		u.UpdatedAt = updatedAt
 		users = append(users, &u)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate user rows: %w", err)
+		return nil, "", 0, fmt.Errorf("iterate user rows: %w", err)
 	}
-	return users, nil
+
+	var nextPageToken string
+	if len(users) > int(pageSize) {
+		nextPageToken = users[pageSize-1].Username
+		users = users[:pageSize]
+	}
+	return users, nextPageToken, totalCount, nil
 }
 
 // CreateUser inserts a new user. Returns ErrUsernameTaken when the
@@ -279,7 +306,9 @@ func joinWithCommas(parts []string) string {
 
 // scanUser maps a pgx.Row to a User from a 10-column result (no card data).
 // Columns: id, username, password_hash, display_name, role, ward_ids,
-//          project_id, active, created_at, updated_at.
+//
+//	project_id, active, created_at, updated_at.
+//
 // Returns nil when the row is empty (pgx.ErrNoRows).
 func scanUser(row pgx.Row) (*User, error) {
 	var u User
@@ -335,13 +364,36 @@ func (s *Store) GetProject(ctx context.Context, id string) (*Project, error) {
 	return &p, nil
 }
 
-// ListProjects returns all projects.
-func (s *Store) ListProjects(ctx context.Context) ([]*Project, error) {
-	rows, err := s.db.Query(ctx,
+// ListProjects returns projects ordered by name using the last project ID as
+// the page token.
+func (s *Store) ListProjects(ctx context.Context, pageSize int32, pageToken string) ([]*Project, string, int64, error) {
+	pageSize = pagination.NormalizePageSize(pageSize)
+	var totalCount int64
+	if err := s.db.QueryRow(ctx, "SELECT COUNT(*) FROM identity.projects").Scan(&totalCount); err != nil {
+		return nil, "", 0, fmt.Errorf("count projects: %w", err)
+	}
+
+	whereSQL := ""
+	args := []any{}
+	argIdx := 1
+	if pageToken != "" {
+		whereSQL = fmt.Sprintf(
+			"WHERE name < (SELECT name FROM identity.projects WHERE id = $%d)",
+			argIdx,
+		)
+		args = append(args, pageToken)
+		argIdx++
+	}
+	query := fmt.Sprintf(
 		`SELECT id, code, name, display_name, slug, active, created_at, updated_at
-		   FROM identity.projects ORDER BY name ASC`)
+		   FROM identity.projects %s ORDER BY name DESC, id DESC LIMIT $%d`,
+		whereSQL, argIdx,
+	)
+	args = append(args, pageSize+1)
+
+	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list projects: %w", err)
+		return nil, "", 0, fmt.Errorf("list projects: %w", err)
 	}
 	defer rows.Close()
 	var projects []*Project
@@ -349,13 +401,22 @@ func (s *Store) ListProjects(ctx context.Context) ([]*Project, error) {
 		var p Project
 		var ca, ua time.Time
 		if err := rows.Scan(&p.ID, &p.Code, &p.Name, &p.DisplayName, &p.Slug, &p.Active, &ca, &ua); err != nil {
-			return nil, fmt.Errorf("scan project: %w", err)
+			return nil, "", 0, fmt.Errorf("scan project: %w", err)
 		}
 		p.CreatedAt = ca
 		p.UpdatedAt = ua
 		projects = append(projects, &p)
 	}
-	return projects, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, "", 0, fmt.Errorf("iterate project rows: %w", err)
+	}
+
+	var nextPageToken string
+	if len(projects) > int(pageSize) {
+		nextPageToken = projects[pageSize-1].ID
+		projects = projects[:pageSize]
+	}
+	return projects, nextPageToken, totalCount, nil
 }
 
 // UpdateProject modifies a project's name or active flag.

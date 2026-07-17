@@ -3,6 +3,7 @@ syntax = "proto3";
 package medisync.identity.v1;
 
 import "google/protobuf/timestamp.proto";
+import "medisync/common/v1/pagination.proto";
 
 option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1;identityv1";
 
@@ -79,10 +80,13 @@ message ListUsersRequest {
   // Filter by project. SYSADMIN can omit to see all.
   // Project admins get this auto-populated by interceptor.
   string project_id = 2;
+  medisync.common.v1.CursorPagination pagination = 3;
 }
 
 message ListUsersResponse {
   repeated User users = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
 }
 
 message CreateUserRequest {
@@ -170,10 +174,13 @@ message UpdateProjectResponse {
 message ListProjectsRequest {
   // SYSADMIN sees all. Project admins get back only their own project
   // (auto-filtered by interceptor).
+  medisync.common.v1.CursorPagination pagination = 1;
 }
 
 message ListProjectsResponse {
   repeated Project projects = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
 }
 
 message GetProjectRequest {
