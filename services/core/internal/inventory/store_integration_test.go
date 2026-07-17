@@ -145,12 +145,20 @@ func TestStoreListSlots_Integration(t *testing.T) {
 	seedSlot(t, store, cab1, code1)
 	seedSlot(t, store, cab2, code2)
 
-	slots, err := store.ListSlots(context.Background(), "", "", false)
+	slots, nextToken, totalCount, err := store.ListSlots(context.Background(), "", "", false, 1, "")
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
-	if len(slots) != 2 {
-		t.Errorf("expected 2 slots, got %d", len(slots))
+	if len(slots) != 1 || nextToken == "" || totalCount != 2 {
+		t.Errorf("page 1 = len %d, token %q, total %d", len(slots), nextToken, totalCount)
+	}
+
+	page2, nextToken2, totalCount2, err := store.ListSlots(context.Background(), "", "", false, 1, nextToken)
+	if err != nil {
+		t.Fatalf("ListSlots page 2: %v", err)
+	}
+	if len(page2) != 1 || nextToken2 != "" || totalCount2 != 2 {
+		t.Errorf("page 2 = len %d, token %q, total %d", len(page2), nextToken2, totalCount2)
 	}
 }
 
@@ -168,12 +176,15 @@ func TestStoreListSlotsFilterByCabinet_Integration(t *testing.T) {
 	seedSlot(t, store, cab1, code1)
 	seedSlot(t, store, cab2, code2)
 
-	slots, err := store.ListSlots(context.Background(), cab1, "", false)
+	slots, _, totalCount, err := store.ListSlots(context.Background(), cab1, "", false, 50, "")
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
 	if len(slots) != 1 {
 		t.Errorf("expected 1 slot for cabinet %s, got %d", cab1, len(slots))
+	}
+	if totalCount != 1 {
+		t.Errorf("totalCount = %d, want 1", totalCount)
 	}
 }
 

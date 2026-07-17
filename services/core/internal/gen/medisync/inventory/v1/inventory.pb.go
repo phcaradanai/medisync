@@ -7,6 +7,7 @@
 package inventoryv1
 
 import (
+	v1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -188,7 +189,8 @@ type ListSlotsRequest struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	CabinetId string                 `protobuf:"bytes,1,opt,name=cabinet_id,json=cabinetId,proto3" json:"cabinet_id,omitempty"`
 	// Only slots at or below their low threshold.
-	LowOnly       bool `protobuf:"varint,2,opt,name=low_only,json=lowOnly,proto3" json:"low_only,omitempty"`
+	LowOnly       bool                 `protobuf:"varint,2,opt,name=low_only,json=lowOnly,proto3" json:"low_only,omitempty"`
+	Pagination    *v1.CursorPagination `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -237,9 +239,18 @@ func (x *ListSlotsRequest) GetLowOnly() bool {
 	return false
 }
 
+func (x *ListSlotsRequest) GetPagination() *v1.CursorPagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 type ListSlotsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Slots         []*Slot                `protobuf:"bytes,1,rep,name=slots,proto3" json:"slots,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -279,6 +290,20 @@ func (x *ListSlotsResponse) GetSlots() []*Slot {
 		return x.Slots
 	}
 	return nil
+}
+
+func (x *ListSlotsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListSlotsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
 }
 
 type AssignDrugRequest struct {
@@ -777,7 +802,7 @@ var File_medisync_inventory_v1_inventory_proto protoreflect.FileDescriptor
 
 const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
-	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe2\x03\n" +
+	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#medisync/common/v1/pagination.proto\"\xe2\x03\n" +
 	"\x04Slot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -798,13 +823,19 @@ const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\vexpiry_date\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"expiryDate\x12\x14\n" +
 	"\x05shelf\x18\x0e \x01(\x05R\x05shelf\x12\x17\n" +
-	"\arow_num\x18\x0f \x01(\x05R\x06rowNum\"L\n" +
+	"\arow_num\x18\x0f \x01(\x05R\x06rowNum\"\x92\x01\n" +
 	"\x10ListSlotsRequest\x12\x1d\n" +
 	"\n" +
 	"cabinet_id\x18\x01 \x01(\tR\tcabinetId\x12\x19\n" +
-	"\blow_only\x18\x02 \x01(\bR\alowOnly\"F\n" +
+	"\blow_only\x18\x02 \x01(\bR\alowOnly\x12D\n" +
+	"\n" +
+	"pagination\x18\x03 \x01(\v2$.medisync.common.v1.CursorPaginationR\n" +
+	"pagination\"\x8f\x01\n" +
 	"\x11ListSlotsResponse\x121\n" +
-	"\x05slots\x18\x01 \x03(\v2\x1b.medisync.inventory.v1.SlotR\x05slots\"\x86\x01\n" +
+	"\x05slots\x18\x01 \x03(\v2\x1b.medisync.inventory.v1.SlotR\x05slots\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount\"\x86\x01\n" +
 	"\x11AssignDrugRequest\x12\x17\n" +
 	"\aslot_id\x18\x01 \x01(\tR\x06slotId\x12\x17\n" +
 	"\adrug_id\x18\x02 \x01(\tR\x06drugId\x12\x1a\n" +
@@ -877,32 +908,34 @@ var file_medisync_inventory_v1_inventory_proto_goTypes = []any{
 	(*CreateSlotRequest)(nil),     // 9: medisync.inventory.v1.CreateSlotRequest
 	(*CreateSlotResponse)(nil),    // 10: medisync.inventory.v1.CreateSlotResponse
 	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
+	(*v1.CursorPagination)(nil),   // 12: medisync.common.v1.CursorPagination
 }
 var file_medisync_inventory_v1_inventory_proto_depIdxs = []int32{
 	11, // 0: medisync.inventory.v1.Slot.updated_at:type_name -> google.protobuf.Timestamp
 	11, // 1: medisync.inventory.v1.Slot.expiry_date:type_name -> google.protobuf.Timestamp
-	0,  // 2: medisync.inventory.v1.ListSlotsResponse.slots:type_name -> medisync.inventory.v1.Slot
-	0,  // 3: medisync.inventory.v1.AssignDrugResponse.slot:type_name -> medisync.inventory.v1.Slot
-	11, // 4: medisync.inventory.v1.RefillRequest.expiry_date:type_name -> google.protobuf.Timestamp
-	0,  // 5: medisync.inventory.v1.RefillResponse.slot:type_name -> medisync.inventory.v1.Slot
-	0,  // 6: medisync.inventory.v1.AdjustStockResponse.slot:type_name -> medisync.inventory.v1.Slot
-	11, // 7: medisync.inventory.v1.CreateSlotRequest.expiry_date:type_name -> google.protobuf.Timestamp
-	0,  // 8: medisync.inventory.v1.CreateSlotResponse.slot:type_name -> medisync.inventory.v1.Slot
-	1,  // 9: medisync.inventory.v1.InventoryService.ListSlots:input_type -> medisync.inventory.v1.ListSlotsRequest
-	9,  // 10: medisync.inventory.v1.InventoryService.CreateSlot:input_type -> medisync.inventory.v1.CreateSlotRequest
-	3,  // 11: medisync.inventory.v1.InventoryService.AssignDrug:input_type -> medisync.inventory.v1.AssignDrugRequest
-	5,  // 12: medisync.inventory.v1.InventoryService.Refill:input_type -> medisync.inventory.v1.RefillRequest
-	7,  // 13: medisync.inventory.v1.InventoryService.AdjustStock:input_type -> medisync.inventory.v1.AdjustStockRequest
-	2,  // 14: medisync.inventory.v1.InventoryService.ListSlots:output_type -> medisync.inventory.v1.ListSlotsResponse
-	10, // 15: medisync.inventory.v1.InventoryService.CreateSlot:output_type -> medisync.inventory.v1.CreateSlotResponse
-	4,  // 16: medisync.inventory.v1.InventoryService.AssignDrug:output_type -> medisync.inventory.v1.AssignDrugResponse
-	6,  // 17: medisync.inventory.v1.InventoryService.Refill:output_type -> medisync.inventory.v1.RefillResponse
-	8,  // 18: medisync.inventory.v1.InventoryService.AdjustStock:output_type -> medisync.inventory.v1.AdjustStockResponse
-	14, // [14:19] is the sub-list for method output_type
-	9,  // [9:14] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	12, // 2: medisync.inventory.v1.ListSlotsRequest.pagination:type_name -> medisync.common.v1.CursorPagination
+	0,  // 3: medisync.inventory.v1.ListSlotsResponse.slots:type_name -> medisync.inventory.v1.Slot
+	0,  // 4: medisync.inventory.v1.AssignDrugResponse.slot:type_name -> medisync.inventory.v1.Slot
+	11, // 5: medisync.inventory.v1.RefillRequest.expiry_date:type_name -> google.protobuf.Timestamp
+	0,  // 6: medisync.inventory.v1.RefillResponse.slot:type_name -> medisync.inventory.v1.Slot
+	0,  // 7: medisync.inventory.v1.AdjustStockResponse.slot:type_name -> medisync.inventory.v1.Slot
+	11, // 8: medisync.inventory.v1.CreateSlotRequest.expiry_date:type_name -> google.protobuf.Timestamp
+	0,  // 9: medisync.inventory.v1.CreateSlotResponse.slot:type_name -> medisync.inventory.v1.Slot
+	1,  // 10: medisync.inventory.v1.InventoryService.ListSlots:input_type -> medisync.inventory.v1.ListSlotsRequest
+	9,  // 11: medisync.inventory.v1.InventoryService.CreateSlot:input_type -> medisync.inventory.v1.CreateSlotRequest
+	3,  // 12: medisync.inventory.v1.InventoryService.AssignDrug:input_type -> medisync.inventory.v1.AssignDrugRequest
+	5,  // 13: medisync.inventory.v1.InventoryService.Refill:input_type -> medisync.inventory.v1.RefillRequest
+	7,  // 14: medisync.inventory.v1.InventoryService.AdjustStock:input_type -> medisync.inventory.v1.AdjustStockRequest
+	2,  // 15: medisync.inventory.v1.InventoryService.ListSlots:output_type -> medisync.inventory.v1.ListSlotsResponse
+	10, // 16: medisync.inventory.v1.InventoryService.CreateSlot:output_type -> medisync.inventory.v1.CreateSlotResponse
+	4,  // 17: medisync.inventory.v1.InventoryService.AssignDrug:output_type -> medisync.inventory.v1.AssignDrugResponse
+	6,  // 18: medisync.inventory.v1.InventoryService.Refill:output_type -> medisync.inventory.v1.RefillResponse
+	8,  // 19: medisync.inventory.v1.InventoryService.AdjustStock:output_type -> medisync.inventory.v1.AdjustStockResponse
+	15, // [15:20] is the sub-list for method output_type
+	10, // [10:15] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_medisync_inventory_v1_inventory_proto_init() }

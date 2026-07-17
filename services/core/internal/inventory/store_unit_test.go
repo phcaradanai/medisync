@@ -56,6 +56,16 @@ func (f *fakeDB) Query(_ context.Context, sql string, args ...any) (pgx.Rows, er
 
 func (f *fakeDB) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
 	f.queryRowCalls = append(f.queryRowCalls, queryRowCall{sql: sql, args: args})
+	if strings.Contains(strings.ToUpper(sql), "COUNT(*)") {
+		count := int64(0)
+		if f.queryRows != nil {
+			count = int64(len(f.queryRows.slots))
+		}
+		return &fakeRow{scanFn: func(dest ...any) error {
+			*(dest[0].(*int64)) = count
+			return nil
+		}}
+	}
 	return f.queryRow
 }
 
@@ -375,12 +385,15 @@ func TestListSlotsEmpty(t *testing.T) {
 	db := &fakeDB{queryRows: &fakeRows{}, queryErr: nil}
 	store := NewStoreWithDB(db, nil)
 
-	slots, err := store.ListSlots(context.Background(), "", "", false)
+	slots, nextToken, totalCount, err := store.ListSlots(context.Background(), "", "", false, 50, "")
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
 	if len(slots) != 0 {
 		t.Errorf("expected 0 slots, got %d", len(slots))
+	}
+	if nextToken != "" || totalCount != 0 {
+		t.Errorf("pagination = token %q, total %d", nextToken, totalCount)
 	}
 }
 
@@ -393,12 +406,15 @@ func TestListSlotsWithResults(t *testing.T) {
 	db := &fakeDB{queryRows: &fakeRows{slots: slots}}
 	store := NewStoreWithDB(db, nil)
 
-	result, err := store.ListSlots(context.Background(), "", "", false)
+	result, nextToken, totalCount, err := store.ListSlots(context.Background(), "", "", false, 1, "")
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
-	if len(result) != 2 {
-		t.Errorf("expected 2 slots, got %d", len(result))
+	if len(result) != 1 {
+		t.Errorf("expected 1 slot, got %d", len(result))
+	}
+	if nextToken != "s1" || totalCount != 2 {
+		t.Errorf("pagination = token %q, total %d", nextToken, totalCount)
 	}
 }
 
@@ -406,7 +422,7 @@ func TestListSlotsFilterByCabinet(t *testing.T) {
 	db := &fakeDB{queryRows: &fakeRows{}}
 	store := NewStoreWithDB(db, nil)
 
-	_, err := store.ListSlots(context.Background(), "cab-1", "", false)
+	_, _, _, err := store.ListSlots(context.Background(), "cab-1", "", false, 50, "")
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
@@ -421,7 +437,7 @@ func TestListSlotsLowOnly(t *testing.T) {
 	db := &fakeDB{queryRows: &fakeRows{}}
 	store := NewStoreWithDB(db, nil)
 
-	_, err := store.ListSlots(context.Background(), "", "", true)
+	_, _, _, err := store.ListSlots(context.Background(), "", "", true, 50, "")
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
@@ -429,6 +445,23 @@ func TestListSlotsLowOnly(t *testing.T) {
 	call := db.lastQuery()
 	if !strings.Contains(call.sql, "quantity <= low_threshold") {
 		t.Error("SQL should filter by low threshold")
+	}
+}
+
+func TestListSlotsCursor(t *testing.T) {
+	db := &fakeDB{queryRows: &fakeRows{}}
+	store := NewStoreWithDB(db, nil)
+
+	_, _, _, err := store.ListSlots(context.Background(), "", "", false, 25, "slot-1")
+	if err != nil {
+		t.Fatalf("ListSlots: %v", err)
+	}
+	call := db.lastQuery()
+	if !strings.Contains(call.sql, "created_at < (SELECT created_at FROM inventory.slot WHERE id = $1)") {
+		t.Errorf("SQL missing created_at cursor: %s", call.sql)
+	}
+	if got := call.args[len(call.args)-1]; got != int32(26) {
+		t.Errorf("LIMIT arg = %v, want 26", got)
 	}
 }
 

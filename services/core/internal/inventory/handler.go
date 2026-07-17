@@ -14,6 +14,7 @@ import (
 	inventoryv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/inventory/v1/inventoryv1connect"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 	"github.com/nats-io/nats.go/jetstream"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -52,7 +53,7 @@ type TokenParser interface {
 }
 
 type SlotStore interface {
-	ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool) ([]*Slot, error)
+	ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool, pageSize int32, pageToken string) ([]*Slot, string, int64, error)
 	GetByID(ctx context.Context, id string) (*Slot, error)
 	CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32, expiryDate *time.Time) (*Slot, error)
 	AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugName string, capacity, lowThreshold int32) (*Slot, error)
@@ -108,10 +109,17 @@ func (s *InventoryServer) ListSlots(ctx context.Context, req *connect.Request[in
 	}
 	msg := req.Msg
 	cabinetID, lowOnly := "", false
+	pageSize, pageToken := pagination.DefaultPageSize, ""
 	if msg != nil {
 		cabinetID, lowOnly = msg.CabinetId, msg.LowOnly
+		if msg.Pagination != nil {
+			pageSize = pagination.NormalizePageSize(msg.Pagination.PageSize)
+			pageToken = msg.Pagination.PageToken
+		}
 	}
-	slots, err := s.store.ListSlots(ctx, cabinetID, claims.GetProjectID(), lowOnly)
+	slots, nextToken, totalCount, err := s.store.ListSlots(
+		ctx, cabinetID, claims.GetProjectID(), lowOnly, pageSize, pageToken,
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list slots: %w", err))
 	}
@@ -119,7 +127,11 @@ func (s *InventoryServer) ListSlots(ctx context.Context, req *connect.Request[in
 	for _, slot := range slots {
 		pbSlots = append(pbSlots, toProtoSlot(slot))
 	}
-	return connect.NewResponse(&inventoryv1.ListSlotsResponse{Slots: pbSlots}), nil
+	return connect.NewResponse(&inventoryv1.ListSlotsResponse{
+		Slots:         pbSlots,
+		NextPageToken: nextToken,
+		TotalCount:    totalCount,
+	}), nil
 }
 
 func (s *InventoryServer) CreateSlot(ctx context.Context, req *connect.Request[inventoryv1.CreateSlotRequest]) (*connect.Response[inventoryv1.CreateSlotResponse], error) {

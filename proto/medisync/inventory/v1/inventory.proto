@@ -3,6 +3,7 @@ syntax = "proto3";
 package medisync.inventory.v1;
 
 import "google/protobuf/timestamp.proto";
+import "medisync/common/v1/pagination.proto";
 
 option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/inventory/v1;inventoryv1";
 
@@ -34,10 +35,13 @@ message ListSlotsRequest {
   string cabinet_id = 1;
   // Only slots at or below their low threshold.
   bool low_only = 2;
+  medisync.common.v1.CursorPagination pagination = 3;
 }
 
 message ListSlotsResponse {
   repeated Slot slots = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
 }
 
 message AssignDrugRequest {

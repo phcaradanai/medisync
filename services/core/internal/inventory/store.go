@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 )
 
 // dbConn is the narrow database interface for the inventory store.
@@ -43,9 +44,10 @@ func NewStoreWithDB(db dbConn, aw *audit.Writer) *Store {
 	return &Store{db: db, auditWriter: aw}
 }
 
-// ListSlots returns all slots, optionally filtered by cabinet_id, by
-// low-stock status, and by project.
-func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool) ([]*Slot, error) {
+// ListSlots returns slots, optionally filtered by cabinet_id, low-stock status,
+// and project, using a created_at cursor.
+func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool, pageSize int32, pageToken string) ([]*Slot, string, int64, error) {
+	pageSize = pagination.NormalizePageSize(pageSize)
 	var whereClauses []string
 	args := []any{}
 	argIdx := 1
@@ -75,15 +77,37 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowO
 		}
 	}
 
+	var totalCount int64
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM inventory.slot %s", whereSQL)
+	if err := s.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		return nil, "", 0, fmt.Errorf("count slots: %w", err)
+	}
+
+	if pageToken != "" {
+		cursorClause := fmt.Sprintf(
+			"created_at < (SELECT created_at FROM inventory.slot WHERE id = $%d)",
+			argIdx,
+		)
+		if whereSQL == "" {
+			whereSQL = "WHERE " + cursorClause
+		} else {
+			whereSQL += " AND " + cursorClause
+		}
+		args = append(args, pageToken)
+		argIdx++
+	}
+
 	query := fmt.Sprintf(
 		`SELECT id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
 		        capacity, quantity, low_threshold,
 		           project_id, expiry_date, shelf, row_num, created_at, updated_at
-		   FROM inventory.slot %s ORDER BY cabinet_id, code ASC`, whereSQL)
+		   FROM inventory.slot %s
+		  ORDER BY created_at DESC, id DESC LIMIT $%d`, whereSQL, argIdx)
+	args = append(args, pageSize+1)
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list slots: %w", err)
+		return nil, "", 0, fmt.Errorf("list slots: %w", err)
 	}
 	defer rows.Close()
 
@@ -91,14 +115,20 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowO
 	for rows.Next() {
 		slot, err := scanSlot(rows)
 		if err != nil {
-			return nil, err
+			return nil, "", 0, err
 		}
 		slots = append(slots, slot)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate slot rows: %w", err)
+		return nil, "", 0, fmt.Errorf("iterate slot rows: %w", err)
 	}
-	return slots, nil
+
+	var nextPageToken string
+	if len(slots) > int(pageSize) {
+		nextPageToken = slots[pageSize-1].ID
+		slots = slots[:pageSize]
+	}
+	return slots, nextPageToken, totalCount, nil
 }
 
 // GetByID returns a Slot by UUID, or nil if not found.

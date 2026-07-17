@@ -32,18 +32,20 @@ func newAuthedRequest[T any](msg *T) *connect.Request[T] {
 // ── Fake SlotStore ─────────────────────────────────────────
 
 type fakeSlotStore struct {
-	listResult    []*Slot
-	listErr       error
-	createResult  *Slot
-	createErr     error
-	getByIDResult *Slot
-	getByIDErr    error
-	assignResult  *Slot
-	assignErr     error
-	refillResult  *Slot
-	refillErr     error
-	adjustResult  *Slot
-	adjustErr     error
+	listResult     []*Slot
+	listNextToken  string
+	listTotalCount int64
+	listErr        error
+	createResult   *Slot
+	createErr      error
+	getByIDResult  *Slot
+	getByIDErr     error
+	assignResult   *Slot
+	assignErr      error
+	refillResult   *Slot
+	refillErr      error
+	adjustResult   *Slot
+	adjustErr      error
 	// call recording
 	refillCalls []refillCall
 	adjustCalls []adjustCall
@@ -70,8 +72,8 @@ type assignCall struct {
 	lowThreshold int32
 }
 
-func (s *fakeSlotStore) ListSlots(_ context.Context, cabinetID, projectID string, lowOnly bool) ([]*Slot, error) {
-	return s.listResult, s.listErr
+func (s *fakeSlotStore) ListSlots(_ context.Context, cabinetID, projectID string, lowOnly bool, pageSize int32, pageToken string) ([]*Slot, string, int64, error) {
+	return s.listResult, s.listNextToken, s.listTotalCount, s.listErr
 }
 
 func (s *fakeSlotStore) CreateSlot(_ context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32, expiryDate *time.Time) (*Slot, error) {
@@ -117,7 +119,9 @@ func sampleSlot() *Slot {
 
 func TestHandlerListSlotsSuccess(t *testing.T) {
 	fakeStore := &fakeSlotStore{
-		listResult: []*Slot{sampleSlot()},
+		listResult:     []*Slot{sampleSlot()},
+		listNextToken:  "slot-1",
+		listTotalCount: 2,
 	}
 	server := NewInventoryServerWithAuth(fakeStore, nil, nil, &fakeTokenParser{claims: adminClaims()})
 
@@ -130,6 +134,9 @@ func TestHandlerListSlotsSuccess(t *testing.T) {
 	}
 	if resp.Msg.Slots[0].Id != "slot-1" {
 		t.Errorf("Id = %q, want slot-1", resp.Msg.Slots[0].Id)
+	}
+	if resp.Msg.NextPageToken != "slot-1" || resp.Msg.TotalCount != 2 {
+		t.Errorf("pagination = token %q, total %d", resp.Msg.NextPageToken, resp.Msg.TotalCount)
 	}
 }
 
