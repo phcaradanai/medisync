@@ -38,6 +38,8 @@ type fakeDrugStore struct {
 	createErr        error
 	getByIDResult    *Drug
 	getByIDErr       error
+	getBarcodeResult *Drug
+	getBarcodeErr    error
 	listResult       []*Drug
 	listNextToken    string
 	listErr          error
@@ -46,8 +48,9 @@ type fakeDrugStore struct {
 	deactivateResult *Drug
 	deactivateErr    error
 	// call recording
-	createCalls []Drug
-	updateCalls []Drug
+	createCalls  []Drug
+	updateCalls  []Drug
+	barcodeCalls []string
 }
 
 func (s *fakeDrugStore) Create(_ context.Context, d Drug) (*Drug, error) {
@@ -61,6 +64,11 @@ func (s *fakeDrugStore) GetByID(_ context.Context, id string) (*Drug, error) {
 
 func (s *fakeDrugStore) GetByCode(_ context.Context, code string) (*Drug, error) {
 	return nil, errors.New("not implemented")
+}
+
+func (s *fakeDrugStore) GetByBarcode(_ context.Context, barcode string) (*Drug, error) {
+	s.barcodeCalls = append(s.barcodeCalls, barcode)
+	return s.getBarcodeResult, s.getBarcodeErr
 }
 
 func (s *fakeDrugStore) List(_ context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, error) {
@@ -232,6 +240,53 @@ func TestHandlerGetDrugNotFound(t *testing.T) {
 	}
 }
 
+func TestHandlerGetByBarcodeSuccess(t *testing.T) {
+	fakeStore := &fakeDrugStore{
+		getBarcodeResult: &Drug{ID: "drug-1", Code: "PARA-500", Name: "Paracetamol", Barcode: "8851234567890", Active: true},
+	}
+	server := NewCatalogServerWithAuth(fakeStore, nil, &fakeTokenParser{claims: adminClaims()})
+
+	resp, err := server.GetByBarcode(context.Background(), newAuthedRequest(&catalogv1.GetByBarcodeRequest{
+		Barcode: "8851234567890",
+	}))
+	if err != nil {
+		t.Fatalf("GetByBarcode: %v", err)
+	}
+	if resp.Msg.Drug == nil || resp.Msg.Drug.Id != "drug-1" {
+		t.Fatalf("unexpected drug response: %+v", resp.Msg.Drug)
+	}
+	if resp.Msg.Drug.Barcode != "8851234567890" {
+		t.Errorf("Barcode = %q, want 8851234567890", resp.Msg.Drug.Barcode)
+	}
+	if len(fakeStore.barcodeCalls) != 1 || fakeStore.barcodeCalls[0] != "8851234567890" {
+		t.Errorf("barcode calls = %v", fakeStore.barcodeCalls)
+	}
+}
+
+func TestHandlerGetByBarcodeMissingBarcode(t *testing.T) {
+	server := NewCatalogServerWithAuth(&fakeDrugStore{}, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.GetByBarcode(context.Background(), newAuthedRequest(&catalogv1.GetByBarcodeRequest{}))
+	if err == nil {
+		t.Fatal("expected error for missing barcode")
+	}
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("code = %v, want CodeInvalidArgument", connect.CodeOf(err))
+	}
+}
+
+func TestHandlerGetByBarcodeNotFound(t *testing.T) {
+	server := NewCatalogServerWithAuth(&fakeDrugStore{}, nil, &fakeTokenParser{claims: adminClaims()})
+	_, err := server.GetByBarcode(context.Background(), newAuthedRequest(&catalogv1.GetByBarcodeRequest{
+		Barcode: "missing",
+	}))
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Errorf("code = %v, want CodeNotFound", connect.CodeOf(err))
+	}
+}
+
 func TestHandlerListDrugs(t *testing.T) {
 	fakeStore := &fakeDrugStore{
 		listResult: []*Drug{
@@ -387,6 +442,7 @@ func TestToProtoDrugFull(t *testing.T) {
 		Unit:        "tab",
 		StickerNote: "Take with water",
 		Active:      true,
+		Barcode:     "8851234567890",
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -417,6 +473,9 @@ func TestToProtoDrugFull(t *testing.T) {
 	}
 	if !pb.Active {
 		t.Error("Active should be true")
+	}
+	if pb.Barcode != "8851234567890" {
+		t.Errorf("Barcode = %q", pb.Barcode)
 	}
 	if pb.CreatedAt == nil {
 		t.Error("CreatedAt should not be nil")

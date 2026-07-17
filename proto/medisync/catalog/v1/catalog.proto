@@ -57,6 +57,14 @@ message GetDrugResponse {
   Drug drug = 1;
 }
 
+message GetByBarcodeRequest {
+  string barcode = 1;
+}
+
+message GetByBarcodeResponse {
+  Drug drug = 1;
+}
+
 message ListDrugsRequest {
   // Case-insensitive match on code, name, or generic name. Empty lists all.
   string query = 1;
@@ -89,6 +97,7 @@ message DeactivateDrugResponse {
 service CatalogService {
   rpc CreateDrug(CreateDrugRequest) returns (CreateDrugResponse);
   rpc GetDrug(GetDrugRequest) returns (GetDrugResponse);
+  rpc GetByBarcode(GetByBarcodeRequest) returns (GetByBarcodeResponse);
   rpc ListDrugs(ListDrugsRequest) returns (ListDrugsResponse);
   rpc UpdateDrug(UpdateDrugRequest) returns (UpdateDrugResponse);
   rpc DeactivateDrug(DeactivateDrugRequest) returns (DeactivateDrugResponse);

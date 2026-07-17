@@ -73,6 +73,15 @@ func (s *Store) GetByCode(ctx context.Context, code string) (*Drug, error) {
 	return scanDrug(row)
 }
 
+// GetByBarcode returns a Drug by barcode, or nil if not found.
+func (s *Store) GetByBarcode(ctx context.Context, barcode string) (*Drug, error) {
+	row := s.db.QueryRow(ctx,
+		`SELECT id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
+		        active, project_id, barcode, created_at, updated_at
+		   FROM catalog.drug WHERE barcode = $1`, barcode)
+	return scanDrug(row)
+}
+
 // List returns drugs matching the optional query string against code, name,
 // and generic_name. Pagination uses a cursor based on the drug id.
 // When includeInactive is false, only active drugs are returned.

@@ -193,11 +193,11 @@ func (r *fakeRows) Scan(dest ...any) error {
 	return nil
 }
 
-func (r *fakeRows) CommandTag() pgconn.CommandTag { return pgconn.CommandTag{} }
+func (r *fakeRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
 func (r *fakeRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
-func (r *fakeRows) Values() ([]any, error) { return nil, nil }
-func (r *fakeRows) RawValues() [][]byte { return nil }
-func (r *fakeRows) Conn() *pgx.Conn { return nil }
+func (r *fakeRows) Values() ([]any, error)                       { return nil, nil }
+func (r *fakeRows) RawValues() [][]byte                          { return nil }
+func (r *fakeRows) Conn() *pgx.Conn                              { return nil }
 
 // ── scanDrug tests ──────────────────────────────────────────────────
 
@@ -413,6 +413,33 @@ func TestGetByCodeSuccess(t *testing.T) {
 	call := db.lastQueryRow()
 	if !strings.Contains(call.sql, "code = $1") {
 		t.Error("SQL should filter by code")
+	}
+}
+
+// ── Store.GetByBarcode tests ────────────────────────────────────────
+
+func TestGetByBarcodeSuccess(t *testing.T) {
+	expected := Drug{ID: "drug-3", Code: "PARA-500", Name: "Paracetamol", Barcode: "8851234567890", Active: true}
+	db := &fakeDB{queryRow: rowWithDrug(expected)}
+	store := NewStoreWithDB(db, nil)
+
+	d, err := store.GetByBarcode(context.Background(), "8851234567890")
+	if err != nil {
+		t.Fatalf("GetByBarcode: %v", err)
+	}
+	if d == nil {
+		t.Fatal("expected drug, got nil")
+	}
+	if d.Barcode != "8851234567890" {
+		t.Errorf("Barcode = %q, want 8851234567890", d.Barcode)
+	}
+
+	call := db.lastQueryRow()
+	if !strings.Contains(call.sql, "WHERE barcode = $1") {
+		t.Error("SQL should filter by barcode")
+	}
+	if len(call.args) != 1 || call.args[0] != "8851234567890" {
+		t.Errorf("query args = %v, want [8851234567890]", call.args)
 	}
 }
 

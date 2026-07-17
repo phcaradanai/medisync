@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/catalog/v1/catalog.proto.
  */
 export const file_medisync_catalog_v1_catalog: GenFile = /*@__PURE__*/
-  fileDesc("CiFtZWRpc3luYy9jYXRhbG9nL3YxL2NhdGFsb2cucHJvdG8SE21lZGlzeW5jLmNhdGFsb2cudjEiswIKBERydWcSCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRIMCgRuYW1lGAMgASgJEhQKDGdlbmVyaWNfbmFtZRgEIAEoCRIMCgRmb3JtGAUgASgJEhAKCHN0cmVuZ3RoGAYgASgJEgwKBHVuaXQYByABKAkSFAoMc3RpY2tlcl9ub3RlGAggASgJEg4KBmFjdGl2ZRgJIAEoCBIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgxkaXNwbGF5X25hbWUYDCABKAkSEgoKcHJvamVjdF9pZBgNIAEoCRIPCgdiYXJjb2RlGA4gASgJIsQBChFDcmVhdGVEcnVnUmVxdWVzdBIMCgRjb2RlGAEgASgJEgwKBG5hbWUYAiABKAkSFAoMZ2VuZXJpY19uYW1lGAMgASgJEgwKBGZvcm0YBCABKAkSEAoIc3RyZW5ndGgYBSABKAkSDAoEdW5pdBgGIAEoCRIUCgxzdGlja2VyX25vdGUYByABKAkSFAoMZGlzcGxheV9uYW1lGAggASgJEhIKCnByb2plY3RfaWQYCSABKAkSDwoHYmFyY29kZRgKIAEoCSI9ChJDcmVhdGVEcnVnUmVzcG9uc2USJwoEZHJ1ZxgBIAEoCzIZLm1lZGlzeW5jLmNhdGFsb2cudjEuRHJ1ZyIcCg5HZXREcnVnUmVxdWVzdBIKCgJpZBgBIAEoCSI6Cg9HZXREcnVnUmVzcG9uc2USJwoEZHJ1ZxgBIAEoCzIZLm1lZGlzeW5jLmNhdGFsb2cudjEuRHJ1ZyJiChBMaXN0RHJ1Z3NSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJEhgKEGluY2x1ZGVfaW5hY3RpdmUYAiABKAgSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkiVgoRTGlzdERydWdzUmVzcG9uc2USKAoFZHJ1Z3MYASADKAsyGS5tZWRpc3luYy5jYXRhbG9nLnYxLkRydWcSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIjwKEVVwZGF0ZURydWdSZXF1ZXN0EicKBGRydWcYASABKAsyGS5tZWRpc3luYy5jYXRhbG9nLnYxLkRydWciPQoSVXBkYXRlRHJ1Z1Jlc3BvbnNlEicKBGRydWcYASABKAsyGS5tZWRpc3luYy5jYXRhbG9nLnYxLkRydWciIwoVRGVhY3RpdmF0ZURydWdSZXF1ZXN0EgoKAmlkGAEgASgJIkEKFkRlYWN0aXZhdGVEcnVnUmVzcG9uc2USJwoEZHJ1ZxgBIAEoCzIZLm1lZGlzeW5jLmNhdGFsb2cudjEuRHJ1ZzLrAwoOQ2F0YWxvZ1NlcnZpY2USXQoKQ3JlYXRlRHJ1ZxImLm1lZGlzeW5jLmNhdGFsb2cudjEuQ3JlYXRlRHJ1Z1JlcXVlc3QaJy5tZWRpc3luYy5jYXRhbG9nLnYxLkNyZWF0ZURydWdSZXNwb25zZRJUCgdHZXREcnVnEiMubWVkaXN5bmMuY2F0YWxvZy52MS5HZXREcnVnUmVxdWVzdBokLm1lZGlzeW5jLmNhdGFsb2cudjEuR2V0RHJ1Z1Jlc3BvbnNlEloKCUxpc3REcnVncxIlLm1lZGlzeW5jLmNhdGFsb2cudjEuTGlzdERydWdzUmVxdWVzdBomLm1lZGlzeW5jLmNhdGFsb2cudjEuTGlzdERydWdzUmVzcG9uc2USXQoKVXBkYXRlRHJ1ZxImLm1lZGlzeW5jLmNhdGFsb2cudjEuVXBkYXRlRHJ1Z1JlcXVlc3QaJy5tZWRpc3luYy5jYXRhbG9nLnYxLlVwZGF0ZURydWdSZXNwb25zZRJpCg5EZWFjdGl2YXRlRHJ1ZxIqLm1lZGlzeW5jLmNhdGFsb2cudjEuRGVhY3RpdmF0ZURydWdSZXF1ZXN0GisubWVkaXN5bmMuY2F0YWxvZy52MS5EZWFjdGl2YXRlRHJ1Z1Jlc3BvbnNlQl5aXGdpdGh1Yi5jb20vYWRtLWNodXJhM2ludGVyL21lZGlzeW5jL3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL21lZGlzeW5jL2NhdGFsb2cvdjE7Y2F0YWxvZ3YxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("CiFtZWRpc3luYy9jYXRhbG9nL3YxL2NhdGFsb2cucHJvdG8SE21lZGlzeW5jLmNhdGFsb2cudjEiswIKBERydWcSCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRIMCgRuYW1lGAMgASgJEhQKDGdlbmVyaWNfbmFtZRgEIAEoCRIMCgRmb3JtGAUgASgJEhAKCHN0cmVuZ3RoGAYgASgJEgwKBHVuaXQYByABKAkSFAoMc3RpY2tlcl9ub3RlGAggASgJEg4KBmFjdGl2ZRgJIAEoCBIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgxkaXNwbGF5X25hbWUYDCABKAkSEgoKcHJvamVjdF9pZBgNIAEoCRIPCgdiYXJjb2RlGA4gASgJIsQBChFDcmVhdGVEcnVnUmVxdWVzdBIMCgRjb2RlGAEgASgJEgwKBG5hbWUYAiABKAkSFAoMZ2VuZXJpY19uYW1lGAMgASgJEgwKBGZvcm0YBCABKAkSEAoIc3RyZW5ndGgYBSABKAkSDAoEdW5pdBgGIAEoCRIUCgxzdGlja2VyX25vdGUYByABKAkSFAoMZGlzcGxheV9uYW1lGAggASgJEhIKCnByb2plY3RfaWQYCSABKAkSDwoHYmFyY29kZRgKIAEoCSI9ChJDcmVhdGVEcnVnUmVzcG9uc2USJwoEZHJ1ZxgBIAEoCzIZLm1lZGlzeW5jLmNhdGFsb2cudjEuRHJ1ZyIcCg5HZXREcnVnUmVxdWVzdBIKCgJpZBgBIAEoCSI6Cg9HZXREcnVnUmVzcG9uc2USJwoEZHJ1ZxgBIAEoCzIZLm1lZGlzeW5jLmNhdGFsb2cudjEuRHJ1ZyImChNHZXRCeUJhcmNvZGVSZXF1ZXN0Eg8KB2JhcmNvZGUYASABKAkiPwoUR2V0QnlCYXJjb2RlUmVzcG9uc2USJwoEZHJ1ZxgBIAEoCzIZLm1lZGlzeW5jLmNhdGFsb2cudjEuRHJ1ZyJiChBMaXN0RHJ1Z3NSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJEhgKEGluY2x1ZGVfaW5hY3RpdmUYAiABKAgSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkiVgoRTGlzdERydWdzUmVzcG9uc2USKAoFZHJ1Z3MYASADKAsyGS5tZWRpc3luYy5jYXRhbG9nLnYxLkRydWcSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIjwKEVVwZGF0ZURydWdSZXF1ZXN0EicKBGRydWcYASABKAsyGS5tZWRpc3luYy5jYXRhbG9nLnYxLkRydWciPQoSVXBkYXRlRHJ1Z1Jlc3BvbnNlEicKBGRydWcYASABKAsyGS5tZWRpc3luYy5jYXRhbG9nLnYxLkRydWciIwoVRGVhY3RpdmF0ZURydWdSZXF1ZXN0EgoKAmlkGAEgASgJIkEKFkRlYWN0aXZhdGVEcnVnUmVzcG9uc2USJwoEZHJ1ZxgBIAEoCzIZLm1lZGlzeW5jLmNhdGFsb2cudjEuRHJ1ZzLQBAoOQ2F0YWxvZ1NlcnZpY2USXQoKQ3JlYXRlRHJ1ZxImLm1lZGlzeW5jLmNhdGFsb2cudjEuQ3JlYXRlRHJ1Z1JlcXVlc3QaJy5tZWRpc3luYy5jYXRhbG9nLnYxLkNyZWF0ZURydWdSZXNwb25zZRJUCgdHZXREcnVnEiMubWVkaXN5bmMuY2F0YWxvZy52MS5HZXREcnVnUmVxdWVzdBokLm1lZGlzeW5jLmNhdGFsb2cudjEuR2V0RHJ1Z1Jlc3BvbnNlEmMKDEdldEJ5QmFyY29kZRIoLm1lZGlzeW5jLmNhdGFsb2cudjEuR2V0QnlCYXJjb2RlUmVxdWVzdBopLm1lZGlzeW5jLmNhdGFsb2cudjEuR2V0QnlCYXJjb2RlUmVzcG9uc2USWgoJTGlzdERydWdzEiUubWVkaXN5bmMuY2F0YWxvZy52MS5MaXN0RHJ1Z3NSZXF1ZXN0GiYubWVkaXN5bmMuY2F0YWxvZy52MS5MaXN0RHJ1Z3NSZXNwb25zZRJdCgpVcGRhdGVEcnVnEiYubWVkaXN5bmMuY2F0YWxvZy52MS5VcGRhdGVEcnVnUmVxdWVzdBonLm1lZGlzeW5jLmNhdGFsb2cudjEuVXBkYXRlRHJ1Z1Jlc3BvbnNlEmkKDkRlYWN0aXZhdGVEcnVnEioubWVkaXN5bmMuY2F0YWxvZy52MS5EZWFjdGl2YXRlRHJ1Z1JlcXVlc3QaKy5tZWRpc3luYy5jYXRhbG9nLnYxLkRlYWN0aXZhdGVEcnVnUmVzcG9uc2VCXlpcZ2l0aHViLmNvbS9hZG0tY2h1cmEzaW50ZXIvbWVkaXN5bmMvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vbWVkaXN5bmMvY2F0YWxvZy92MTtjYXRhbG9ndjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.catalog.v1.Drug
@@ -228,6 +228,40 @@ export const GetDrugResponseSchema: GenMessage<GetDrugResponse> = /*@__PURE__*/
   messageDesc(file_medisync_catalog_v1_catalog, 4);
 
 /**
+ * @generated from message medisync.catalog.v1.GetByBarcodeRequest
+ */
+export type GetByBarcodeRequest = Message<"medisync.catalog.v1.GetByBarcodeRequest"> & {
+  /**
+   * @generated from field: string barcode = 1;
+   */
+  barcode: string;
+};
+
+/**
+ * Describes the message medisync.catalog.v1.GetByBarcodeRequest.
+ * Use `create(GetByBarcodeRequestSchema)` to create a new message.
+ */
+export const GetByBarcodeRequestSchema: GenMessage<GetByBarcodeRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_catalog_v1_catalog, 5);
+
+/**
+ * @generated from message medisync.catalog.v1.GetByBarcodeResponse
+ */
+export type GetByBarcodeResponse = Message<"medisync.catalog.v1.GetByBarcodeResponse"> & {
+  /**
+   * @generated from field: medisync.catalog.v1.Drug drug = 1;
+   */
+  drug?: Drug | undefined;
+};
+
+/**
+ * Describes the message medisync.catalog.v1.GetByBarcodeResponse.
+ * Use `create(GetByBarcodeResponseSchema)` to create a new message.
+ */
+export const GetByBarcodeResponseSchema: GenMessage<GetByBarcodeResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_catalog_v1_catalog, 6);
+
+/**
  * @generated from message medisync.catalog.v1.ListDrugsRequest
  */
 export type ListDrugsRequest = Message<"medisync.catalog.v1.ListDrugsRequest"> & {
@@ -259,7 +293,7 @@ export type ListDrugsRequest = Message<"medisync.catalog.v1.ListDrugsRequest"> &
  * Use `create(ListDrugsRequestSchema)` to create a new message.
  */
 export const ListDrugsRequestSchema: GenMessage<ListDrugsRequest> = /*@__PURE__*/
-  messageDesc(file_medisync_catalog_v1_catalog, 5);
+  messageDesc(file_medisync_catalog_v1_catalog, 7);
 
 /**
  * @generated from message medisync.catalog.v1.ListDrugsResponse
@@ -281,7 +315,7 @@ export type ListDrugsResponse = Message<"medisync.catalog.v1.ListDrugsResponse">
  * Use `create(ListDrugsResponseSchema)` to create a new message.
  */
 export const ListDrugsResponseSchema: GenMessage<ListDrugsResponse> = /*@__PURE__*/
-  messageDesc(file_medisync_catalog_v1_catalog, 6);
+  messageDesc(file_medisync_catalog_v1_catalog, 8);
 
 /**
  * @generated from message medisync.catalog.v1.UpdateDrugRequest
@@ -298,7 +332,7 @@ export type UpdateDrugRequest = Message<"medisync.catalog.v1.UpdateDrugRequest">
  * Use `create(UpdateDrugRequestSchema)` to create a new message.
  */
 export const UpdateDrugRequestSchema: GenMessage<UpdateDrugRequest> = /*@__PURE__*/
-  messageDesc(file_medisync_catalog_v1_catalog, 7);
+  messageDesc(file_medisync_catalog_v1_catalog, 9);
 
 /**
  * @generated from message medisync.catalog.v1.UpdateDrugResponse
@@ -315,7 +349,7 @@ export type UpdateDrugResponse = Message<"medisync.catalog.v1.UpdateDrugResponse
  * Use `create(UpdateDrugResponseSchema)` to create a new message.
  */
 export const UpdateDrugResponseSchema: GenMessage<UpdateDrugResponse> = /*@__PURE__*/
-  messageDesc(file_medisync_catalog_v1_catalog, 8);
+  messageDesc(file_medisync_catalog_v1_catalog, 10);
 
 /**
  * @generated from message medisync.catalog.v1.DeactivateDrugRequest
@@ -332,7 +366,7 @@ export type DeactivateDrugRequest = Message<"medisync.catalog.v1.DeactivateDrugR
  * Use `create(DeactivateDrugRequestSchema)` to create a new message.
  */
 export const DeactivateDrugRequestSchema: GenMessage<DeactivateDrugRequest> = /*@__PURE__*/
-  messageDesc(file_medisync_catalog_v1_catalog, 9);
+  messageDesc(file_medisync_catalog_v1_catalog, 11);
 
 /**
  * @generated from message medisync.catalog.v1.DeactivateDrugResponse
@@ -349,7 +383,7 @@ export type DeactivateDrugResponse = Message<"medisync.catalog.v1.DeactivateDrug
  * Use `create(DeactivateDrugResponseSchema)` to create a new message.
  */
 export const DeactivateDrugResponseSchema: GenMessage<DeactivateDrugResponse> = /*@__PURE__*/
-  messageDesc(file_medisync_catalog_v1_catalog, 10);
+  messageDesc(file_medisync_catalog_v1_catalog, 12);
 
 /**
  * @generated from service medisync.catalog.v1.CatalogService
@@ -370,6 +404,14 @@ export const CatalogService: GenService<{
     methodKind: "unary";
     input: typeof GetDrugRequestSchema;
     output: typeof GetDrugResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.catalog.v1.CatalogService.GetByBarcode
+   */
+  getByBarcode: {
+    methodKind: "unary";
+    input: typeof GetByBarcodeRequestSchema;
+    output: typeof GetByBarcodeResponseSchema;
   },
   /**
    * @generated from rpc medisync.catalog.v1.CatalogService.ListDrugs

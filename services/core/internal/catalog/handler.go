@@ -19,6 +19,7 @@ var (
 	ErrDrugCodeRequired = errors.New("drug code is required")
 	ErrDrugNameRequired = errors.New("drug name is required")
 	ErrDrugIDRequired   = errors.New("drug id is required")
+	ErrBarcodeRequired  = errors.New("barcode is required")
 	ErrDrugNotFound     = errors.New("drug not found")
 	ErrNotAuthenticated = errors.New("authentication required")
 	ErrNotAdmin         = errors.New("admin role required")
@@ -53,6 +54,7 @@ type DrugStore interface {
 	Create(ctx context.Context, d Drug) (*Drug, error)
 	GetByID(ctx context.Context, id string) (*Drug, error)
 	GetByCode(ctx context.Context, code string) (*Drug, error)
+	GetByBarcode(ctx context.Context, barcode string) (*Drug, error)
 	List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, error)
 	Update(ctx context.Context, d Drug) (*Drug, error)
 	Deactivate(ctx context.Context, id string) (*Drug, error)
@@ -167,6 +169,26 @@ func (s *CatalogServer) GetDrug(ctx context.Context, req *connect.Request[catalo
 	}
 
 	return connect.NewResponse(&catalogv1.GetDrugResponse{Drug: toProtoDrug(drug)}), nil
+}
+
+func (s *CatalogServer) GetByBarcode(ctx context.Context, req *connect.Request[catalogv1.GetByBarcodeRequest]) (*connect.Response[catalogv1.GetByBarcodeResponse], error) {
+	if _, cerr := s.authenticate(req.Header()); cerr != nil {
+		return nil, cerr
+	}
+	msg := req.Msg
+	if msg == nil || msg.Barcode == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrBarcodeRequired)
+	}
+
+	drug, err := s.store.GetByBarcode(ctx, msg.Barcode)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get drug by barcode: %w", err))
+	}
+	if drug == nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrDrugNotFound)
+	}
+
+	return connect.NewResponse(&catalogv1.GetByBarcodeResponse{Drug: toProtoDrug(drug)}), nil
 }
 
 func (s *CatalogServer) ListDrugs(ctx context.Context, req *connect.Request[catalogv1.ListDrugsRequest]) (*connect.Response[catalogv1.ListDrugsResponse], error) {
@@ -304,6 +326,7 @@ func toProtoDrug(d *Drug) *catalogv1.Drug {
 		StickerNote: d.StickerNote,
 		Active:      d.Active,
 		ProjectId:   d.ProjectID,
+		Barcode:     d.Barcode,
 		CreatedAt:   createdAt,
 		UpdatedAt:   updatedAt,
 	}

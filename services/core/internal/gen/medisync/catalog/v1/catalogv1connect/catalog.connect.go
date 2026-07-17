@@ -38,6 +38,9 @@ const (
 	CatalogServiceCreateDrugProcedure = "/medisync.catalog.v1.CatalogService/CreateDrug"
 	// CatalogServiceGetDrugProcedure is the fully-qualified name of the CatalogService's GetDrug RPC.
 	CatalogServiceGetDrugProcedure = "/medisync.catalog.v1.CatalogService/GetDrug"
+	// CatalogServiceGetByBarcodeProcedure is the fully-qualified name of the CatalogService's
+	// GetByBarcode RPC.
+	CatalogServiceGetByBarcodeProcedure = "/medisync.catalog.v1.CatalogService/GetByBarcode"
 	// CatalogServiceListDrugsProcedure is the fully-qualified name of the CatalogService's ListDrugs
 	// RPC.
 	CatalogServiceListDrugsProcedure = "/medisync.catalog.v1.CatalogService/ListDrugs"
@@ -53,6 +56,7 @@ const (
 type CatalogServiceClient interface {
 	CreateDrug(context.Context, *connect.Request[v1.CreateDrugRequest]) (*connect.Response[v1.CreateDrugResponse], error)
 	GetDrug(context.Context, *connect.Request[v1.GetDrugRequest]) (*connect.Response[v1.GetDrugResponse], error)
+	GetByBarcode(context.Context, *connect.Request[v1.GetByBarcodeRequest]) (*connect.Response[v1.GetByBarcodeResponse], error)
 	ListDrugs(context.Context, *connect.Request[v1.ListDrugsRequest]) (*connect.Response[v1.ListDrugsResponse], error)
 	UpdateDrug(context.Context, *connect.Request[v1.UpdateDrugRequest]) (*connect.Response[v1.UpdateDrugResponse], error)
 	DeactivateDrug(context.Context, *connect.Request[v1.DeactivateDrugRequest]) (*connect.Response[v1.DeactivateDrugResponse], error)
@@ -81,6 +85,12 @@ func NewCatalogServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(catalogServiceMethods.ByName("GetDrug")),
 			connect.WithClientOptions(opts...),
 		),
+		getByBarcode: connect.NewClient[v1.GetByBarcodeRequest, v1.GetByBarcodeResponse](
+			httpClient,
+			baseURL+CatalogServiceGetByBarcodeProcedure,
+			connect.WithSchema(catalogServiceMethods.ByName("GetByBarcode")),
+			connect.WithClientOptions(opts...),
+		),
 		listDrugs: connect.NewClient[v1.ListDrugsRequest, v1.ListDrugsResponse](
 			httpClient,
 			baseURL+CatalogServiceListDrugsProcedure,
@@ -106,6 +116,7 @@ func NewCatalogServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 type catalogServiceClient struct {
 	createDrug     *connect.Client[v1.CreateDrugRequest, v1.CreateDrugResponse]
 	getDrug        *connect.Client[v1.GetDrugRequest, v1.GetDrugResponse]
+	getByBarcode   *connect.Client[v1.GetByBarcodeRequest, v1.GetByBarcodeResponse]
 	listDrugs      *connect.Client[v1.ListDrugsRequest, v1.ListDrugsResponse]
 	updateDrug     *connect.Client[v1.UpdateDrugRequest, v1.UpdateDrugResponse]
 	deactivateDrug *connect.Client[v1.DeactivateDrugRequest, v1.DeactivateDrugResponse]
@@ -119,6 +130,11 @@ func (c *catalogServiceClient) CreateDrug(ctx context.Context, req *connect.Requ
 // GetDrug calls medisync.catalog.v1.CatalogService.GetDrug.
 func (c *catalogServiceClient) GetDrug(ctx context.Context, req *connect.Request[v1.GetDrugRequest]) (*connect.Response[v1.GetDrugResponse], error) {
 	return c.getDrug.CallUnary(ctx, req)
+}
+
+// GetByBarcode calls medisync.catalog.v1.CatalogService.GetByBarcode.
+func (c *catalogServiceClient) GetByBarcode(ctx context.Context, req *connect.Request[v1.GetByBarcodeRequest]) (*connect.Response[v1.GetByBarcodeResponse], error) {
+	return c.getByBarcode.CallUnary(ctx, req)
 }
 
 // ListDrugs calls medisync.catalog.v1.CatalogService.ListDrugs.
@@ -140,6 +156,7 @@ func (c *catalogServiceClient) DeactivateDrug(ctx context.Context, req *connect.
 type CatalogServiceHandler interface {
 	CreateDrug(context.Context, *connect.Request[v1.CreateDrugRequest]) (*connect.Response[v1.CreateDrugResponse], error)
 	GetDrug(context.Context, *connect.Request[v1.GetDrugRequest]) (*connect.Response[v1.GetDrugResponse], error)
+	GetByBarcode(context.Context, *connect.Request[v1.GetByBarcodeRequest]) (*connect.Response[v1.GetByBarcodeResponse], error)
 	ListDrugs(context.Context, *connect.Request[v1.ListDrugsRequest]) (*connect.Response[v1.ListDrugsResponse], error)
 	UpdateDrug(context.Context, *connect.Request[v1.UpdateDrugRequest]) (*connect.Response[v1.UpdateDrugResponse], error)
 	DeactivateDrug(context.Context, *connect.Request[v1.DeactivateDrugRequest]) (*connect.Response[v1.DeactivateDrugResponse], error)
@@ -162,6 +179,12 @@ func NewCatalogServiceHandler(svc CatalogServiceHandler, opts ...connect.Handler
 		CatalogServiceGetDrugProcedure,
 		svc.GetDrug,
 		connect.WithSchema(catalogServiceMethods.ByName("GetDrug")),
+		connect.WithHandlerOptions(opts...),
+	)
+	catalogServiceGetByBarcodeHandler := connect.NewUnaryHandler(
+		CatalogServiceGetByBarcodeProcedure,
+		svc.GetByBarcode,
+		connect.WithSchema(catalogServiceMethods.ByName("GetByBarcode")),
 		connect.WithHandlerOptions(opts...),
 	)
 	catalogServiceListDrugsHandler := connect.NewUnaryHandler(
@@ -188,6 +211,8 @@ func NewCatalogServiceHandler(svc CatalogServiceHandler, opts ...connect.Handler
 			catalogServiceCreateDrugHandler.ServeHTTP(w, r)
 		case CatalogServiceGetDrugProcedure:
 			catalogServiceGetDrugHandler.ServeHTTP(w, r)
+		case CatalogServiceGetByBarcodeProcedure:
+			catalogServiceGetByBarcodeHandler.ServeHTTP(w, r)
 		case CatalogServiceListDrugsProcedure:
 			catalogServiceListDrugsHandler.ServeHTTP(w, r)
 		case CatalogServiceUpdateDrugProcedure:
@@ -209,6 +234,10 @@ func (UnimplementedCatalogServiceHandler) CreateDrug(context.Context, *connect.R
 
 func (UnimplementedCatalogServiceHandler) GetDrug(context.Context, *connect.Request[v1.GetDrugRequest]) (*connect.Response[v1.GetDrugResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.catalog.v1.CatalogService.GetDrug is not implemented"))
+}
+
+func (UnimplementedCatalogServiceHandler) GetByBarcode(context.Context, *connect.Request[v1.GetByBarcodeRequest]) (*connect.Response[v1.GetByBarcodeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.catalog.v1.CatalogService.GetByBarcode is not implemented"))
 }
 
 func (UnimplementedCatalogServiceHandler) ListDrugs(context.Context, *connect.Request[v1.ListDrugsRequest]) (*connect.Response[v1.ListDrugsResponse], error) {

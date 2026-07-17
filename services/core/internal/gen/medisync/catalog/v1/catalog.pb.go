@@ -427,6 +427,94 @@ func (x *GetDrugResponse) GetDrug() *Drug {
 	return nil
 }
 
+type GetByBarcodeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Barcode       string                 `protobuf:"bytes,1,opt,name=barcode,proto3" json:"barcode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetByBarcodeRequest) Reset() {
+	*x = GetByBarcodeRequest{}
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetByBarcodeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetByBarcodeRequest) ProtoMessage() {}
+
+func (x *GetByBarcodeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetByBarcodeRequest.ProtoReflect.Descriptor instead.
+func (*GetByBarcodeRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetByBarcodeRequest) GetBarcode() string {
+	if x != nil {
+		return x.Barcode
+	}
+	return ""
+}
+
+type GetByBarcodeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Drug          *Drug                  `protobuf:"bytes,1,opt,name=drug,proto3" json:"drug,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetByBarcodeResponse) Reset() {
+	*x = GetByBarcodeResponse{}
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetByBarcodeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetByBarcodeResponse) ProtoMessage() {}
+
+func (x *GetByBarcodeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetByBarcodeResponse.ProtoReflect.Descriptor instead.
+func (*GetByBarcodeResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetByBarcodeResponse) GetDrug() *Drug {
+	if x != nil {
+		return x.Drug
+	}
+	return nil
+}
+
 type ListDrugsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Case-insensitive match on code, name, or generic name. Empty lists all.
@@ -440,7 +528,7 @@ type ListDrugsRequest struct {
 
 func (x *ListDrugsRequest) Reset() {
 	*x = ListDrugsRequest{}
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[5]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -452,7 +540,7 @@ func (x *ListDrugsRequest) String() string {
 func (*ListDrugsRequest) ProtoMessage() {}
 
 func (x *ListDrugsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[5]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -465,7 +553,7 @@ func (x *ListDrugsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDrugsRequest.ProtoReflect.Descriptor instead.
 func (*ListDrugsRequest) Descriptor() ([]byte, []int) {
-	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{5}
+	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListDrugsRequest) GetQuery() string {
@@ -506,7 +594,7 @@ type ListDrugsResponse struct {
 
 func (x *ListDrugsResponse) Reset() {
 	*x = ListDrugsResponse{}
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[6]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -518,7 +606,7 @@ func (x *ListDrugsResponse) String() string {
 func (*ListDrugsResponse) ProtoMessage() {}
 
 func (x *ListDrugsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[6]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -531,7 +619,7 @@ func (x *ListDrugsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDrugsResponse.ProtoReflect.Descriptor instead.
 func (*ListDrugsResponse) Descriptor() ([]byte, []int) {
-	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{6}
+	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListDrugsResponse) GetDrugs() []*Drug {
@@ -557,7 +645,7 @@ type UpdateDrugRequest struct {
 
 func (x *UpdateDrugRequest) Reset() {
 	*x = UpdateDrugRequest{}
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[7]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -569,7 +657,7 @@ func (x *UpdateDrugRequest) String() string {
 func (*UpdateDrugRequest) ProtoMessage() {}
 
 func (x *UpdateDrugRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[7]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +670,7 @@ func (x *UpdateDrugRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDrugRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDrugRequest) Descriptor() ([]byte, []int) {
-	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{7}
+	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateDrugRequest) GetDrug() *Drug {
@@ -601,7 +689,7 @@ type UpdateDrugResponse struct {
 
 func (x *UpdateDrugResponse) Reset() {
 	*x = UpdateDrugResponse{}
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[8]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -613,7 +701,7 @@ func (x *UpdateDrugResponse) String() string {
 func (*UpdateDrugResponse) ProtoMessage() {}
 
 func (x *UpdateDrugResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[8]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -626,7 +714,7 @@ func (x *UpdateDrugResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDrugResponse.ProtoReflect.Descriptor instead.
 func (*UpdateDrugResponse) Descriptor() ([]byte, []int) {
-	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{8}
+	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateDrugResponse) GetDrug() *Drug {
@@ -645,7 +733,7 @@ type DeactivateDrugRequest struct {
 
 func (x *DeactivateDrugRequest) Reset() {
 	*x = DeactivateDrugRequest{}
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[9]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -657,7 +745,7 @@ func (x *DeactivateDrugRequest) String() string {
 func (*DeactivateDrugRequest) ProtoMessage() {}
 
 func (x *DeactivateDrugRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[9]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -670,7 +758,7 @@ func (x *DeactivateDrugRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeactivateDrugRequest.ProtoReflect.Descriptor instead.
 func (*DeactivateDrugRequest) Descriptor() ([]byte, []int) {
-	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{9}
+	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeactivateDrugRequest) GetId() string {
@@ -689,7 +777,7 @@ type DeactivateDrugResponse struct {
 
 func (x *DeactivateDrugResponse) Reset() {
 	*x = DeactivateDrugResponse{}
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[10]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -701,7 +789,7 @@ func (x *DeactivateDrugResponse) String() string {
 func (*DeactivateDrugResponse) ProtoMessage() {}
 
 func (x *DeactivateDrugResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[10]
+	mi := &file_medisync_catalog_v1_catalog_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -714,7 +802,7 @@ func (x *DeactivateDrugResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeactivateDrugResponse.ProtoReflect.Descriptor instead.
 func (*DeactivateDrugResponse) Descriptor() ([]byte, []int) {
-	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{10}
+	return file_medisync_catalog_v1_catalog_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeactivateDrugResponse) GetDrug() *Drug {
@@ -766,6 +854,10 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x0eGetDrugRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"@\n" +
 	"\x0fGetDrugResponse\x12-\n" +
+	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug\"/\n" +
+	"\x13GetByBarcodeRequest\x12\x18\n" +
+	"\abarcode\x18\x01 \x01(\tR\abarcode\"E\n" +
+	"\x14GetByBarcodeResponse\x12-\n" +
 	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug\"\x8f\x01\n" +
 	"\x10ListDrugsRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12)\n" +
@@ -783,11 +875,12 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x15DeactivateDrugRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"G\n" +
 	"\x16DeactivateDrugResponse\x12-\n" +
-	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug2\xeb\x03\n" +
+	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug2\xd0\x04\n" +
 	"\x0eCatalogService\x12]\n" +
 	"\n" +
 	"CreateDrug\x12&.medisync.catalog.v1.CreateDrugRequest\x1a'.medisync.catalog.v1.CreateDrugResponse\x12T\n" +
-	"\aGetDrug\x12#.medisync.catalog.v1.GetDrugRequest\x1a$.medisync.catalog.v1.GetDrugResponse\x12Z\n" +
+	"\aGetDrug\x12#.medisync.catalog.v1.GetDrugRequest\x1a$.medisync.catalog.v1.GetDrugResponse\x12c\n" +
+	"\fGetByBarcode\x12(.medisync.catalog.v1.GetByBarcodeRequest\x1a).medisync.catalog.v1.GetByBarcodeResponse\x12Z\n" +
 	"\tListDrugs\x12%.medisync.catalog.v1.ListDrugsRequest\x1a&.medisync.catalog.v1.ListDrugsResponse\x12]\n" +
 	"\n" +
 	"UpdateDrug\x12&.medisync.catalog.v1.UpdateDrugRequest\x1a'.medisync.catalog.v1.UpdateDrugResponse\x12i\n" +
@@ -805,45 +898,50 @@ func file_medisync_catalog_v1_catalog_proto_rawDescGZIP() []byte {
 	return file_medisync_catalog_v1_catalog_proto_rawDescData
 }
 
-var file_medisync_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_medisync_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_medisync_catalog_v1_catalog_proto_goTypes = []any{
 	(*Drug)(nil),                   // 0: medisync.catalog.v1.Drug
 	(*CreateDrugRequest)(nil),      // 1: medisync.catalog.v1.CreateDrugRequest
 	(*CreateDrugResponse)(nil),     // 2: medisync.catalog.v1.CreateDrugResponse
 	(*GetDrugRequest)(nil),         // 3: medisync.catalog.v1.GetDrugRequest
 	(*GetDrugResponse)(nil),        // 4: medisync.catalog.v1.GetDrugResponse
-	(*ListDrugsRequest)(nil),       // 5: medisync.catalog.v1.ListDrugsRequest
-	(*ListDrugsResponse)(nil),      // 6: medisync.catalog.v1.ListDrugsResponse
-	(*UpdateDrugRequest)(nil),      // 7: medisync.catalog.v1.UpdateDrugRequest
-	(*UpdateDrugResponse)(nil),     // 8: medisync.catalog.v1.UpdateDrugResponse
-	(*DeactivateDrugRequest)(nil),  // 9: medisync.catalog.v1.DeactivateDrugRequest
-	(*DeactivateDrugResponse)(nil), // 10: medisync.catalog.v1.DeactivateDrugResponse
-	(*timestamppb.Timestamp)(nil),  // 11: google.protobuf.Timestamp
+	(*GetByBarcodeRequest)(nil),    // 5: medisync.catalog.v1.GetByBarcodeRequest
+	(*GetByBarcodeResponse)(nil),   // 6: medisync.catalog.v1.GetByBarcodeResponse
+	(*ListDrugsRequest)(nil),       // 7: medisync.catalog.v1.ListDrugsRequest
+	(*ListDrugsResponse)(nil),      // 8: medisync.catalog.v1.ListDrugsResponse
+	(*UpdateDrugRequest)(nil),      // 9: medisync.catalog.v1.UpdateDrugRequest
+	(*UpdateDrugResponse)(nil),     // 10: medisync.catalog.v1.UpdateDrugResponse
+	(*DeactivateDrugRequest)(nil),  // 11: medisync.catalog.v1.DeactivateDrugRequest
+	(*DeactivateDrugResponse)(nil), // 12: medisync.catalog.v1.DeactivateDrugResponse
+	(*timestamppb.Timestamp)(nil),  // 13: google.protobuf.Timestamp
 }
 var file_medisync_catalog_v1_catalog_proto_depIdxs = []int32{
-	11, // 0: medisync.catalog.v1.Drug.created_at:type_name -> google.protobuf.Timestamp
-	11, // 1: medisync.catalog.v1.Drug.updated_at:type_name -> google.protobuf.Timestamp
+	13, // 0: medisync.catalog.v1.Drug.created_at:type_name -> google.protobuf.Timestamp
+	13, // 1: medisync.catalog.v1.Drug.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: medisync.catalog.v1.CreateDrugResponse.drug:type_name -> medisync.catalog.v1.Drug
 	0,  // 3: medisync.catalog.v1.GetDrugResponse.drug:type_name -> medisync.catalog.v1.Drug
-	0,  // 4: medisync.catalog.v1.ListDrugsResponse.drugs:type_name -> medisync.catalog.v1.Drug
-	0,  // 5: medisync.catalog.v1.UpdateDrugRequest.drug:type_name -> medisync.catalog.v1.Drug
-	0,  // 6: medisync.catalog.v1.UpdateDrugResponse.drug:type_name -> medisync.catalog.v1.Drug
-	0,  // 7: medisync.catalog.v1.DeactivateDrugResponse.drug:type_name -> medisync.catalog.v1.Drug
-	1,  // 8: medisync.catalog.v1.CatalogService.CreateDrug:input_type -> medisync.catalog.v1.CreateDrugRequest
-	3,  // 9: medisync.catalog.v1.CatalogService.GetDrug:input_type -> medisync.catalog.v1.GetDrugRequest
-	5,  // 10: medisync.catalog.v1.CatalogService.ListDrugs:input_type -> medisync.catalog.v1.ListDrugsRequest
-	7,  // 11: medisync.catalog.v1.CatalogService.UpdateDrug:input_type -> medisync.catalog.v1.UpdateDrugRequest
-	9,  // 12: medisync.catalog.v1.CatalogService.DeactivateDrug:input_type -> medisync.catalog.v1.DeactivateDrugRequest
-	2,  // 13: medisync.catalog.v1.CatalogService.CreateDrug:output_type -> medisync.catalog.v1.CreateDrugResponse
-	4,  // 14: medisync.catalog.v1.CatalogService.GetDrug:output_type -> medisync.catalog.v1.GetDrugResponse
-	6,  // 15: medisync.catalog.v1.CatalogService.ListDrugs:output_type -> medisync.catalog.v1.ListDrugsResponse
-	8,  // 16: medisync.catalog.v1.CatalogService.UpdateDrug:output_type -> medisync.catalog.v1.UpdateDrugResponse
-	10, // 17: medisync.catalog.v1.CatalogService.DeactivateDrug:output_type -> medisync.catalog.v1.DeactivateDrugResponse
-	13, // [13:18] is the sub-list for method output_type
-	8,  // [8:13] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	0,  // 4: medisync.catalog.v1.GetByBarcodeResponse.drug:type_name -> medisync.catalog.v1.Drug
+	0,  // 5: medisync.catalog.v1.ListDrugsResponse.drugs:type_name -> medisync.catalog.v1.Drug
+	0,  // 6: medisync.catalog.v1.UpdateDrugRequest.drug:type_name -> medisync.catalog.v1.Drug
+	0,  // 7: medisync.catalog.v1.UpdateDrugResponse.drug:type_name -> medisync.catalog.v1.Drug
+	0,  // 8: medisync.catalog.v1.DeactivateDrugResponse.drug:type_name -> medisync.catalog.v1.Drug
+	1,  // 9: medisync.catalog.v1.CatalogService.CreateDrug:input_type -> medisync.catalog.v1.CreateDrugRequest
+	3,  // 10: medisync.catalog.v1.CatalogService.GetDrug:input_type -> medisync.catalog.v1.GetDrugRequest
+	5,  // 11: medisync.catalog.v1.CatalogService.GetByBarcode:input_type -> medisync.catalog.v1.GetByBarcodeRequest
+	7,  // 12: medisync.catalog.v1.CatalogService.ListDrugs:input_type -> medisync.catalog.v1.ListDrugsRequest
+	9,  // 13: medisync.catalog.v1.CatalogService.UpdateDrug:input_type -> medisync.catalog.v1.UpdateDrugRequest
+	11, // 14: medisync.catalog.v1.CatalogService.DeactivateDrug:input_type -> medisync.catalog.v1.DeactivateDrugRequest
+	2,  // 15: medisync.catalog.v1.CatalogService.CreateDrug:output_type -> medisync.catalog.v1.CreateDrugResponse
+	4,  // 16: medisync.catalog.v1.CatalogService.GetDrug:output_type -> medisync.catalog.v1.GetDrugResponse
+	6,  // 17: medisync.catalog.v1.CatalogService.GetByBarcode:output_type -> medisync.catalog.v1.GetByBarcodeResponse
+	8,  // 18: medisync.catalog.v1.CatalogService.ListDrugs:output_type -> medisync.catalog.v1.ListDrugsResponse
+	10, // 19: medisync.catalog.v1.CatalogService.UpdateDrug:output_type -> medisync.catalog.v1.UpdateDrugResponse
+	12, // 20: medisync.catalog.v1.CatalogService.DeactivateDrug:output_type -> medisync.catalog.v1.DeactivateDrugResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_medisync_catalog_v1_catalog_proto_init() }
@@ -857,7 +955,7 @@ func file_medisync_catalog_v1_catalog_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_medisync_catalog_v1_catalog_proto_rawDesc), len(file_medisync_catalog_v1_catalog_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
