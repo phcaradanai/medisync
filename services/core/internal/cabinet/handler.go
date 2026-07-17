@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	cabinetv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1"
 	cabinetv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1/cabinetv1connect"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -53,7 +54,13 @@ func (s *Server) ListCabinets(
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
 	}
 
-	cabinets, err := s.store.List(ctx, claims.ProjectID)
+	pageSize, pageToken := pagination.DefaultPageSize, ""
+	if req.Msg != nil && req.Msg.Pagination != nil {
+		pageSize = pagination.NormalizePageSize(req.Msg.Pagination.PageSize)
+		pageToken = req.Msg.Pagination.PageToken
+	}
+
+	cabinets, nextToken, totalCount, err := s.store.List(ctx, claims.ProjectID, pageSize, pageToken)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
@@ -62,7 +69,11 @@ func (s *Server) ListCabinets(
 	for i, c := range cabinets {
 		pb[i] = toProto(c)
 	}
-	return connect.NewResponse(&cabinetv1.ListCabinetsResponse{Cabinets: pb}), nil
+	return connect.NewResponse(&cabinetv1.ListCabinetsResponse{
+		Cabinets:      pb,
+		NextPageToken: nextToken,
+		TotalCount:    totalCount,
+	}), nil
 }
 
 // CreateCabinet registers a new cabinet. Requires admin role.

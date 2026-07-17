@@ -6,13 +6,15 @@ import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegen
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { CursorPagination } from "../../common/v1/pagination_pb";
+import { file_medisync_common_v1_pagination } from "../../common/v1/pagination_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file medisync/cabinet/v1/cabinet.proto.
  */
 export const file_medisync_cabinet_v1_cabinet: GenFile = /*@__PURE__*/
-  fileDesc("CiFtZWRpc3luYy9jYWJpbmV0L3YxL2NhYmluZXQucHJvdG8SE21lZGlzeW5jLmNhYmluZXQudjEiywEKB0NhYmluZXQSCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBmFjdGl2ZRgEIAEoCBIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgxkaXNwbGF5X25hbWUYByABKAkSEgoKcHJvamVjdF9pZBgIIAEoCSIVChNMaXN0Q2FiaW5ldHNSZXF1ZXN0IkYKFExpc3RDYWJpbmV0c1Jlc3BvbnNlEi4KCGNhYmluZXRzGAEgAygLMhwubWVkaXN5bmMuY2FiaW5ldC52MS5DYWJpbmV0IlwKFENyZWF0ZUNhYmluZXRSZXF1ZXN0EgwKBGNvZGUYASABKAkSDAoEbmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEgoKcHJvamVjdF9pZBgEIAEoCSJGChVDcmVhdGVDYWJpbmV0UmVzcG9uc2USLQoHY2FiaW5ldBgBIAEoCzIcLm1lZGlzeW5jLmNhYmluZXQudjEuQ2FiaW5ldCJeChRVcGRhdGVDYWJpbmV0UmVxdWVzdBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESEwoGYWN0aXZlGAMgASgISAGIAQFCBwoFX25hbWVCCQoHX2FjdGl2ZSJGChVVcGRhdGVDYWJpbmV0UmVzcG9uc2USLQoHY2FiaW5ldBgBIAEoCzIcLm1lZGlzeW5jLmNhYmluZXQudjEuQ2FiaW5ldDLFAgoOQ2FiaW5ldFNlcnZpY2USYwoMTGlzdENhYmluZXRzEigubWVkaXN5bmMuY2FiaW5ldC52MS5MaXN0Q2FiaW5ldHNSZXF1ZXN0GikubWVkaXN5bmMuY2FiaW5ldC52MS5MaXN0Q2FiaW5ldHNSZXNwb25zZRJmCg1DcmVhdGVDYWJpbmV0EikubWVkaXN5bmMuY2FiaW5ldC52MS5DcmVhdGVDYWJpbmV0UmVxdWVzdBoqLm1lZGlzeW5jLmNhYmluZXQudjEuQ3JlYXRlQ2FiaW5ldFJlc3BvbnNlEmYKDVVwZGF0ZUNhYmluZXQSKS5tZWRpc3luYy5jYWJpbmV0LnYxLlVwZGF0ZUNhYmluZXRSZXF1ZXN0GioubWVkaXN5bmMuY2FiaW5ldC52MS5VcGRhdGVDYWJpbmV0UmVzcG9uc2VCXlpcZ2l0aHViLmNvbS9hZG0tY2h1cmEzaW50ZXIvbWVkaXN5bmMvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vbWVkaXN5bmMvY2FiaW5ldC92MTtjYWJpbmV0djFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("CiFtZWRpc3luYy9jYWJpbmV0L3YxL2NhYmluZXQucHJvdG8SE21lZGlzeW5jLmNhYmluZXQudjEiywEKB0NhYmluZXQSCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBmFjdGl2ZRgEIAEoCBIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgxkaXNwbGF5X25hbWUYByABKAkSEgoKcHJvamVjdF9pZBgIIAEoCSJPChNMaXN0Q2FiaW5ldHNSZXF1ZXN0EjgKCnBhZ2luYXRpb24YASABKAsyJC5tZWRpc3luYy5jb21tb24udjEuQ3Vyc29yUGFnaW5hdGlvbiJ0ChRMaXN0Q2FiaW5ldHNSZXNwb25zZRIuCghjYWJpbmV0cxgBIAMoCzIcLm1lZGlzeW5jLmNhYmluZXQudjEuQ2FiaW5ldBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkSEwoLdG90YWxfY291bnQYAyABKAMiXAoUQ3JlYXRlQ2FiaW5ldFJlcXVlc3QSDAoEY29kZRgBIAEoCRIMCgRuYW1lGAIgASgJEhQKDGRpc3BsYXlfbmFtZRgDIAEoCRISCgpwcm9qZWN0X2lkGAQgASgJIkYKFUNyZWF0ZUNhYmluZXRSZXNwb25zZRItCgdjYWJpbmV0GAEgASgLMhwubWVkaXN5bmMuY2FiaW5ldC52MS5DYWJpbmV0Il4KFFVwZGF0ZUNhYmluZXRSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARITCgZhY3RpdmUYAyABKAhIAYgBAUIHCgVfbmFtZUIJCgdfYWN0aXZlIkYKFVVwZGF0ZUNhYmluZXRSZXNwb25zZRItCgdjYWJpbmV0GAEgASgLMhwubWVkaXN5bmMuY2FiaW5ldC52MS5DYWJpbmV0MsUCCg5DYWJpbmV0U2VydmljZRJjCgxMaXN0Q2FiaW5ldHMSKC5tZWRpc3luYy5jYWJpbmV0LnYxLkxpc3RDYWJpbmV0c1JlcXVlc3QaKS5tZWRpc3luYy5jYWJpbmV0LnYxLkxpc3RDYWJpbmV0c1Jlc3BvbnNlEmYKDUNyZWF0ZUNhYmluZXQSKS5tZWRpc3luYy5jYWJpbmV0LnYxLkNyZWF0ZUNhYmluZXRSZXF1ZXN0GioubWVkaXN5bmMuY2FiaW5ldC52MS5DcmVhdGVDYWJpbmV0UmVzcG9uc2USZgoNVXBkYXRlQ2FiaW5ldBIpLm1lZGlzeW5jLmNhYmluZXQudjEuVXBkYXRlQ2FiaW5ldFJlcXVlc3QaKi5tZWRpc3luYy5jYWJpbmV0LnYxLlVwZGF0ZUNhYmluZXRSZXNwb25zZUJeWlxnaXRodWIuY29tL2FkbS1jaHVyYTNpbnRlci9tZWRpc3luYy9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi9tZWRpc3luYy9jYWJpbmV0L3YxO2NhYmluZXR2MWIGcHJvdG8z", [file_google_protobuf_timestamp, file_medisync_common_v1_pagination]);
 
 /**
  * Cabinet is a physical vending machine. Slots belong to cabinets
@@ -77,6 +79,10 @@ export const CabinetSchema: GenMessage<Cabinet> = /*@__PURE__*/
  * @generated from message medisync.cabinet.v1.ListCabinetsRequest
  */
 export type ListCabinetsRequest = Message<"medisync.cabinet.v1.ListCabinetsRequest"> & {
+  /**
+   * @generated from field: medisync.common.v1.CursorPagination pagination = 1;
+   */
+  pagination?: CursorPagination | undefined;
 };
 
 /**
@@ -94,6 +100,16 @@ export type ListCabinetsResponse = Message<"medisync.cabinet.v1.ListCabinetsResp
    * @generated from field: repeated medisync.cabinet.v1.Cabinet cabinets = 1;
    */
   cabinets: Cabinet[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+
+  /**
+   * @generated from field: int64 total_count = 3;
+   */
+  totalCount: bigint;
 };
 
 /**

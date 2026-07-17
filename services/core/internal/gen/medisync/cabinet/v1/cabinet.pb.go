@@ -7,6 +7,7 @@
 package cabinetv1
 
 import (
+	v1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -128,6 +129,7 @@ func (x *Cabinet) GetProjectId() string {
 
 type ListCabinetsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pagination    *v1.CursorPagination   `protobuf:"bytes,1,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -162,9 +164,18 @@ func (*ListCabinetsRequest) Descriptor() ([]byte, []int) {
 	return file_medisync_cabinet_v1_cabinet_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *ListCabinetsRequest) GetPagination() *v1.CursorPagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 type ListCabinetsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cabinets      []*Cabinet             `protobuf:"bytes,1,rep,name=cabinets,proto3" json:"cabinets,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -204,6 +215,20 @@ func (x *ListCabinetsResponse) GetCabinets() []*Cabinet {
 		return x.Cabinets
 	}
 	return nil
+}
+
+func (x *ListCabinetsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListCabinetsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
 }
 
 type CreateCabinetRequest struct {
@@ -427,7 +452,7 @@ var File_medisync_cabinet_v1_cabinet_proto protoreflect.FileDescriptor
 
 const file_medisync_cabinet_v1_cabinet_proto_rawDesc = "" +
 	"\n" +
-	"!medisync/cabinet/v1/cabinet.proto\x12\x13medisync.cabinet.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x91\x02\n" +
+	"!medisync/cabinet/v1/cabinet.proto\x12\x13medisync.cabinet.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#medisync/common/v1/pagination.proto\"\x91\x02\n" +
 	"\aCabinet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -439,10 +464,16 @@ const file_medisync_cabinet_v1_cabinet_proto_rawDesc = "" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12!\n" +
 	"\fdisplay_name\x18\a \x01(\tR\vdisplayName\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\b \x01(\tR\tprojectId\"\x15\n" +
-	"\x13ListCabinetsRequest\"P\n" +
+	"project_id\x18\b \x01(\tR\tprojectId\"[\n" +
+	"\x13ListCabinetsRequest\x12D\n" +
+	"\n" +
+	"pagination\x18\x01 \x01(\v2$.medisync.common.v1.CursorPaginationR\n" +
+	"pagination\"\x99\x01\n" +
 	"\x14ListCabinetsResponse\x128\n" +
-	"\bcabinets\x18\x01 \x03(\v2\x1c.medisync.cabinet.v1.CabinetR\bcabinets\"\x80\x01\n" +
+	"\bcabinets\x18\x01 \x03(\v2\x1c.medisync.cabinet.v1.CabinetR\bcabinets\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount\"\x80\x01\n" +
 	"\x14CreateCabinetRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -486,24 +517,26 @@ var file_medisync_cabinet_v1_cabinet_proto_goTypes = []any{
 	(*UpdateCabinetRequest)(nil),  // 5: medisync.cabinet.v1.UpdateCabinetRequest
 	(*UpdateCabinetResponse)(nil), // 6: medisync.cabinet.v1.UpdateCabinetResponse
 	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(*v1.CursorPagination)(nil),   // 8: medisync.common.v1.CursorPagination
 }
 var file_medisync_cabinet_v1_cabinet_proto_depIdxs = []int32{
 	7, // 0: medisync.cabinet.v1.Cabinet.created_at:type_name -> google.protobuf.Timestamp
 	7, // 1: medisync.cabinet.v1.Cabinet.updated_at:type_name -> google.protobuf.Timestamp
-	0, // 2: medisync.cabinet.v1.ListCabinetsResponse.cabinets:type_name -> medisync.cabinet.v1.Cabinet
-	0, // 3: medisync.cabinet.v1.CreateCabinetResponse.cabinet:type_name -> medisync.cabinet.v1.Cabinet
-	0, // 4: medisync.cabinet.v1.UpdateCabinetResponse.cabinet:type_name -> medisync.cabinet.v1.Cabinet
-	1, // 5: medisync.cabinet.v1.CabinetService.ListCabinets:input_type -> medisync.cabinet.v1.ListCabinetsRequest
-	3, // 6: medisync.cabinet.v1.CabinetService.CreateCabinet:input_type -> medisync.cabinet.v1.CreateCabinetRequest
-	5, // 7: medisync.cabinet.v1.CabinetService.UpdateCabinet:input_type -> medisync.cabinet.v1.UpdateCabinetRequest
-	2, // 8: medisync.cabinet.v1.CabinetService.ListCabinets:output_type -> medisync.cabinet.v1.ListCabinetsResponse
-	4, // 9: medisync.cabinet.v1.CabinetService.CreateCabinet:output_type -> medisync.cabinet.v1.CreateCabinetResponse
-	6, // 10: medisync.cabinet.v1.CabinetService.UpdateCabinet:output_type -> medisync.cabinet.v1.UpdateCabinetResponse
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	8, // 2: medisync.cabinet.v1.ListCabinetsRequest.pagination:type_name -> medisync.common.v1.CursorPagination
+	0, // 3: medisync.cabinet.v1.ListCabinetsResponse.cabinets:type_name -> medisync.cabinet.v1.Cabinet
+	0, // 4: medisync.cabinet.v1.CreateCabinetResponse.cabinet:type_name -> medisync.cabinet.v1.Cabinet
+	0, // 5: medisync.cabinet.v1.UpdateCabinetResponse.cabinet:type_name -> medisync.cabinet.v1.Cabinet
+	1, // 6: medisync.cabinet.v1.CabinetService.ListCabinets:input_type -> medisync.cabinet.v1.ListCabinetsRequest
+	3, // 7: medisync.cabinet.v1.CabinetService.CreateCabinet:input_type -> medisync.cabinet.v1.CreateCabinetRequest
+	5, // 8: medisync.cabinet.v1.CabinetService.UpdateCabinet:input_type -> medisync.cabinet.v1.UpdateCabinetRequest
+	2, // 9: medisync.cabinet.v1.CabinetService.ListCabinets:output_type -> medisync.cabinet.v1.ListCabinetsResponse
+	4, // 10: medisync.cabinet.v1.CabinetService.CreateCabinet:output_type -> medisync.cabinet.v1.CreateCabinetResponse
+	6, // 11: medisync.cabinet.v1.CabinetService.UpdateCabinet:output_type -> medisync.cabinet.v1.UpdateCabinetResponse
+	9, // [9:12] is the sub-list for method output_type
+	6, // [6:9] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_medisync_cabinet_v1_cabinet_proto_init() }

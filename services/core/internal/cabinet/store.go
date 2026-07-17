@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 )
 
 // Compile-time check that *pgxpool.Pool satisfies dbConn.
@@ -36,22 +38,47 @@ func NewStoreWithDB(db dbConn) *Store {
 	return &Store{db: db}
 }
 
-// List returns all cabinets ordered by code.
-// List returns all cabinets, optionally scoped to a project.
+// List returns cabinets, optionally scoped to a project, using a created_at
+// cursor whose token is the last cabinet ID.
 // When projectID is non-empty, only cabinets in that project are returned.
-func (s *Store) List(ctx context.Context, projectID string) ([]*Cabinet, error) {
+func (s *Store) List(ctx context.Context, projectID string, pageSize int32, pageToken string) ([]*Cabinet, string, int64, error) {
+	pageSize = pagination.NormalizePageSize(pageSize)
 	query := `SELECT id, code, name, display_name, active, project_id, created_at, updated_at
 		   FROM cabinet.cabinet`
 	args := []any{}
+	whereSQL := ""
+	argIdx := 1
 	if projectID != "" {
-		query += ` WHERE project_id = $1`
+		whereSQL = "WHERE project_id = $1"
 		args = append(args, projectID)
+		argIdx++
 	}
-	query += ` ORDER BY code ASC`
+
+	var totalCount int64
+	countQuery := "SELECT COUNT(*) FROM cabinet.cabinet " + whereSQL
+	if err := s.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		return nil, "", 0, fmt.Errorf("count cabinets: %w", err)
+	}
+
+	if pageToken != "" {
+		cursorClause := fmt.Sprintf(
+			"created_at < (SELECT created_at FROM cabinet.cabinet WHERE id = $%d)",
+			argIdx,
+		)
+		if whereSQL == "" {
+			whereSQL = "WHERE " + cursorClause
+		} else {
+			whereSQL += " AND " + cursorClause
+		}
+		args = append(args, pageToken)
+		argIdx++
+	}
+	query += " " + whereSQL + fmt.Sprintf(" ORDER BY created_at DESC, id DESC LIMIT $%d", argIdx)
+	args = append(args, pageSize+1)
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list cabinets: %w", err)
+		return nil, "", 0, fmt.Errorf("list cabinets: %w", err)
 	}
 	defer rows.Close()
 
@@ -59,14 +86,20 @@ func (s *Store) List(ctx context.Context, projectID string) ([]*Cabinet, error) 
 	for rows.Next() {
 		c, err := scanCabinet(rows)
 		if err != nil {
-			return nil, err
+			return nil, "", 0, err
 		}
 		cabinets = append(cabinets, c)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate cabinet rows: %w", err)
+		return nil, "", 0, fmt.Errorf("iterate cabinet rows: %w", err)
 	}
-	return cabinets, nil
+
+	var nextPageToken string
+	if len(cabinets) > int(pageSize) {
+		nextPageToken = cabinets[pageSize-1].ID
+		cabinets = cabinets[:pageSize]
+	}
+	return cabinets, nextPageToken, totalCount, nil
 }
 
 // GetByID returns a Cabinet by UUID, or nil if not found.

@@ -3,6 +3,7 @@ syntax = "proto3";
 package medisync.cabinet.v1;
 
 import "google/protobuf/timestamp.proto";
+import "medisync/common/v1/pagination.proto";
 
 option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1;cabinetv1";
 
@@ -21,10 +22,14 @@ message Cabinet {
   string project_id = 8;
 }
 
-message ListCabinetsRequest {}
+message ListCabinetsRequest {
+  medisync.common.v1.CursorPagination pagination = 1;
+}
 
 message ListCabinetsResponse {
   repeated Cabinet cabinets = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
 }
 
 message CreateCabinetRequest {
