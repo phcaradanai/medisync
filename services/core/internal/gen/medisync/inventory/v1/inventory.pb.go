@@ -39,8 +39,12 @@ type Slot struct {
 	UpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	DisplayName  string                 `protobuf:"bytes,11,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Project this slot belongs to (multi-tenant).
-	ProjectId     string                 `protobuf:"bytes,12,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	ExpiryDate    *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=expiry_date,json=expiryDate,proto3" json:"expiry_date,omitempty"`
+	ProjectId  string                 `protobuf:"bytes,12,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ExpiryDate *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=expiry_date,json=expiryDate,proto3" json:"expiry_date,omitempty"`
+	// Physical shelf position (1-5).
+	Shelf int32 `protobuf:"varint,14,opt,name=shelf,proto3" json:"shelf,omitempty"`
+	// Physical row position within shelf (1-22).
+	RowNum        int32 `protobuf:"varint,15,opt,name=row_num,json=rowNum,proto3" json:"row_num,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -164,6 +168,20 @@ func (x *Slot) GetExpiryDate() *timestamppb.Timestamp {
 		return x.ExpiryDate
 	}
 	return nil
+}
+
+func (x *Slot) GetShelf() int32 {
+	if x != nil {
+		return x.Shelf
+	}
+	return 0
+}
+
+func (x *Slot) GetRowNum() int32 {
+	if x != nil {
+		return x.RowNum
+	}
+	return 0
 }
 
 type ListSlotsRequest struct {
@@ -612,6 +630,8 @@ type CreateSlotRequest struct {
 	// Required for SYSADMIN; project-scoped users inherit from JWT.
 	ProjectId     string                 `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	ExpiryDate    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expiry_date,json=expiryDate,proto3" json:"expiry_date,omitempty"`
+	Shelf         int32                  `protobuf:"varint,8,opt,name=shelf,proto3" json:"shelf,omitempty"`
+	RowNum        int32                  `protobuf:"varint,9,opt,name=row_num,json=rowNum,proto3" json:"row_num,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -695,6 +715,20 @@ func (x *CreateSlotRequest) GetExpiryDate() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *CreateSlotRequest) GetShelf() int32 {
+	if x != nil {
+		return x.Shelf
+	}
+	return 0
+}
+
+func (x *CreateSlotRequest) GetRowNum() int32 {
+	if x != nil {
+		return x.RowNum
+	}
+	return 0
+}
+
 type CreateSlotResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Slot          *Slot                  `protobuf:"bytes,1,opt,name=slot,proto3" json:"slot,omitempty"`
@@ -743,7 +777,7 @@ var File_medisync_inventory_v1_inventory_proto protoreflect.FileDescriptor
 
 const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
-	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb3\x03\n" +
+	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe2\x03\n" +
 	"\x04Slot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -762,7 +796,9 @@ const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\f \x01(\tR\tprojectId\x12;\n" +
 	"\vexpiry_date\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"expiryDate\"L\n" +
+	"expiryDate\x12\x14\n" +
+	"\x05shelf\x18\x0e \x01(\x05R\x05shelf\x12\x17\n" +
+	"\arow_num\x18\x0f \x01(\x05R\x06rowNum\"L\n" +
 	"\x10ListSlotsRequest\x12\x1d\n" +
 	"\n" +
 	"cabinet_id\x18\x01 \x01(\tR\tcabinetId\x12\x19\n" +
@@ -790,7 +826,7 @@ const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12\x19\n" +
 	"\btrace_id\x18\x04 \x01(\tR\atraceId\"F\n" +
 	"\x13AdjustStockResponse\x12/\n" +
-	"\x04slot\x18\x01 \x01(\v2\x1b.medisync.inventory.v1.SlotR\x04slot\"\x86\x02\n" +
+	"\x04slot\x18\x01 \x01(\v2\x1b.medisync.inventory.v1.SlotR\x04slot\"\xb5\x02\n" +
 	"\x11CreateSlotRequest\x12\x1d\n" +
 	"\n" +
 	"cabinet_id\x18\x01 \x01(\tR\tcabinetId\x12\x12\n" +
@@ -801,7 +837,9 @@ const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\x06 \x01(\tR\tprojectId\x12;\n" +
 	"\vexpiry_date\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"expiryDate\"E\n" +
+	"expiryDate\x12\x14\n" +
+	"\x05shelf\x18\b \x01(\x05R\x05shelf\x12\x17\n" +
+	"\arow_num\x18\t \x01(\x05R\x06rowNum\"E\n" +
 	"\x12CreateSlotResponse\x12/\n" +
 	"\x04slot\x18\x01 \x01(\v2\x1b.medisync.inventory.v1.SlotR\x04slot2\xf5\x03\n" +
 	"\x10InventoryService\x12^\n" +

@@ -1,0 +1,25 @@
+Build kiosk ShelfGrid + SlotCell + BarcodeScanDialog components per DESIGN.md specs.
+
+Context:
+- apps/kiosk/src/index.css has all CSS custom properties
+- apps/kiosk/src/App.tsx renders current WithdrawFlow + RefillFlow
+- apps/kiosk/src/auth.tsx has useKioskAuth hook
+- Slots from inventory have: id, code, displayName, drugCode, drugName, quantity, capacity, lowThreshold, shelf, rowNum, expiryDate
+- ListSlots returns all slots for the kiosk cabinet with shelf/row
+
+DESIGN.md specs:
+- ShelfGrid: 5 shelves x 22 rows. Kiosk: one shelf per screen, tabs 'ชั้น 1-5', SlotCells min 48px, gap 4px.
+- SlotCell: radius 4px, 1px border, mono row number + fill bar. States: empty/assigned/low/expiring/expired/selected. Expired blocks dispense.
+- BarcodeScanDialog: native DIALOG element, Panel Float, radius 8px. Idle: scan area + 'สแกนบาร์โค้ดยา'. Matched: drug name + confirm 64px button. Not found: error + rescan.
+- ExpiryBadge: Expiring LT 30 days: Warning + clock. Expired: Error + strike. No data: no badge.
+- Rules: touch GE 48px, primary GE 64px, Thai-first, reuse CSS tokens, scan never auto-fires dispense
+
+Tasks:
+1. Create apps/kiosk/src/features/catalog/ShelfGrid.tsx
+2. Create apps/kiosk/src/features/catalog/SlotCell.tsx
+3. Create apps/kiosk/src/features/catalog/BarcodeScanDialog.tsx
+4. Update apps/kiosk/src/App.tsx to show ShelfGrid
+5. Add CSS to index.css only if needed
+
+Run: npm run build -w apps/kiosk to verify.
+Commit: feat(kiosk): ShelfGrid + SlotCell + BarcodeScanDialog

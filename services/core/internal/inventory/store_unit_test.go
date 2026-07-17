@@ -95,12 +95,12 @@ func (r *fakeRow) Scan(dest ...any) error {
 }
 
 // rowWithSlot returns a fakeRow that fills dest with a sample slot.
-// Matches the 14-column scan used by inventory queries.
+// Matches the 16-column scan used by inventory queries.
 func rowWithSlot(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 14 {
-				return fmt.Errorf("expected 14 dests, got %d", len(dest))
+			if len(dest) != 16 {
+				return fmt.Errorf("expected 16 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
@@ -113,13 +113,15 @@ func rowWithSlot(sl Slot) *fakeRow {
 			*(dest[8].(*int32)) = sl.Quantity
 			*(dest[9].(*int32)) = sl.LowThreshold
 			*(dest[10].(*string)) = sl.ProjectID
-			if dt, ok := dest[11].(**time.Time); ok {
+			*(dest[11].(*int32)) = sl.Shelf
+			*(dest[12].(*int32)) = sl.RowNum
+			if dt, ok := dest[13].(**time.Time); ok {
 				*dt = sl.ExpiryDate
 			}
-			if dt, ok := dest[12].(*time.Time); ok {
+			if dt, ok := dest[14].(*time.Time); ok {
 				*dt = sl.CreatedAt
 			}
-			if dt, ok := dest[13].(*time.Time); ok {
+			if dt, ok := dest[15].(*time.Time); ok {
 				*dt = sl.UpdatedAt
 			}
 			return nil
@@ -167,8 +169,8 @@ func (r *fakeRows) Scan(dest ...any) error {
 		return errors.New("no row to scan")
 	}
 	sl := r.slots[r.current-1]
-	if len(dest) != 14 {
-		return fmt.Errorf("expected 14 dests, got %d", len(dest))
+	if len(dest) != 16 {
+		return fmt.Errorf("expected 16 dests, got %d", len(dest))
 	}
 	*(dest[0].(*string)) = sl.ID
 	*(dest[1].(*string)) = sl.CabinetID
@@ -184,10 +186,12 @@ func (r *fakeRows) Scan(dest ...any) error {
 	if dt, ok := dest[11].(**time.Time); ok {
 		*dt = sl.ExpiryDate
 	}
-	if dt, ok := dest[12].(*time.Time); ok {
+	*(dest[12].(*int32)) = sl.Shelf
+	*(dest[13].(*int32)) = sl.RowNum
+	if dt, ok := dest[14].(*time.Time); ok {
 		*dt = sl.CreatedAt
 	}
-	if dt, ok := dest[13].(*time.Time); ok {
+	if dt, ok := dest[15].(*time.Time); ok {
 		*dt = sl.UpdatedAt
 	}
 	return nil
@@ -205,8 +209,8 @@ func (r *fakeRows) Conn() *pgx.Conn                              { return nil }
 func rowWithSlot11(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 14 {
-				return fmt.Errorf("expected 14 dests, got %d", len(dest))
+			if len(dest) != 16 {
+				return fmt.Errorf("expected 16 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
@@ -254,8 +258,8 @@ func TestScanSlotSuccess(t *testing.T) {
 
 	row := &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 14 {
-				return fmt.Errorf("expected 14 dests, got %d", len(dest))
+			if len(dest) != 16 {
+				return fmt.Errorf("expected 16 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = expected.ID
 			*(dest[1].(*string)) = expected.CabinetID

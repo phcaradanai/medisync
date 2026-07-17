@@ -626,6 +626,374 @@ body {
 .refill-progress-fill[data-low="true"] {
   background: var(--semantic-progress);
 }
+
+/* ── Cabinet shelf grid ────────────────────────────────────── */
+.kiosk-panel--shelf-grid {
+  overflow: hidden;
+}
+
+.shelf-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.shelf-grid__tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.shelf-grid__tab {
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm);
+  border: 1px solid var(--neutral-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--neutral-surface);
+  color: var(--neutral-text);
+  font: 600 1.25rem / 1.2 var(--font-family);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 200ms ease, border-color 200ms ease,
+    color 200ms ease;
+}
+
+.shelf-grid__tab:hover {
+  background: var(--neutral-subtle);
+}
+
+.shelf-grid__tab:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.shelf-grid__tab--active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--neutral-surface);
+}
+
+.shelf-grid__tab--active:hover {
+  background: var(--primary);
+}
+
+.shelf-grid__shelf {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.shelf-grid__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  color: var(--neutral-deep);
+  font: 700 1.25rem / 1.3 var(--font-family);
+}
+
+.shelf-grid__hint {
+  color: var(--neutral-text-muted);
+  font: 400 1rem / 1.4 var(--font-family);
+  text-align: right;
+}
+
+.shelf-grid__viewport {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 3px 3px var(--space-sm);
+  border-radius: var(--radius-sm);
+  overscroll-behavior-inline: contain;
+}
+
+.shelf-grid__viewport:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.shelf-grid__cells {
+  display: grid;
+  grid-template-columns: repeat(22, minmax(48px, 1fr));
+  gap: 4px;
+  min-width: 1140px;
+}
+
+.shelf-grid__cell-wrapper {
+  min-width: 48px;
+}
+
+.slot-cell {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: var(--touch-target-min);
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--neutral-border);
+  border-radius: var(--radius-sm);
+  background: var(--neutral-surface);
+  color: var(--neutral-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.slot-cell:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+.slot-cell:focus-visible {
+  z-index: 1;
+  outline: 3px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.slot-cell:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.slot-cell__row {
+  font: 700 1rem / 1 var(--font-mono);
+}
+
+.slot-cell__glyph {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font: 700 0.875rem / 1 var(--font-family);
+}
+
+.slot-cell__fill-track {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  left: 5px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--neutral-border);
+}
+
+.slot-cell__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0.65;
+}
+
+.slot-cell--empty {
+  background: var(--neutral-subtle);
+  color: var(--neutral-text-muted);
+}
+
+.slot-cell--low,
+.slot-cell--expiring {
+  border-color: var(--semantic-warning);
+  background: var(--semantic-warning);
+  color: var(--text-on-warning);
+}
+
+.slot-cell--expired {
+  border-color: var(--semantic-error);
+  background: var(--semantic-error);
+  color: var(--text-on-error);
+}
+
+.slot-cell--selected {
+  border: 2px solid var(--primary);
+  background: color-mix(
+    in srgb,
+    var(--primary) 8%,
+    var(--neutral-surface)
+  );
+  color: var(--neutral-deep);
+}
+
+.shelf-grid__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--neutral-subtle);
+}
+
+.shelf-grid__detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.shelf-grid__detail-heading h2 {
+  margin-top: var(--space-xs);
+  color: var(--neutral-deep);
+  font: 700 1.25rem / 1.35 var(--font-family);
+}
+
+.shelf-grid__address,
+.shelf-grid__drug-code,
+.expiry-badge time {
+  font-family: var(--font-mono);
+}
+
+.shelf-grid__address {
+  color: var(--neutral-text-muted);
+  font-size: 1rem;
+}
+
+.shelf-grid__detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md) var(--space-xl);
+  color: var(--neutral-text);
+  font: var(--type-kiosk-body);
+}
+
+.shelf-grid-screen__loading {
+  display: flex;
+  min-height: 160px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  color: var(--neutral-text-muted);
+  font: var(--type-kiosk-body);
+}
+
+.shelf-grid-screen__retry {
+  width: 100%;
+  margin-top: var(--space-md);
+}
+
+/* ── Drug barcode scanner dialog ───────────────────────────── */
+.barcode-dialog {
+  width: min(calc(100% - 2rem), var(--kiosk-max-width));
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--neutral-surface);
+  color: var(--neutral-text);
+  box-shadow: var(--shadow-panel);
+}
+
+.barcode-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.barcode-dialog__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+  padding: var(--space-3xl);
+}
+
+.barcode-dialog__title {
+  color: var(--neutral-deep);
+  font: var(--type-kiosk-title);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.barcode-dialog__glyph {
+  width: 64px;
+  height: 48px;
+  color: var(--neutral-text-muted);
+}
+
+.barcode-dialog__matched {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  text-align: center;
+}
+
+.barcode-dialog__mono {
+  color: inherit;
+  font: 600 1.25rem / 1.4 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.barcode-dialog__drug-code {
+  color: var(--neutral-text-muted);
+  font: 400 1rem / 1.4 var(--font-mono);
+}
+
+.barcode-dialog__error {
+  display: flex;
+  min-height: 120px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--semantic-error);
+  color: var(--text-on-error);
+  font: 600 1.25rem / 1.4 var(--font-family);
+  text-align: center;
+}
+
+.barcode-dialog__manual {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.barcode-dialog__manual-row,
+.barcode-dialog__actions {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-md);
+}
+
+.barcode-dialog__manual-input {
+  min-width: 0;
+  font-family: var(--font-mono);
+}
+
+.barcode-dialog__manual-row .kiosk-btn {
+  min-width: 160px;
+}
+
+.barcode-dialog__actions .kiosk-btn {
+  flex: 1;
+}
+
+.barcode-dialog__dismiss {
+  align-self: center;
+}
+
+@media (max-width: 600px) {
+  .barcode-dialog__panel {
+    padding: var(--space-xl);
+  }
+
+  .barcode-dialog__manual-row,
+  .barcode-dialog__actions,
+  .shelf-grid__detail-heading {
+    flex-direction: column;
+  }
+
+  .barcode-dialog__manual-row .kiosk-btn,
+  .barcode-dialog__actions .kiosk-btn {
+    width: 100%;
+  }
+
+  .shelf-grid__hint {
+    display: none;
+  }
+}
+
 /* Error variant: offline (warning tone — network problem). */
 .kiosk-error--offline {
   background: var(--semantic-warning);

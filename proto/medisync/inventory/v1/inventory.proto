@@ -24,6 +24,10 @@ message Slot {
   // Project this slot belongs to (multi-tenant).
   string project_id = 12;
   google.protobuf.Timestamp expiry_date = 13;
+  // Physical shelf position (1-5).
+  int32 shelf = 14;
+  // Physical row position within shelf (1-22).
+  int32 row_num = 15;
 }
 
 message ListSlotsRequest {
@@ -81,6 +85,8 @@ message CreateSlotRequest {
   // Required for SYSADMIN; project-scoped users inherit from JWT.
   string project_id = 6;
   google.protobuf.Timestamp expiry_date = 7;
+  int32 shelf = 8;
+  int32 row_num = 9;
 }
 
 message CreateSlotResponse {

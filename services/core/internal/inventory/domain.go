@@ -18,6 +18,8 @@ type Slot struct {
 	LowThreshold int32
 	ProjectID    string
 	ExpiryDate   *time.Time
+	Shelf        int32
+	RowNum       int32
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
