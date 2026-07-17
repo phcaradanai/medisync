@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,11 +12,14 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	commonv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/common/v1"
 	identityv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1"
 	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
 	"github.com/adm-chura3inter/medisync/services/core/internal/identity"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/config"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/tracing"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // testConfig is a config that disables rate limiting for tests.
@@ -26,11 +31,11 @@ var testConfig = config.Config{
 // setupAuthenticatedServer creates a test HTTP server that has the Identity
 // Connect handler mounted. It returns the server and a connected client.
 // The fake store and token manager allow full control over authentication.
-func setupAuthenticatedServer(t *testing.T, store *fakeUserStore, tm *fakeTokenManager) (*httptest.Server, identityv1connect.IdentityServiceClient) {
+func setupAuthenticatedServer(t *testing.T, store *fakeUserStore, tm *fakeTokenManager, options ...connect.HandlerOption) (*httptest.Server, identityv1connect.IdentityServiceClient) {
 	t.Helper()
 
 	mux := http.NewServeMux()
-	path, handler := newIdentityHandler(store, tm, testConfig)
+	path, handler := newIdentityHandler(store, tm, testConfig, options...)
 	mux.Handle(path, handler)
 
 	ts := httptest.NewServer(mux)
@@ -256,6 +261,49 @@ func TestConnectWhoAmIInvalidToken(t *testing.T) {
 	}
 	if connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Errorf("code = %v, want CodeUnauthenticated", connect.CodeOf(err))
+	}
+}
+
+func TestRPCTracingMiddleware(t *testing.T) {
+	var logs bytes.Buffer
+	option := connect.WithInterceptors(
+		tracing.NewInterceptor(slog.New(slog.NewJSONHandler(&logs, nil))),
+	)
+	_, client := setupAuthenticatedServer(t, &fakeUserStore{}, &fakeTokenManager{}, option)
+
+	_, err := client.Login(context.Background(), connect.NewRequest(&identityv1.LoginRequest{}))
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) {
+		t.Fatalf("error type = %T, want *connect.Error", err)
+	}
+	requestID := connectErr.Meta().Get(tracing.HeaderRequestID)
+	if _, err := uuid.Parse(requestID); err != nil {
+		t.Fatalf("X-Request-Id is not a UUID: %v", err)
+	}
+
+	var traceID string
+	for _, detail := range connectErr.Details() {
+		value, detailErr := detail.Value()
+		if detailErr != nil {
+			t.Fatalf("decode error detail: %v", detailErr)
+		}
+		if trace, ok := value.(*commonv1.ErrorTrace); ok {
+			traceID = trace.TraceId
+		}
+	}
+	if _, err := uuid.Parse(traceID); err != nil {
+		t.Fatalf("trace_id is not a UUID: %v", err)
+	}
+	for _, want := range []string{
+		requestID,
+		traceID,
+		"/medisync.identity.v1.IdentityService/Login",
+		"invalid_argument",
+		"username is required",
+	} {
+		if !strings.Contains(logs.String(), want) {
+			t.Errorf("structured log missing %q: %s", want, logs.String())
+		}
 	}
 }
 

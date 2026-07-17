@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package medisync.common.v1;
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/common/v1;commonv1";
+
+// ErrorTrace correlates an RPC error response with structured server logs.
+message ErrorTrace {
+  string trace_id = 1;
+}

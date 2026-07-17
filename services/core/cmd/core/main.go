@@ -14,9 +14,11 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go/jetstream"
 
+	"github.com/adm-chura3inter/medisync/services/core/internal/cabinet"
 	"github.com/adm-chura3inter/medisync/services/core/internal/catalog"
 	"github.com/adm-chura3inter/medisync/services/core/internal/dispensing"
 	cabinetv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1/cabinetv1connect"
@@ -27,13 +29,13 @@ import (
 	kioskv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1/kioskv1connect"
 	"github.com/adm-chura3inter/medisync/services/core/internal/identity"
 	"github.com/adm-chura3inter/medisync/services/core/internal/inventory"
-	"github.com/adm-chura3inter/medisync/services/core/internal/cabinet"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/config"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/logging"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/postgres"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/ratelimit"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/tracing"
 	"github.com/adm-chura3inter/medisync/services/core/internal/printing"
 	"github.com/adm-chura3inter/medisync/services/core/internal/vending"
 	"github.com/adm-chura3inter/medisync/services/core/migrations"
@@ -147,34 +149,37 @@ func run() (runErr error) {
 	}
 
 	mux := http.NewServeMux()
-	path, handler := newIdentityHandler(identityStore, jwtMgr, cfg)
+	rpcOptions := []connect.HandlerOption{
+		connect.WithInterceptors(tracing.NewInterceptor(log)),
+	}
+	path, handler := newIdentityHandler(identityStore, jwtMgr, cfg, rpcOptions...)
 	mux.Handle(path, handler)
 
 	// Project management (SYSADMIN-only).
-	projectPath, projectHandler := newProjectHandler(identityStore)
+	projectPath, projectHandler := newProjectHandler(identityStore, rpcOptions...)
 	mux.Handle(projectPath, projectHandler)
 
 	// Kiosk provisioning and kiosk-token authentication.
 	kioskStore := identity.NewKioskStore(pool)
-	kioskPath, kioskHandler := newKioskHandler(kioskStore, jwtMgr, cfg)
+	kioskPath, kioskHandler := newKioskHandler(kioskStore, jwtMgr, cfg, rpcOptions...)
 	mux.Handle(kioskPath, kioskHandler)
 
 	// ── Cabinet ──────────────────────────────────────────────────────
 	cabinetStore := cabinet.NewStore(pool)
 	cabinetServer := cabinet.NewServer(cabinetStore, newCabinetTokenParser(jwtMgr))
-	cabinetPath, cabinetHandler := cabinetv1connect.NewCabinetServiceHandler(cabinetServer)
+	cabinetPath, cabinetHandler := cabinetv1connect.NewCabinetServiceHandler(cabinetServer, rpcOptions...)
 	mux.Handle(cabinetPath, cabinetHandler)
 
 	// ── Catalog ─────────────────────────────────────────────────────
 	catalogStore := catalog.NewStore(pool, auditw)
 	catalogServer := catalog.NewCatalogServerWithAuth(catalogStore, auditw, newCatalogTokenParser(jwtMgr))
-	catalogPath, catalogHandler := catalogv1connect.NewCatalogServiceHandler(catalogServer)
+	catalogPath, catalogHandler := catalogv1connect.NewCatalogServiceHandler(catalogServer, rpcOptions...)
 	mux.Handle(catalogPath, catalogHandler)
 
 	// ── Inventory ──────────────────────────────────────────────────
 	inventoryStore := inventory.NewStore(pool, auditw)
 	inventoryServer := inventory.NewInventoryServerWithAuth(inventoryStore, auditw, js, newInventoryTokenParser(jwtMgr))
-	inventoryPath, inventoryHandler := inventoryv1connect.NewInventoryServiceHandler(inventoryServer)
+	inventoryPath, inventoryHandler := inventoryv1connect.NewInventoryServiceHandler(inventoryServer, rpcOptions...)
 	mux.Handle(inventoryPath, inventoryHandler)
 
 	// ── Dispensing ────────────────────────────────────────────────
@@ -184,7 +189,7 @@ func run() (runErr error) {
 		newDispensingTokenParser(jwtMgr),
 		auditw,
 	)
-	dispensingPath, dispensingHandler := dispensingv1connect.NewDispensingServiceHandler(dispensingServer)
+	dispensingPath, dispensingHandler := dispensingv1connect.NewDispensingServiceHandler(dispensingServer, rpcOptions...)
 	mux.Handle(dispensingPath, dispensingHandler)
 
 	// Health check endpoint — reports DB, NATS, and consumer status.
@@ -322,7 +327,7 @@ func bootstrapAdmin(ctx context.Context, store adminSeeder, password string) (bo
 	return store.SeedAdmin(ctx, passwordHash)
 }
 
-func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, cfg config.Config) (string, http.Handler) {
+func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, cfg config.Config, options ...connect.HandlerOption) (string, http.Handler) {
 	authService := identity.NewAuthService(store, tokens)
 
 	// Create rate limiters for login endpoints.
@@ -336,23 +341,23 @@ func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, 
 	}
 
 	server := identity.NewIdentityServerWithRateLimit(authService, identityStore, idLimiter, ipLimiter)
-	return identityv1connect.NewIdentityServiceHandler(server)
+	return identityv1connect.NewIdentityServiceHandler(server, options...)
 }
 
-func newProjectHandler(store *identity.Store) (string, http.Handler) {
+func newProjectHandler(store *identity.Store, options ...connect.HandlerOption) (string, http.Handler) {
 	server := identity.NewProjectServer(store)
-	return identityv1connect.NewProjectServiceHandler(server)
+	return identityv1connect.NewProjectServiceHandler(server, options...)
 }
 
 // newDispensingTokenParser adapts identity.JWTManager to dispensing.TokenParser.
 // The dispensing handler defines its own TokenClaims type to avoid a circular
 // dependency on package identity.
-func newKioskHandler(store identity.KioskStore, jwtMgr *identity.JWTManager, cfg config.Config) (string, http.Handler) {
+func newKioskHandler(store identity.KioskStore, jwtMgr *identity.JWTManager, cfg config.Config, options ...connect.HandlerOption) (string, http.Handler) {
 	window := time.Duration(cfg.LoginRateLimitWindowSeconds) * time.Second
 	idLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
 	ipLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
 	server := identity.NewKioskServerWithRateLimit(store, jwtMgr, jwtMgr, idLimiter, ipLimiter)
-	return kioskv1connect.NewKioskServiceHandler(server)
+	return kioskv1connect.NewKioskServiceHandler(server, options...)
 }
 
 func newDispensingTokenParser(mgr *identity.JWTManager) *dispensingTokenParser {
