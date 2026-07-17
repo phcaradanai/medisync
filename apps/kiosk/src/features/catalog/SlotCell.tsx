@@ -28,17 +28,17 @@ export type SlotCellState =
   | "expiring"
   | "expired";
 
-interface SlotCellProps {
+export interface SlotCellProps {
   slot?: SlotCellData;
-  shelfNumber: number;
-  rowNumber: number;
+  shelfNumber?: number;
+  rowNumber?: number;
   selected?: boolean;
   expiryWarningDays?: number;
   now?: Date;
   onSelect?: (slot: SlotCellData) => void;
 }
 
-interface ExpiryBadgeProps {
+export interface ExpiryBadgeProps {
   expiryDate?: ExpiryValue;
   warningDays?: number;
   now?: Date;
@@ -175,9 +175,11 @@ export default function SlotCell({
   now = new Date(),
   onSelect,
 }: SlotCellProps) {
+  const resolvedShelfNumber = shelfNumber ?? slot?.shelf ?? 1;
+  const resolvedRowNumber = rowNumber ?? slot?.rowNum ?? 1;
   const state = getSlotCellState(slot, expiryWarningDays, now);
   const glyph = getStateGlyph(state);
-  const address = `S${shelfNumber}-R${rowNumber}`;
+  const address = `S${resolvedShelfNumber}-R${resolvedRowNumber}`;
   const disabled = !slot || state === "expired";
   const fillPercent = slot?.capacity
     ? Math.max(0, Math.min(100, (slot.quantity / slot.capacity) * 100))
@@ -198,7 +200,7 @@ export default function SlotCell({
       title={title}
       onClick={() => slot && !disabled && onSelect?.(slot)}
     >
-      <span className="slot-cell__row">{rowNumber}</span>
+      <span className="slot-cell__row">{resolvedRowNumber}</span>
       {glyph && (
         <span className="slot-cell__glyph" aria-hidden="true">
           {glyph}

@@ -14,7 +14,7 @@ import {
 } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
 import { transport } from "../../transport.ts";
 
-interface BarcodeScanDialogProps {
+export interface BarcodeScanDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (drug: Drug, barcode: string) => void;

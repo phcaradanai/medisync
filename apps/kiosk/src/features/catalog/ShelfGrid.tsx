@@ -9,7 +9,7 @@ import SlotCell, {
   type SlotCellData,
 } from "./SlotCell";
 
-interface ShelfGridProps {
+export interface ShelfGridProps {
   slots: readonly SlotCellData[];
   selectedSlotId?: string | null;
   initialShelf?: number;
