@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-17T00:00:00Z",
+  "title": "Design System: MediSync",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Action Blue",
+        "canonical": "#1e66f5",
+        "tonalRamp": ["oklch(20% 0.16 262)", "oklch(30% 0.19 262)", "oklch(42% 0.21 262)", "oklch(55% 0.21 262)", "oklch(65% 0.17 262)", "oklch(76% 0.12 262)", "oklch(87% 0.06 262)", "oklch(95% 0.02 262)"]
+      },
+      "neutral-deep": {
+        "role": "neutral",
+        "displayName": "Deep Navy",
+        "canonical": "#1e1e2e",
+        "tonalRamp": ["oklch(15% 0.03 285)", "oklch(24% 0.03 285)", "oklch(35% 0.03 285)", "oklch(48% 0.03 285)", "oklch(60% 0.03 285)", "oklch(74% 0.02 285)", "oklch(87% 0.01 285)", "oklch(95% 0.005 285)"]
+      },
+      "semantic-success": {
+        "role": "semantic",
+        "displayName": "Pastel Green (paired ink #0d6b0d)",
+        "canonical": "#a6e3a1",
+        "tonalRamp": ["oklch(20% 0.08 145)", "oklch(32% 0.10 145)", "oklch(45% 0.11 145)", "oklch(58% 0.11 145)", "oklch(70% 0.11 145)", "oklch(80% 0.10 145)", "oklch(87% 0.10 145)", "oklch(95% 0.04 145)"]
+      },
+      "semantic-warning": {
+        "role": "semantic",
+        "displayName": "Pastel Amber (paired ink #6b5500)",
+        "canonical": "#f9e2af",
+        "tonalRamp": ["oklch(22% 0.06 90)", "oklch(34% 0.08 90)", "oklch(47% 0.09 90)", "oklch(60% 0.09 90)", "oklch(72% 0.08 90)", "oklch(82% 0.08 90)", "oklch(91% 0.07 90)", "oklch(96% 0.03 90)"]
+      },
+      "semantic-error": {
+        "role": "semantic",
+        "displayName": "Pastel Rose (paired ink #7a001e)",
+        "canonical": "#f38ba8",
+        "tonalRamp": ["oklch(22% 0.10 5)", "oklch(34% 0.12 5)", "oklch(46% 0.13 5)", "oklch(58% 0.13 5)", "oklch(68% 0.13 5)", "oklch(75% 0.13 5)", "oklch(86% 0.07 5)", "oklch(95% 0.03 5)"]
+      },
+      "semantic-info": {
+        "role": "semantic",
+        "displayName": "Pastel Blue (paired ink #003399)",
+        "canonical": "#89b4fa",
+        "tonalRamp": ["oklch(20% 0.09 260)", "oklch(32% 0.10 260)", "oklch(45% 0.11 260)", "oklch(57% 0.11 260)", "oklch(67% 0.11 260)", "oklch(76% 0.10 260)", "oklch(87% 0.06 260)", "oklch(95% 0.02 260)"]
+      },
+      "semantic-progress": {
+        "role": "semantic",
+        "displayName": "Warm Peach — refill-mode signal (paired ink #7a3d00)",
+        "canonical": "#fab387",
+        "tonalRamp": ["oklch(22% 0.08 55)", "oklch(34% 0.10 55)", "oklch(47% 0.11 55)", "oklch(59% 0.11 55)", "oklch(70% 0.11 55)", "oklch(82% 0.10 55)", "oklch(90% 0.06 55)", "oklch(96% 0.03 55)"]
+      },
+      "semantic-neutral": {
+        "role": "semantic",
+        "displayName": "Pastel Slate (paired ink #2d313b)",
+        "canonical": "#9399b2",
+        "tonalRamp": ["oklch(18% 0.03 275)", "oklch(30% 0.03 275)", "oklch(43% 0.03 275)", "oklch(55% 0.03 275)", "oklch(68% 0.03 275)", "oklch(79% 0.02 275)", "oklch(88% 0.01 275)", "oklch(95% 0.005 275)"]
+      },
+      "danger-deep": {
+        "role": "semantic",
+        "displayName": "Crimson — kiosk destructive fill",
+        "canonical": "#c41e3a",
+        "tonalRamp": ["oklch(20% 0.13 15)", "oklch(30% 0.16 15)", "oklch(41% 0.18 15)", "oklch(51% 0.19 15)", "oklch(62% 0.16 15)", "oklch(74% 0.11 15)", "oklch(86% 0.06 15)", "oklch(95% 0.02 15)"]
+      }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Admin Body", "purpose": "Tables, forms, prose at desk distance." },
+      "heading": { "displayName": "Admin Heading", "purpose": "Page titles; h2 1.25rem, h3 1rem." },
+      "label": { "displayName": "Label", "purpose": "Uppercase form labels, table headers, badges, nav section labels." },
+      "stat": { "displayName": "Admin Stat", "purpose": "Dashboard numbers." },
+      "mono": { "displayName": "Mono", "purpose": "Machine identifiers only: HN, drug codes, slot codes (S2-R14), barcodes." },
+      "kiosk-title": { "displayName": "Kiosk Title", "purpose": "Screen purpose, one per screen, readable at arm's length." },
+      "kiosk-body": { "displayName": "Kiosk Body", "purpose": "Instructions, drug names, patient identifiers. The 1.25rem kiosk floor." },
+      "kiosk-action": { "displayName": "Kiosk Action", "purpose": "Button labels on ≥64px touch actions." },
+      "kiosk-stat": { "displayName": "Kiosk Stat", "purpose": "Stock counts and quantities readable while standing." }
+    },
+    "shadows": [
+      { "name": "card-rest", "value": "0 1px 3px rgba(0,0,0,0.1)", "purpose": "Stat cards, table wrappers, hover lift on kiosk touch cards." },
+      { "name": "panel-float", "value": "0 8px 24px rgba(0,0,0,0.08)", "purpose": "Login panels, kiosk step panel, modals." },
+      { "name": "popover", "value": "0 10px 24px rgba(0,0,0,0.18)", "purpose": "Tooltips/popovers over dark or busy surfaces (SlotCell detail)." }
+    ],
+    "motion": [
+      { "name": "transition-admin", "value": "150ms ease", "purpose": "Admin state transitions: opacity, background, border-color." },
+      { "name": "transition-kiosk", "value": "200ms ease", "purpose": "Kiosk state transitions; larger surfaces read slower." },
+      { "name": "progress-fill", "value": "width 300ms ease", "purpose": "Refill progress bar fill." },
+      { "name": "spinner", "value": "spin 800ms linear infinite", "purpose": "The only looping animation; killed by prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "kiosk-panel-max", "value": "720px" },
+      { "name": "admin-shelfgrid-scroll", "value": "1100px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Admin Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Deep Navy quiet rectangle; the admin save/submit action.",
+      "html": "<button class=\"ds-btn-primary\">Save drug</button>",
+      "css": ".ds-btn-primary { background: #1e1e2e; color: #ffffff; font: 500 0.875rem/1.2 system-ui, 'Noto Sans Thai', sans-serif; padding: 0.7rem 0.9rem; border: none; border-radius: 6px; cursor: pointer; transition: opacity 150ms ease; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid #1e66f5; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Admin Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Subtle Gray bordered companion to the primary.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { background: #f0f0f0; color: #374151; font: 500 0.875rem/1.2 system-ui, 'Noto Sans Thai', sans-serif; padding: 0.7rem 0.9rem; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-secondary:hover { background: #e5e7eb; } .ds-btn-secondary:focus-visible { outline: 2px solid #1e66f5; outline-offset: 2px; }"
+    },
+    {
+      "name": "Kiosk Primary Action",
+      "kind": "button",
+      "refersTo": "kiosk-action-button",
+      "description": "≥64px gloved-finger primary; one per kiosk screen.",
+      "html": "<button class=\"ds-kiosk-btn-primary\">ยืนยันการเบิกยา</button>",
+      "css": ".ds-kiosk-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 64px; min-width: 200px; background: #1e1e2e; color: #ffffff; font: 700 1.5rem/1.2 system-ui, 'Noto Sans Thai', sans-serif; padding: 1.25rem 2rem; border: none; border-radius: 8px; cursor: pointer; touch-action: manipulation; user-select: none; transition: opacity 200ms ease; } .ds-kiosk-btn-primary:active { opacity: 0.7; } .ds-kiosk-btn-primary:focus-visible { outline: 3px solid #1e66f5; outline-offset: 2px; } .ds-kiosk-btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }"
+    },
+    {
+      "name": "Kiosk Outline Action",
+      "kind": "button",
+      "refersTo": "kiosk-action-button-outline",
+      "description": "Secondary/back kiosk action; same 64px height as primary.",
+      "html": "<button class=\"ds-kiosk-btn-outline\">ย้อนกลับ</button>",
+      "css": ".ds-kiosk-btn-outline { display: inline-flex; align-items: center; justify-content: center; min-height: 64px; min-width: 200px; background: transparent; color: #1e1e2e; font: 700 1.5rem/1.2 system-ui, 'Noto Sans Thai', sans-serif; padding: 1.25rem 2rem; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; touch-action: manipulation; transition: opacity 200ms ease; } .ds-kiosk-btn-outline:active { opacity: 0.7; } .ds-kiosk-btn-outline:focus-visible { outline: 3px solid #1e66f5; outline-offset: 2px; }"
+    },
+    {
+      "name": "Admin Input",
+      "kind": "input",
+      "refersTo": "admin-input",
+      "description": "Standard admin form field with uppercase label and blue focus glow.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field-label\" for=\"ds-drug-code\">Drug code</label><input class=\"ds-input-admin\" id=\"ds-drug-code\" placeholder=\"PARA-500\" /></div>",
+      "css": ".ds-field { display: flex; flex-direction: column; } .ds-field-label { font: 600 0.75rem/1.4 system-ui, 'Noto Sans Thai', sans-serif; letter-spacing: 0.05em; text-transform: uppercase; color: #6b7280; margin-bottom: 0.35rem; } .ds-input-admin { font: 400 0.875rem/1.5 system-ui, 'Noto Sans Thai', sans-serif; padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 6px; background: #ffffff; color: #374151; outline: none; transition: border-color 150ms ease; } .ds-input-admin:focus { border-color: #1e66f5; box-shadow: 0 0 0 2px rgba(30,102,245,0.15); } .ds-input-admin::placeholder { color: #6b7280; }"
+    },
+    {
+      "name": "Status Badge (kiosk, success)",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Solid semantic pastel + paired AA ink + glyph; six-color family.",
+      "html": "<span class=\"ds-status-badge ds-status-badge--success\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" aria-hidden=\"true\"><path d=\"M3 8.5 6.5 12 13 4.5\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>จ่ายยาแล้ว</span>",
+      "css": ".ds-status-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 4px 12px; border-radius: 4px; font: 600 0.875rem/1.4 system-ui, 'Noto Sans Thai', sans-serif; } .ds-status-badge--success { background: #a6e3a1; color: #0d6b0d; }"
+    },
+    {
+      "name": "Admin Nav Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Sidebar link on Deep Navy; active gets Nav Active ink + 3px inset marker.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-link\" href=\"#\">Drugs</a><a class=\"ds-nav-link ds-nav-link--active\" href=\"#\" aria-current=\"page\">Inventory</a><a class=\"ds-nav-link\" href=\"#\">Users</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; width: 200px; background: #1e1e2e; padding: 1rem 0; border-radius: 8px; } .ds-nav-link { display: block; padding: 0.5rem 1rem; color: #cdd6f4; font: 400 0.875rem/1.5 system-ui, 'Noto Sans Thai', sans-serif; text-decoration: none; border-left: 3px solid transparent; transition: background-color 120ms ease, border-color 120ms ease; } .ds-nav-link:hover { background: #313244; color: #ffffff; } .ds-nav-link:focus-visible { outline: 2px solid #89b4fa; outline-offset: -2px; } .ds-nav-link--active { color: #89b4fa; border-left-color: #89b4fa; background: rgba(137,180,250,0.08); }"
+    },
+    {
+      "name": "Prescription Touch Card",
+      "kind": "card",
+      "refersTo": "rx-card",
+      "description": "80px touch-list row for prescriptions and refill slots; blue border on hover/focus.",
+      "html": "<div class=\"ds-rx-card\" tabindex=\"0\" role=\"button\"><div class=\"ds-rx-card-info\"><div class=\"ds-rx-card-patient\">สมชาย ใจดี</div><div class=\"ds-rx-card-hn\">HN 65-004821</div><div class=\"ds-rx-card-drugs\">Paracetamol 500mg × 20</div></div><span class=\"ds-status-badge-info\">พร้อมจ่าย</span></div>",
+      "css": ".ds-rx-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1rem; min-height: 80px; padding: 1.25rem; border: 1px solid #e5e7eb; border-radius: 8px; background: #ffffff; cursor: pointer; touch-action: manipulation; transition: border-color 200ms, box-shadow 200ms; } .ds-rx-card:hover { border-color: #1e66f5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); } .ds-rx-card:focus-visible { outline: 3px solid #1e66f5; outline-offset: 1px; border-color: #1e66f5; } .ds-rx-card-info { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; } .ds-rx-card-patient { font: 700 1.25rem/1.3 system-ui, 'Noto Sans Thai', sans-serif; color: #1e1e2e; } .ds-rx-card-hn { font: 400 0.875rem/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #6b7280; } .ds-rx-card-drugs { font: 400 1rem/1.4 system-ui, 'Noto Sans Thai', sans-serif; color: #374151; } .ds-status-badge-info { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 4px; font: 600 0.875rem/1.4 system-ui, 'Noto Sans Thai', sans-serif; background: #89b4fa; color: #003399; }"
+    },
+    {
+      "name": "ExpiryBadge (specified)",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Specified, not yet implemented. Status-badge variant for expiry alerts; date in mono.",
+      "html": "<span class=\"ds-expiry-badge ds-expiry-badge--warning\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"6.5\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M8 4.5V8l2.5 1.5\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg>ใกล้หมดอายุ <span class=\"ds-expiry-date\">2026-08-02</span></span>",
+      "css": ".ds-expiry-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 4px 12px; border-radius: 4px; font: 600 0.875rem/1.4 system-ui, 'Noto Sans Thai', sans-serif; } .ds-expiry-badge--warning { background: #f9e2af; color: #6b5500; } .ds-expiry-badge--expired { background: #f38ba8; color: #7a001e; } .ds-expiry-date { font: 600 0.8rem/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }"
+    },
+    {
+      "name": "SlotCell (specified)",
+      "kind": "custom",
+      "refersTo": "status-badge",
+      "description": "Specified, not yet implemented. One cell of the 5×22 ShelfGrid; state = color + glyph, never color alone.",
+      "html": "<div class=\"ds-slot-row\"><div class=\"ds-slot-cell ds-slot-cell--empty\">01</div><div class=\"ds-slot-cell\">02</div><div class=\"ds-slot-cell ds-slot-cell--low\">03<svg width=\"10\" height=\"10\" viewBox=\"0 0 16 16\" fill=\"none\" aria-hidden=\"true\"><path d=\"M8 2 15 14H1L8 2Z\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/></svg></div><div class=\"ds-slot-cell ds-slot-cell--expired\">04<svg width=\"10\" height=\"10\" viewBox=\"0 0 16 16\" fill=\"none\" aria-hidden=\"true\"><path d=\"M3 3l10 10M13 3 3 13\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/></svg></div><div class=\"ds-slot-cell ds-slot-cell--selected\">05</div></div>",
+      "css": ".ds-slot-row { display: grid; grid-template-columns: repeat(5, 48px); gap: 4px; } .ds-slot-cell { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-height: 48px; border: 1px solid #e5e7eb; border-radius: 4px; background: #ffffff; color: #374151; font: 600 0.8rem/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; cursor: pointer; transition: border-color 150ms ease; } .ds-slot-cell:hover { border-color: #1e66f5; } .ds-slot-cell:focus-visible { outline: 2px solid #1e66f5; outline-offset: 1px; } .ds-slot-cell--empty { background: #f0f0f0; color: #6b7280; } .ds-slot-cell--low { background: #f9e2af; color: #6b5500; } .ds-slot-cell--expired { background: #f38ba8; color: #7a001e; cursor: not-allowed; } .ds-slot-cell--selected { border: 2px solid #1e66f5; background: rgba(30,102,245,0.08); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Lab Notebook, at arm's length.",
+    "overview": "MediSync shares PrintOps' visual language — clinical, calm, precise, light-first, flat-by-default — because the same hospital staff use both. One token set, two viewing distances: the admin app (desk distance, English-first) with data tables, quiet forms, one accent blue, and a dark left nav; and the kiosk app (arm's length, touch, Thai-first) with the same tokens scaled up — body type from 1.25rem, primary actions ≥64px, one primary action per screen. Motion is state-change only (150ms admin, 200ms kiosk) and layout is structural, not fluid: a fixed 200px sidebar for admin, a single centered 720px panel for kiosk.",
+    "keyCharacteristics": [
+      "One token set, two scales: body/heading/label for admin, kiosk-* for the cabinet screen",
+      "Light-first for fluorescent-lit wards; WCAG 2.1 AA minimum",
+      "Six-color semantic status palette with paired AA text inks (text-on-*)",
+      "Flat at rest; three shadows total, only on floating surfaces",
+      "Motion limited to state-change fades ≤200ms; prefers-reduced-motion respected",
+      "Thai-first kiosk text: 'Noto Sans Thai' in the stack for consistent Thai rendering; admin bilingual where useful",
+      "Monospace reserved for machine identifiers: HN numbers, drug codes, slot codes, barcodes"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Action Blue is the only non-semantic accent, on ≤5% of any screen. If blue is decorating rather than indicating focus/selection/action, remove it.", "section": "colors" },
+      { "name": "The Six-Color Status Rule", "body": "Every domain state maps to one of the six semantic pastels. No seventh status color, ever. Status is always color + icon/shape + text — never a bare colored dot.", "section": "colors" },
+      { "name": "The Paired Ink Rule", "body": "Text on a semantic pastel always uses its text-on-* partner. Gray text on a pastel is prohibited — it fails contrast and looks washed out.", "section": "colors" },
+      { "name": "The Single Family Rule", "body": "One family for everything except code/IDs. No web-font display faces; Thai falls back through the system stack without layout shift.", "section": "typography" },
+      { "name": "The Arm's-Length Floor Rule", "body": "Kiosk body text never drops below 1.25rem to fit more content. Cut content instead.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Nothing else casts a shadow. If a new component seems to need a fourth shadow, it doesn't — pick the closest of the three or use a border.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep kiosk touch targets ≥48px (primary actions ≥64px) and one primary action per screen.",
+      "Do show hardware-confirmed state, with explicit acknowledgment on FAILED — never auto-dismiss or auto-advance past a failed or ambiguous hardware result.",
+      "Do write kiosk copy in Thai first, short imperative sentences; admin copy in English.",
+      "Do use Warm Peach (semantic-progress) as the refill-mode signal — banner + mode button + label + icon, never color alone.",
+      "Do pair every semantic pastel background with its text-on-* ink (The Paired Ink Rule).",
+      "Do render every machine identifier — HN, drug code, slot code (S2-R14), barcode — in the mono stack.",
+      "Do treat expiry as a first-class alert: expired slots block dispensing and render in Error pastel with a glyph on both surfaces.",
+      "Do require a deliberate confirm tap after every barcode/QR scan; a scan is input, never authorization to move medication."
+    ],
+    "donts": [
+      "Don't use flashy SaaS gradients — no purple-to-blue heroes, no landing-page animation patterns.",
+      "Don't build terminal-dense ops walls — nurses and pharmacists are not SREs; no Grafana sprawl.",
+      "Don't default to generic Material Design — no default MUI look; purpose-built for medication workflows.",
+      "Don't ship dark-mode-by-default — hospital environments are brightly lit; light mode primary.",
+      "Don't add consumer-kiosk playfulness — no mascots, oversized illustrations, or celebratory confetti; a calm success state is the brand.",
+      "Don't put more than one flow decision on a kiosk screen.",
+      "Don't shrink kiosk body type below 1.25rem or touch targets below 48px to fit content — cut content or paginate (ShelfGrid shows one shelf per kiosk screen, never all 110 cells).",
+      "Don't invent a seventh status color or a fourth shadow. The vocabulary is closed.",
+      "Don't use gray/muted ink on semantic pastel backgrounds — always the paired text-on-* ink.",
+      "Don't hardcode palette values in component CSS (the #fab387 refill drift is the cautionary tale) — reference the custom properties."
+    ]
+  }
+}
