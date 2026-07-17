@@ -30,7 +30,7 @@ const AuthContext = createContext<AuthState | null>(null);
 
 function loadSession(): Session | null {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const s: Session = JSON.parse(raw);
     if (new Date(s.expiresAt) <= new Date()) {
@@ -44,13 +44,13 @@ function loadSession(): Session | null {
 }
 
 function saveSession(session: Session) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session, (_key, value) =>
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session, (_key, value) =>
     typeof value === "bigint" ? String(value) : value
   ));
 }
 
 function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
 }
 
 /** Strip createdAt (Timestamp with bigint) before JSON.stringify or setState. */

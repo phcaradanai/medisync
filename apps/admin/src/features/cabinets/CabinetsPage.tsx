@@ -6,12 +6,17 @@ import {
   UpdateCabinetRequestSchema,
   type Cabinet,
 } from "@medisync/proto/medisync/cabinet/v1/cabinet_pb";
-import { cabinetClient } from "../../api/client";
+import {
+  ListProjectsRequestSchema,
+} from "@medisync/proto/medisync/identity/v1/identity_pb";
+import type { Project } from "@medisync/proto/medisync/identity/v1/identity_pb";
+import { cabinetClient, projectClient } from "../../api/client";
 
 // ── Component ──────────────────────────────────────────────────────
 
 export function CabinetsPage() {
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,6 +25,8 @@ export function CabinetsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -38,9 +45,19 @@ export function CabinetsPage() {
     }
   }, []);
 
+  const fetchProjects = useCallback(async () => {
+    try {
+      const res = await projectClient.listProjects(create(ListProjectsRequestSchema, {}));
+      setProjects(res.projects.filter(p => p.active));
+    } catch (_) {
+      // non-critical
+    }
+  }, []);
+
   useEffect(() => {
     fetchCabinets();
-  }, [fetchCabinets]);
+    fetchProjects();
+  }, [fetchCabinets, fetchProjects]);
 
   // ── CRUD ───────────────────────────────────────────────────────
 
@@ -48,6 +65,8 @@ export function CabinetsPage() {
     setEditId(null);
     setCode("");
     setName("");
+    setDisplayName("");
+    setProjectId(projects[0]?.id ?? "");
     setFormError(null);
     setShowModal(true);
   }
@@ -56,6 +75,8 @@ export function CabinetsPage() {
     setEditId(c.id);
     setCode(c.code);
     setName(c.name);
+    setDisplayName(c.displayName);
+    setProjectId(c.projectId);
     setFormError(null);
     setShowModal(true);
   }
@@ -65,6 +86,8 @@ export function CabinetsPage() {
     setEditId(null);
     setCode("");
     setName("");
+    setDisplayName("");
+    setProjectId("");
     setFormError(null);
   }
 
@@ -80,6 +103,10 @@ export function CabinetsPage() {
       setFormError("Name is required");
       return;
     }
+    if (!projectId) {
+      setFormError("Project is required");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -92,6 +119,8 @@ export function CabinetsPage() {
         await cabinetClient.createCabinet(create(CreateCabinetRequestSchema, {
           code: code.trim(),
           name: name.trim(),
+          displayName: displayName.trim() || name.trim(),
+          projectId: projectId,
         }));
       }
       closeModal();
@@ -207,6 +236,30 @@ export function CabinetsPage() {
                 placeholder="e.g. ตู้จ่ายยาชั้น 1"
                 required
               />
+            </div>
+
+            <div className="form-group">
+              <label>Display Name (Thai)</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. ตู้จ่ายยาหลัก ชั้น 1"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Project *</label>
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                required
+              >
+                <option value="">-- Select Project --</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-actions">

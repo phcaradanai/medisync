@@ -8,29 +8,37 @@ import {
   ListDrugsRequestSchema,
 } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
 import type { Drug } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
-import { catalogClient } from "../../api/client";
+import {
+  ListProjectsRequestSchema,
+} from "@medisync/proto/medisync/identity/v1/identity_pb";
+import type { Project } from "@medisync/proto/medisync/identity/v1/identity_pb";
+import { catalogClient, projectClient } from "../../api/client";
 
 // ── Types ──────────────────────────────────────────────────────────
 
 interface DrugFormData {
   code: string;
   name: string;
+  displayName: string;
   genericName: string;
   form: string;
   strength: string;
   unit: string;
   stickerNote: string;
+  projectId: string;
   active: boolean;
 }
 
 const emptyForm: DrugFormData = {
   code: "",
   name: "",
+  displayName: "",
   genericName: "",
   form: "",
   strength: "",
   unit: "",
   stickerNote: "",
+  projectId: "",
   active: true,
 };
 
@@ -38,6 +46,7 @@ const emptyForm: DrugFormData = {
 
 export function DrugsPage() {
   const [drugs, setDrugs] = useState<Drug[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -77,7 +86,19 @@ export function DrugsPage() {
 
   useEffect(() => {
     fetchDrugs();
+    fetchProjects();
   }, [fetchDrugs]);
+
+  // ── Fetch projects ─────────────────────────────────────────────
+
+  const fetchProjects = useCallback(async () => {
+    try {
+      const res = await projectClient.listProjects(create(ListProjectsRequestSchema, {}));
+      setProjects(res.projects.filter(p => p.active));
+    } catch (_) {
+      // projects list is non-critical for drug page
+    }
+  }, []);
 
   // ── Search ─────────────────────────────────────────────────────
 
@@ -90,7 +111,7 @@ export function DrugsPage() {
 
   function openCreate() {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, projectId: projects[0]?.id ?? "" });
     setFormError(null);
     setShowModal(true);
   }
@@ -100,11 +121,13 @@ export function DrugsPage() {
     setForm({
       code: drug.code,
       name: drug.name,
+      displayName: drug.displayName,
       genericName: drug.genericName,
       form: drug.form,
       strength: drug.strength,
       unit: drug.unit,
       stickerNote: drug.stickerNote,
+      projectId: drug.projectId,
       active: drug.active,
     });
     setFormError(null);
@@ -152,11 +175,13 @@ export function DrugsPage() {
         const req = create(CreateDrugRequestSchema, {
           code: form.code.trim(),
           name: form.name.trim(),
+          displayName: form.displayName.trim() || form.name.trim(),
           genericName: form.genericName.trim(),
           form: form.form.trim(),
           strength: form.strength.trim(),
           unit: form.unit.trim(),
           stickerNote: form.stickerNote.trim(),
+          projectId: form.projectId.trim() || undefined,
         });
         await catalogClient.createDrug(req);
       }
@@ -367,6 +392,27 @@ export function DrugsPage() {
               setForm((f) => ({ ...f, stickerNote: v })),
               { placeholder: "e.g. Take with food. Avoid alcohol." },
             )}
+
+            {field("Display Name (Thai)", form.displayName, (v) =>
+              setForm((f) => ({ ...f, displayName: v })),
+              { placeholder: "e.g. พาราเซตามอล 500 มก." },
+            )}
+
+            <div className="form-group">
+              <label>Project *</label>
+              <select
+                value={form.projectId}
+                onChange={(e) => setForm((f) => ({ ...f, projectId: e.target.value }))}
+                required
+              >
+                <option value="">-- Select Project --</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="form-actions">
               <button
