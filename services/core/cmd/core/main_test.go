@@ -35,7 +35,7 @@ func setupAuthenticatedServer(t *testing.T, store *fakeUserStore, tm *fakeTokenM
 	t.Helper()
 
 	mux := http.NewServeMux()
-	path, handler := newIdentityHandler(store, tm, testConfig, options...)
+	path, handler := newIdentityHandler(store, tm, testConfig, nil, options...)
 	mux.Handle(path, handler)
 
 	ts := httptest.NewServer(mux)
@@ -310,7 +310,7 @@ func TestRPCTracingMiddleware(t *testing.T) {
 // ── Mux path registration test ─────────────────────────────────────────
 
 func TestMuxPathRegistration(t *testing.T) {
-	path, handler := newIdentityHandler(&fakeUserStore{}, &fakeTokenManager{}, testConfig)
+	path, handler := newIdentityHandler(&fakeUserStore{}, &fakeTokenManager{}, testConfig, nil)
 
 	// Verify the handler is not nil.
 	if handler == nil {

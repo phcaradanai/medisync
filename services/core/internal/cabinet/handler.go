@@ -9,7 +9,9 @@ import (
 	"connectrpc.com/connect"
 	cabinetv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1"
 	cabinetv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1/cabinetv1connect"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -33,11 +35,12 @@ type TokenClaims struct {
 type Server struct {
 	store  *Store
 	parser TokenParser
+	audit  *audit.Writer
 }
 
 // NewServer creates a CabinetService handler.
-func NewServer(store *Store, parser TokenParser) *Server {
-	return &Server{store: store, parser: parser}
+func NewServer(store *Store, parser TokenParser, aw *audit.Writer) *Server {
+	return &Server{store: store, parser: parser, audit: aw}
 }
 
 // ListCabinets returns cabinets scoped to the caller's project.
@@ -114,6 +117,14 @@ func (s *Server) CreateCabinet(
 		}
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.Subject,
+		Action:    "create_cabinet",
+		Entity:    "cabinet",
+		EntityID:  c.ID,
+		ProjectID: claims.ProjectID,
+		Detail:    map[string]string{"actor_type": claims.Role},
+	})
 
 	return connect.NewResponse(&cabinetv1.CreateCabinetResponse{Cabinet: toProto(c)}), nil
 }
@@ -123,8 +134,12 @@ func (s *Server) UpdateCabinet(
 	ctx context.Context,
 	req *connect.Request[cabinetv1.UpdateCabinetRequest],
 ) (*connect.Response[cabinetv1.UpdateCabinetResponse], error) {
-	if err := s.requireAdmin(req.Header()); err != nil {
-		return nil, err
+	claims, authErr := s.authenticate(req.Header())
+	if authErr != nil {
+		return nil, authErr
+	}
+	if claims.Role != "ADMIN" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
 	}
 
 	msg := req.Msg
@@ -153,8 +168,26 @@ func (s *Server) UpdateCabinet(
 	if updated == nil {
 		return nil, connect.NewError(connect.CodeNotFound, ErrNotFound)
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.Subject,
+		Action:    "update_cabinet",
+		Entity:    "cabinet",
+		EntityID:  updated.ID,
+		ProjectID: claims.ProjectID,
+		Detail:    map[string]string{"actor_type": claims.Role},
+	})
 
 	return connect.NewResponse(&cabinetv1.UpdateCabinetResponse{Cabinet: toProto(updated)}), nil
+}
+
+func (s *Server) writeAudit(ctx context.Context, entry audit.Entry) {
+	if s.audit == nil {
+		return
+	}
+	if entry.TraceID == "" {
+		entry.TraceID = uuid.NewString()
+	}
+	_ = s.audit.Write(ctx, entry)
 }
 
 // requireAdmin validates the admin bearer token.

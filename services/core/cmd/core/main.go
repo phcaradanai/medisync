@@ -152,21 +152,21 @@ func run() (runErr error) {
 	rpcOptions := []connect.HandlerOption{
 		connect.WithInterceptors(tracing.NewInterceptor(log)),
 	}
-	path, handler := newIdentityHandler(identityStore, jwtMgr, cfg, rpcOptions...)
+	path, handler := newIdentityHandler(identityStore, jwtMgr, cfg, auditw, rpcOptions...)
 	mux.Handle(path, handler)
 
 	// Project management (SYSADMIN-only).
-	projectPath, projectHandler := newProjectHandler(identityStore, rpcOptions...)
+	projectPath, projectHandler := newProjectHandler(identityStore, auditw, rpcOptions...)
 	mux.Handle(projectPath, projectHandler)
 
 	// Kiosk provisioning and kiosk-token authentication.
 	kioskStore := identity.NewKioskStore(pool)
-	kioskPath, kioskHandler := newKioskHandler(kioskStore, jwtMgr, cfg, rpcOptions...)
+	kioskPath, kioskHandler := newKioskHandler(kioskStore, jwtMgr, cfg, auditw, rpcOptions...)
 	mux.Handle(kioskPath, kioskHandler)
 
 	// ── Cabinet ──────────────────────────────────────────────────────
 	cabinetStore := cabinet.NewStore(pool)
-	cabinetServer := cabinet.NewServer(cabinetStore, newCabinetTokenParser(jwtMgr))
+	cabinetServer := cabinet.NewServer(cabinetStore, newCabinetTokenParser(jwtMgr), auditw)
 	cabinetPath, cabinetHandler := cabinetv1connect.NewCabinetServiceHandler(cabinetServer, rpcOptions...)
 	mux.Handle(cabinetPath, cabinetHandler)
 
@@ -327,7 +327,7 @@ func bootstrapAdmin(ctx context.Context, store adminSeeder, password string) (bo
 	return store.SeedAdmin(ctx, passwordHash)
 }
 
-func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, cfg config.Config, options ...connect.HandlerOption) (string, http.Handler) {
+func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, cfg config.Config, auditw *audit.Writer, options ...connect.HandlerOption) (string, http.Handler) {
 	authService := identity.NewAuthService(store, tokens)
 
 	// Create rate limiters for login endpoints.
@@ -340,23 +340,23 @@ func newIdentityHandler(store identity.UserStore, tokens identity.TokenManager, 
 		identityStore = s
 	}
 
-	server := identity.NewIdentityServerWithRateLimit(authService, identityStore, idLimiter, ipLimiter)
+	server := identity.NewIdentityServerWithRateLimit(authService, identityStore, idLimiter, ipLimiter, auditw)
 	return identityv1connect.NewIdentityServiceHandler(server, options...)
 }
 
-func newProjectHandler(store *identity.Store, options ...connect.HandlerOption) (string, http.Handler) {
-	server := identity.NewProjectServer(store)
+func newProjectHandler(store *identity.Store, auditw *audit.Writer, options ...connect.HandlerOption) (string, http.Handler) {
+	server := identity.NewProjectServer(store, auditw)
 	return identityv1connect.NewProjectServiceHandler(server, options...)
 }
 
 // newDispensingTokenParser adapts identity.JWTManager to dispensing.TokenParser.
 // The dispensing handler defines its own TokenClaims type to avoid a circular
 // dependency on package identity.
-func newKioskHandler(store identity.KioskStore, jwtMgr *identity.JWTManager, cfg config.Config, options ...connect.HandlerOption) (string, http.Handler) {
+func newKioskHandler(store identity.KioskStore, jwtMgr *identity.JWTManager, cfg config.Config, auditw *audit.Writer, options ...connect.HandlerOption) (string, http.Handler) {
 	window := time.Duration(cfg.LoginRateLimitWindowSeconds) * time.Second
 	idLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
 	ipLimiter := ratelimit.New(cfg.LoginRateLimitMax, window)
-	server := identity.NewKioskServerWithRateLimit(store, jwtMgr, jwtMgr, idLimiter, ipLimiter)
+	server := identity.NewKioskServerWithRateLimit(store, jwtMgr, jwtMgr, idLimiter, ipLimiter, auditw)
 	return kioskv1connect.NewKioskServiceHandler(server, options...)
 }
 

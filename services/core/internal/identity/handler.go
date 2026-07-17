@@ -12,7 +12,9 @@ import (
 	"connectrpc.com/connect"
 	identityv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1"
 	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -31,14 +33,15 @@ type IdentityServer struct {
 	store     *Store
 	idLimiter LoginRateLimiter
 	ipLimiter LoginRateLimiter
+	audit     *audit.Writer
 }
 
 func NewIdentityServer(auth *AuthService, store *Store) *IdentityServer {
 	return &IdentityServer{auth: auth, store: store}
 }
 
-func NewIdentityServerWithRateLimit(auth *AuthService, store *Store, idLimiter, ipLimiter LoginRateLimiter) *IdentityServer {
-	return &IdentityServer{auth: auth, store: store, idLimiter: idLimiter, ipLimiter: ipLimiter}
+func NewIdentityServerWithRateLimit(auth *AuthService, store *Store, idLimiter, ipLimiter LoginRateLimiter, aw *audit.Writer) *IdentityServer {
+	return &IdentityServer{auth: auth, store: store, idLimiter: idLimiter, ipLimiter: ipLimiter, audit: aw}
 }
 
 // ── Login / WhoAmI ──────────────────────────────────────────────
@@ -259,6 +262,14 @@ func (s *IdentityServer) CreateUser(ctx context.Context, req *connect.Request[id
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create user: %w", err))
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.Subject,
+		Action:    "create_user",
+		Entity:    "identity",
+		EntityID:  u.ID,
+		ProjectID: claims.ProjectID,
+		Detail:    map[string]string{"actor_type": claims.Role},
+	})
 	return connect.NewResponse(&identityv1.CreateUserResponse{User: toProtoUser(u)}), nil
 }
 
@@ -299,11 +310,20 @@ func (s *IdentityServer) UpdateUser(ctx context.Context, req *connect.Request[id
 	if u == nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("user not found"))
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.Subject,
+		Action:    "update_user",
+		Entity:    "identity",
+		EntityID:  u.ID,
+		ProjectID: claims.ProjectID,
+		Detail:    map[string]string{"actor_type": claims.Role},
+	})
 	return connect.NewResponse(&identityv1.UpdateUserResponse{User: toProtoUser(u)}), nil
 }
 
 func (s *IdentityServer) SetCardToken(ctx context.Context, req *connect.Request[identityv1.SetCardTokenRequest]) (*connect.Response[identityv1.SetCardTokenResponse], error) {
-	if _, err := s.requireProjectRole(req.Header()); err != nil {
+	claims, err := s.requireProjectRole(req.Header())
+	if err != nil {
 		return nil, err
 	}
 	msg := req.Msg
@@ -326,7 +346,25 @@ func (s *IdentityServer) SetCardToken(ctx context.Context, req *connect.Request[
 	if u == nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("user not found"))
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.Subject,
+		Action:    "set_card_token",
+		Entity:    "identity",
+		EntityID:  u.ID,
+		ProjectID: claims.ProjectID,
+		Detail:    map[string]string{"actor_type": claims.Role},
+	})
 	return connect.NewResponse(&identityv1.SetCardTokenResponse{User: toProtoUser(u)}), nil
+}
+
+func (s *IdentityServer) writeAudit(ctx context.Context, entry audit.Entry) {
+	if s.audit == nil {
+		return
+	}
+	if entry.TraceID == "" {
+		entry.TraceID = uuid.NewString()
+	}
+	_ = s.audit.Write(ctx, entry)
 }
 
 // ── Authorization ───────────────────────────────────────────────
@@ -376,10 +414,11 @@ var _ identityv1connect.ProjectServiceHandler = (*ProjectServer)(nil)
 // ProjectServer handles ProjectService RPCs. SYSADMIN-only.
 type ProjectServer struct {
 	store *Store
+	audit *audit.Writer
 }
 
-func NewProjectServer(store *Store) *ProjectServer {
-	return &ProjectServer{store: store}
+func NewProjectServer(store *Store, aw *audit.Writer) *ProjectServer {
+	return &ProjectServer{store: store, audit: aw}
 }
 
 func toProtoProject(p *Project) *identityv1.Project {
@@ -415,6 +454,12 @@ func (s *ProjectServer) CreateProject(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create project: %w", err))
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Action:   "create_project",
+		Entity:   "identity",
+		EntityID: p.ID,
+		Detail:   map[string]string{"actor_type": "SYSTEM"},
+	})
 	return connect.NewResponse(&identityv1.CreateProjectResponse{Project: toProtoProject(p)}), nil
 }
 
@@ -435,7 +480,23 @@ func (s *ProjectServer) UpdateProject(ctx context.Context, req *connect.Request[
 	if p == nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("project not found"))
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Action:   "update_project",
+		Entity:   "identity",
+		EntityID: p.ID,
+		Detail:   map[string]string{"actor_type": "SYSTEM"},
+	})
 	return connect.NewResponse(&identityv1.UpdateProjectResponse{Project: toProtoProject(p)}), nil
+}
+
+func (s *ProjectServer) writeAudit(ctx context.Context, entry audit.Entry) {
+	if s.audit == nil {
+		return
+	}
+	if entry.TraceID == "" {
+		entry.TraceID = uuid.NewString()
+	}
+	_ = s.audit.Write(ctx, entry)
 }
 
 func (s *ProjectServer) ListProjects(ctx context.Context, req *connect.Request[identityv1.ListProjectsRequest]) (*connect.Response[identityv1.ListProjectsResponse], error) {

@@ -9,7 +9,9 @@ import (
 	"connectrpc.com/connect"
 	kioskv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1"
 	kioskv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1/kioskv1connect"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -37,6 +39,7 @@ type KioskServer struct {
 	userParser UserTokenParser
 	idLimiter  LoginRateLimiter
 	ipLimiter  LoginRateLimiter
+	audit      *audit.Writer
 }
 
 // NewKioskServer creates a KioskServer without rate limiting.
@@ -51,7 +54,7 @@ func NewKioskServer(store KioskStore, jwt KioskTokenManager, userParser UserToke
 
 // NewKioskServerWithRateLimit creates a KioskServer with rate limiting
 // on the kiosk login endpoint.
-func NewKioskServerWithRateLimit(store KioskStore, jwt KioskTokenManager, userParser UserTokenParser, idLimiter, ipLimiter LoginRateLimiter) *KioskServer {
+func NewKioskServerWithRateLimit(store KioskStore, jwt KioskTokenManager, userParser UserTokenParser, idLimiter, ipLimiter LoginRateLimiter, aw *audit.Writer) *KioskServer {
 	return &KioskServer{
 		store:      store,
 		passwd:     &passwordHelper{Hash: HashPassword, Verify: VerifyPassword},
@@ -59,6 +62,7 @@ func NewKioskServerWithRateLimit(store KioskStore, jwt KioskTokenManager, userPa
 		userParser: userParser,
 		idLimiter:  idLimiter,
 		ipLimiter:  ipLimiter,
+		audit:      aw,
 	}
 }
 
@@ -155,6 +159,14 @@ func (s *KioskServer) CreateKiosk(
 	if pb != nil {
 		pb.Pin = &msg.Pin
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.Subject,
+		Action:    "create_kiosk",
+		Entity:    "kiosk",
+		EntityID:  k.ID,
+		ProjectID: claims.ProjectID,
+		Detail:    map[string]string{"actor_type": claims.Role},
+	})
 	return connect.NewResponse(&kioskv1.CreateKioskResponse{
 		Kiosk: pb,
 	}), nil
@@ -165,8 +177,12 @@ func (s *KioskServer) UpdateKiosk(
 	ctx context.Context,
 	req *connect.Request[kioskv1.UpdateKioskRequest],
 ) (*connect.Response[kioskv1.UpdateKioskResponse], error) {
-	if err := s.requireAdmin(req.Header()); err != nil {
-		return nil, err
+	claims, authErr := s.authenticate(req.Header())
+	if authErr != nil {
+		return nil, authErr
+	}
+	if claims.Role != string(RoleAdmin) {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
 	}
 
 	msg := req.Msg
@@ -202,6 +218,14 @@ func (s *KioskServer) UpdateKiosk(
 	if err != nil || updated == nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.Subject,
+		Action:    "update_kiosk",
+		Entity:    "kiosk",
+		EntityID:  updated.ID,
+		ProjectID: claims.ProjectID,
+		Detail:    map[string]string{"actor_type": claims.Role},
+	})
 
 	return connect.NewResponse(&kioskv1.UpdateKioskResponse{
 		Kiosk: toProtoKiosk(updated, false),
@@ -214,8 +238,12 @@ func (s *KioskServer) ResetKioskPin(
 	ctx context.Context,
 	req *connect.Request[kioskv1.ResetKioskPinRequest],
 ) (*connect.Response[kioskv1.ResetKioskPinResponse], error) {
-	if err := s.requireAdmin(req.Header()); err != nil {
-		return nil, err
+	claims, authErr := s.authenticate(req.Header())
+	if authErr != nil {
+		return nil, authErr
+	}
+	if claims.Role != string(RoleAdmin) {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
 	}
 
 	msg := req.Msg
@@ -251,6 +279,14 @@ func (s *KioskServer) ResetKioskPin(
 	if pb != nil {
 		pb.Pin = &msg.NewPin
 	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor:     claims.Subject,
+		Action:    "reset_kiosk_pin",
+		Entity:    "kiosk",
+		EntityID:  existing.ID,
+		ProjectID: claims.ProjectID,
+		Detail:    map[string]string{"actor_type": claims.Role},
+	})
 	return connect.NewResponse(&kioskv1.ResetKioskPinResponse{
 		Kiosk: pb,
 	}), nil
@@ -377,6 +413,16 @@ func (s *KioskServer) requireAdmin(header http.Header) *connect.Error {
 	}
 
 	return nil
+}
+
+func (s *KioskServer) writeAudit(ctx context.Context, entry audit.Entry) {
+	if s.audit == nil {
+		return
+	}
+	if entry.TraceID == "" {
+		entry.TraceID = uuid.NewString()
+	}
+	_ = s.audit.Write(ctx, entry)
 }
 
 // checkKioskLoginRateLimit checks both the per-identifier (kiosk code)

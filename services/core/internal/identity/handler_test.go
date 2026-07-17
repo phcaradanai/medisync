@@ -426,7 +426,7 @@ func setupHandlerWithRateLimit(t *testing.T, store *fakeUserStore, tm *fakeToken
 		passwd: &passwordHelper{Hash: HashPassword, Verify: VerifyPassword},
 		jwt:    tm,
 	}
-	return NewIdentityServerWithRateLimit(svc, nil, idLim, ipLim)
+	return NewIdentityServerWithRateLimit(svc, nil, idLim, ipLim, nil)
 }
 
 func TestHandlerLoginRateLimitedByIdentifier(t *testing.T) {
@@ -477,7 +477,7 @@ func TestHandlerLoginRateLimitedByIP(t *testing.T) {
 		jwt:    tm,
 	}
 	ipLim := &fakeLimiter{allow: false}
-	server := NewIdentityServerWithRateLimit(svc, nil, &fakeLimiter{allow: true}, ipLim)
+	server := NewIdentityServerWithRateLimit(svc, nil, &fakeLimiter{allow: true}, ipLim, nil)
 	mux := http.NewServeMux()
 	path, handler := identityv1connect.NewIdentityServiceHandler(server)
 	mux.Handle(path, handler)
@@ -577,7 +577,7 @@ func TestHandlerLoginRateLimitedUniformError(t *testing.T) {
 		passwd: &passwordHelper{Hash: HashPassword, Verify: VerifyPassword},
 		jwt:    &fakeTokenManager{fixedToken: "t", fixedExpiresAt: time.Now()},
 	}
-	idBlockServer := NewIdentityServerWithRateLimit(idBlockSvc, nil, &fakeLimiter{allow: false}, &fakeLimiter{allow: true})
+	idBlockServer := NewIdentityServerWithRateLimit(idBlockSvc, nil, &fakeLimiter{allow: false}, &fakeLimiter{allow: true}, nil)
 
 	mux1 := http.NewServeMux()
 	p1, h1 := identityv1connect.NewIdentityServiceHandler(idBlockServer)
@@ -599,7 +599,7 @@ func TestHandlerLoginRateLimitedUniformError(t *testing.T) {
 		passwd: &passwordHelper{Hash: HashPassword, Verify: VerifyPassword},
 		jwt:    &fakeTokenManager{fixedToken: "t", fixedExpiresAt: time.Now()},
 	}
-	ipBlockServer := NewIdentityServerWithRateLimit(ipBlockSvc, nil, &fakeLimiter{allow: true}, &fakeLimiter{allow: false})
+	ipBlockServer := NewIdentityServerWithRateLimit(ipBlockSvc, nil, &fakeLimiter{allow: true}, &fakeLimiter{allow: false}, nil)
 
 	mux2 := http.NewServeMux()
 	p2, h2 := identityv1connect.NewIdentityServiceHandler(ipBlockServer)
