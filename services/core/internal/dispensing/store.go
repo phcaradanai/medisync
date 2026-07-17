@@ -119,10 +119,15 @@ func (s *Store) GetByPrescriptionID(ctx context.Context, prescriptionID, sourceS
 // When states is empty, all non-terminal states are returned.
 // Used by ListPrescriptions handler; ward-scoping is enforced server-side.
 func (s *Store) ListByWard(ctx context.Context, wardID string, states []State) ([]*PrescriptionRow, error) {
-	args := []any{wardID}
-	argIdx := 2
+	var args []any
+	argIdx := 1
 
-	whereClauses := []string{fmt.Sprintf("ward_id = $1")}
+	var whereClauses []string
+	if wardID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("ward_id = $%d", argIdx))
+		args = append(args, wardID)
+		argIdx++
+	}
 	if len(states) > 0 {
 		placeholders := ""
 		for i, st := range states {

@@ -158,6 +158,36 @@ func (c *CompletionConsumer) handleCompleted(ctx context.Context, msg jetstream.
 		return fmt.Errorf("commit transition: %w", err)
 	}
 
+	// Decrement stock for each item in the prescription.
+	if len(pr.Items) > 0 {
+		for _, item := range pr.Items {
+			if item.DrugCode == "" || item.Quantity <= 0 {
+				continue
+			}
+			tag, err := c.pool.Exec(ctx,
+				`UPDATE inventory.slot
+				    SET quantity = quantity - $1, updated_at = now()
+				  WHERE drug_code = $2 AND quantity >= $1
+				  RETURNING id`, item.Quantity, item.DrugCode)
+			if err != nil {
+				c.log.Warn("stock decrement failed",
+					"prescription_id", event.PrescriptionId,
+					"drug_code", item.DrugCode,
+					"error", err.Error())
+			} else if tag.RowsAffected() == 0 {
+				c.log.Warn("stock decrement: no matching slot or insufficient stock",
+					"prescription_id", event.PrescriptionId,
+					"drug_code", item.DrugCode,
+					"quantity", item.Quantity)
+			} else {
+				c.log.Info("stock decremented",
+					"prescription_id", event.PrescriptionId,
+					"drug_code", item.DrugCode,
+					"delta", -item.Quantity)
+			}
+		}
+	}
+
 	c.writeAudit(updated.ID, "dispense.completed", "{}")
 
 	// Publish stock.changed event.

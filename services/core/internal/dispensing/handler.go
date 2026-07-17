@@ -116,7 +116,15 @@ func (s *DispensingServer) ListPrescriptions(
 	// Collect prescriptions across the authorized wards.
 	var allPrescriptions []*PrescriptionRow
 	for _, wardID := range wardIDs {
-		rows, err := s.store.ListByWard(ctx, wardID, states)
+		// Empty wardID = ADMIN wildcard = no ward filter (list all).
+		isAllWards := wardID == ""
+		var rows []*PrescriptionRow
+		var err error
+		if isAllWards {
+			rows, err = s.store.ListByWard(ctx, "", states)
+		} else {
+			rows, err = s.store.ListByWard(ctx, wardID, states)
+		}
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list prescriptions: %w", err))
 		}
