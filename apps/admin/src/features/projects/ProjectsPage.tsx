@@ -11,9 +11,10 @@ import { projectClient } from "../../api/client";
 interface ProjectFormData {
   name: string;
   slug: string;
+  code: string;
 }
 
-const emptyForm: ProjectFormData = { name: "", slug: "" };
+const emptyForm: ProjectFormData = { name: "", slug: "", code: "" };
 
 export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -58,6 +59,7 @@ export function ProjectsPage() {
         await projectClient.createProject(create(CreateProjectRequestSchema, {
           name: form.name.trim(),
           slug: form.slug.trim() || undefined,
+          code: form.code.trim() || undefined,
         }));
       }
       resetForm();
@@ -83,7 +85,7 @@ export function ProjectsPage() {
 
   const startEdit = (p: Project) => {
     setEditingId(p.id);
-    setForm({ name: p.name, slug: p.slug });
+    setForm({ name: p.name, slug: p.slug, code: p.code });
   };
 
   if (loading) {
@@ -109,12 +111,20 @@ export function ProjectsPage() {
             required
           />
           {!editingId && (
-            <input
-              type="text"
-              placeholder="Slug (auto-generated)"
-              value={form.slug}
-              onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
-            />
+            <>
+              <input
+                type="text"
+                placeholder="Slug (auto-generated)"
+                value={form.slug}
+                onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
+              />
+              <input
+                type="text"
+                placeholder="Code (e.g. BKK-HOSP)"
+                value={form.code}
+                onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
+              />
+            </>
           )}
           <button type="submit" disabled={submitting || !form.name.trim()}>
             {editingId ? "Save" : "Create"}
@@ -126,6 +136,7 @@ export function ProjectsPage() {
       <table className="data-table">
         <thead>
           <tr>
+            <th>Code</th>
             <th>Name</th>
             <th>Slug</th>
             <th>Active</th>
@@ -134,10 +145,11 @@ export function ProjectsPage() {
         </thead>
         <tbody>
           {projects.length === 0 && (
-            <tr><td colSpan={4} style={{ textAlign: "center", color: "#888" }}>No projects yet</td></tr>
+            <tr><td colSpan={5} style={{ textAlign: "center", color: "#888" }}>No projects yet</td></tr>
           )}
           {projects.map(p => (
             <tr key={p.id} className={!p.active ? "inactive-row" : ""}>
+              <td><code>{p.code || "—"}</code></td>
               <td>{p.name}</td>
               <td><code>{p.slug}</code></td>
               <td>{p.active ? "✅" : "❌"}</td>

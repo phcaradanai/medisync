@@ -147,8 +147,10 @@ service ProjectService {
 
 message CreateProjectRequest {
   string name = 1;
-  // Optional; auto-generated from name if empty.
+  // Optional; auto-generated from slug if empty.
   string slug = 2;
+  // Project code — set by SYSADMIN, visible to all.
+  string code = 3;
 }
 
 message CreateProjectResponse {

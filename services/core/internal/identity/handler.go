@@ -375,12 +375,14 @@ func toProtoProject(p *Project) *identityv1.Project {
 		return nil
 	}
 	return &identityv1.Project{
-		Id:        p.ID,
-		Name:      p.Name,
-		Slug:      p.Slug,
-		Active:    p.Active,
-		CreatedAt: timestamppb.New(p.CreatedAt),
-		UpdatedAt: timestamppb.New(p.UpdatedAt),
+		Id:          p.ID,
+		Code:        p.Code,
+		Name:        p.Name,
+		DisplayName: p.DisplayName,
+		Slug:        p.Slug,
+		Active:      p.Active,
+		CreatedAt:   timestamppb.New(p.CreatedAt),
+		UpdatedAt:   timestamppb.New(p.UpdatedAt),
 	}
 }
 
@@ -393,7 +395,11 @@ func (s *ProjectServer) CreateProject(ctx context.Context, req *connect.Request[
 	if slug == "" {
 		slug = strings.ToLower(strings.ReplaceAll(msg.Name, " ", "-"))
 	}
-	p, err := s.store.CreateProject(ctx, msg.Name, slug)
+	code := msg.Code
+	if code == "" {
+		code = slug
+	}
+	p, err := s.store.CreateProject(ctx, msg.Name, slug, code)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create project: %w", err))
 	}

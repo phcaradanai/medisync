@@ -56,10 +56,12 @@ func (u *User) ProjectIDStr() string {
 
 // Project is the domain model for a multi-tenant project.
 type Project struct {
-	ID        string
-	Name      string
-	Slug      string
-	Active    bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          string
+	Code        string
+	Name        string
+	DisplayName string
+	Slug        string
+	Active      bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

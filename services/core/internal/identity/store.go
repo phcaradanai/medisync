@@ -301,13 +301,13 @@ func scanUser(row pgx.Row) (*User, error) {
 // ── Project CRUD ──────────────────────────────────────────────────
 
 // CreateProject inserts a new project.
-func (s *Store) CreateProject(ctx context.Context, name, slug string) (*Project, error) {
+func (s *Store) CreateProject(ctx context.Context, name, slug, code string) (*Project, error) {
 	var p Project
 	var createdAt, updatedAt time.Time
 	err := s.db.QueryRow(ctx,
-		`INSERT INTO identity.projects (name, slug) VALUES ($1, $2)
-		 RETURNING id, name, slug, active, created_at, updated_at`,
-		name, slug).Scan(&p.ID, &p.Name, &p.Slug, &p.Active, &createdAt, &updatedAt)
+		`INSERT INTO identity.projects (name, slug, code) VALUES ($1, $2, $3)
+		 RETURNING id, name, slug, code, active, created_at, updated_at`,
+		name, slug, code).Scan(&p.ID, &p.Name, &p.Slug, &p.Code, &p.Active, &createdAt, &updatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create project: %w", err)
 	}
@@ -321,9 +321,9 @@ func (s *Store) GetProject(ctx context.Context, id string) (*Project, error) {
 	var p Project
 	var createdAt, updatedAt time.Time
 	err := s.db.QueryRow(ctx,
-		`SELECT id, name, slug, active, created_at, updated_at
+		`SELECT id, code, name, display_name, slug, active, created_at, updated_at
 		   FROM identity.projects WHERE id = $1`, id).Scan(
-		&p.ID, &p.Name, &p.Slug, &p.Active, &createdAt, &updatedAt)
+		&p.ID, &p.Code, &p.Name, &p.DisplayName, &p.Slug, &p.Active, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -338,7 +338,7 @@ func (s *Store) GetProject(ctx context.Context, id string) (*Project, error) {
 // ListProjects returns all projects.
 func (s *Store) ListProjects(ctx context.Context) ([]*Project, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT id, name, slug, active, created_at, updated_at
+		`SELECT id, code, name, display_name, slug, active, created_at, updated_at
 		   FROM identity.projects ORDER BY name ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
@@ -348,7 +348,7 @@ func (s *Store) ListProjects(ctx context.Context) ([]*Project, error) {
 	for rows.Next() {
 		var p Project
 		var ca, ua time.Time
-		if err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.Active, &ca, &ua); err != nil {
+		if err := rows.Scan(&p.ID, &p.Code, &p.Name, &p.DisplayName, &p.Slug, &p.Active, &ca, &ua); err != nil {
 			return nil, fmt.Errorf("scan project: %w", err)
 		}
 		p.CreatedAt = ca
@@ -379,11 +379,11 @@ func (s *Store) UpdateProject(ctx context.Context, id string, name *string, acti
 	setClauses = append(setClauses, "updated_at = now()")
 	querySQL := fmt.Sprintf(
 		`UPDATE identity.projects SET %s WHERE id = $1
-		 RETURNING id, name, slug, active, created_at, updated_at`,
+		 RETURNING id, code, name, display_name, slug, active, created_at, updated_at`,
 		joinWithCommas(setClauses))
 	var p Project
 	var ca, ua time.Time
-	err := s.db.QueryRow(ctx, querySQL, args...).Scan(&p.ID, &p.Name, &p.Slug, &p.Active, &ca, &ua)
+	err := s.db.QueryRow(ctx, querySQL, args...).Scan(&p.ID, &p.Code, &p.Name, &p.DisplayName, &p.Slug, &p.Active, &ca, &ua)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
