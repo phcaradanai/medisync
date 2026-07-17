@@ -19,6 +19,7 @@ type Drug struct {
 	StickerNote string
 	Active      bool
 	ProjectID   string
+	Barcode     string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

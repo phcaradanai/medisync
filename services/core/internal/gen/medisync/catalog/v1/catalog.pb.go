@@ -42,7 +42,9 @@ type Drug struct {
 	// Human-readable display name (Thai/English label).
 	DisplayName string `protobuf:"bytes,12,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Project this drug belongs to (multi-tenant).
-	ProjectId     string `protobuf:"bytes,13,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ProjectId string `protobuf:"bytes,13,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Barcode for scanning during refill/withdraw.
+	Barcode       string `protobuf:"bytes,14,opt,name=barcode,proto3" json:"barcode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -168,6 +170,13 @@ func (x *Drug) GetProjectId() string {
 	return ""
 }
 
+func (x *Drug) GetBarcode() string {
+	if x != nil {
+		return x.Barcode
+	}
+	return ""
+}
+
 type CreateDrugRequest struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Code        string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
@@ -179,7 +188,9 @@ type CreateDrugRequest struct {
 	StickerNote string                 `protobuf:"bytes,7,opt,name=sticker_note,json=stickerNote,proto3" json:"sticker_note,omitempty"`
 	DisplayName string                 `protobuf:"bytes,8,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Required for SYSADMIN; project-scoped users inherit from JWT.
-	ProjectId     string `protobuf:"bytes,9,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ProjectId string `protobuf:"bytes,9,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Barcode for scanning.
+	Barcode       string `protobuf:"bytes,10,opt,name=barcode,proto3" json:"barcode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -273,6 +284,13 @@ func (x *CreateDrugRequest) GetDisplayName() string {
 func (x *CreateDrugRequest) GetProjectId() string {
 	if x != nil {
 		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CreateDrugRequest) GetBarcode() string {
+	if x != nil {
+		return x.Barcode
 	}
 	return ""
 }
@@ -710,7 +728,7 @@ var File_medisync_catalog_v1_catalog_proto protoreflect.FileDescriptor
 
 const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
-	"!medisync/catalog/v1/catalog.proto\x12\x13medisync.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x98\x03\n" +
+	"!medisync/catalog/v1/catalog.proto\x12\x13medisync.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb2\x03\n" +
 	"\x04Drug\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -728,7 +746,8 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12!\n" +
 	"\fdisplay_name\x18\f \x01(\tR\vdisplayName\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\r \x01(\tR\tprojectId\"\x87\x02\n" +
+	"project_id\x18\r \x01(\tR\tprojectId\x12\x18\n" +
+	"\abarcode\x18\x0e \x01(\tR\abarcode\"\xa1\x02\n" +
 	"\x11CreateDrugRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -739,7 +758,9 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\fsticker_note\x18\a \x01(\tR\vstickerNote\x12!\n" +
 	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\t \x01(\tR\tprojectId\"C\n" +
+	"project_id\x18\t \x01(\tR\tprojectId\x12\x18\n" +
+	"\abarcode\x18\n" +
+	" \x01(\tR\abarcode\"C\n" +
 	"\x12CreateDrugResponse\x12-\n" +
 	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug\" \n" +
 	"\x0eGetDrugRequest\x12\x0e\n" +

@@ -26,6 +26,8 @@ message Drug {
   string display_name = 12;
   // Project this drug belongs to (multi-tenant).
   string project_id = 13;
+  // Barcode for scanning during refill/withdraw.
+  string barcode = 14;
 }
 
 message CreateDrugRequest {
@@ -39,6 +41,8 @@ message CreateDrugRequest {
   string display_name = 8;
   // Required for SYSADMIN; project-scoped users inherit from JWT.
   string project_id = 9;
+  // Barcode for scanning.
+  string barcode = 10;
 }
 
 message CreateDrugResponse {

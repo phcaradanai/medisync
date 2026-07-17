@@ -99,12 +99,12 @@ func (r *fakeRow) Scan(dest ...any) error {
 }
 
 // rowWithDrug returns a fakeRow that fills dest with a sample drug.
-// Matches the 13-column scan used by all catalog queries.
+// Matches the 14-column scan used by all catalog queries.
 func rowWithDrug(d Drug) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 13 {
-				return fmt.Errorf("expected 13 dests, got %d", len(dest))
+			if len(dest) != 14 {
+				return fmt.Errorf("expected 14 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = d.ID
 			*(dest[1].(*string)) = d.Code
@@ -117,10 +117,11 @@ func rowWithDrug(d Drug) *fakeRow {
 			*(dest[8].(*string)) = d.StickerNote
 			*(dest[9].(*bool)) = d.Active
 			*(dest[10].(*string)) = d.ProjectID
-			if dt, ok := dest[11].(*time.Time); ok {
+			*(dest[11].(*string)) = d.Barcode
+			if dt, ok := dest[12].(*time.Time); ok {
 				*dt = d.CreatedAt
 			}
-			if dt, ok := dest[12].(*time.Time); ok {
+			if dt, ok := dest[13].(*time.Time); ok {
 				*dt = d.UpdatedAt
 			}
 			return nil
@@ -211,12 +212,13 @@ func TestScanDrugSuccess(t *testing.T) {
 		Unit:        "tab",
 		StickerNote: "Take with food",
 		Active:      true,
+		Barcode:     "8851234567890",
 	}
 
 	row := &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 13 {
-				return fmt.Errorf("expected 13 dests, got %d", len(dest))
+			if len(dest) != 14 {
+				return fmt.Errorf("expected 14 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = expected.ID
 			*(dest[1].(*string)) = expected.Code
@@ -229,7 +231,8 @@ func TestScanDrugSuccess(t *testing.T) {
 			*(dest[8].(*string)) = expected.StickerNote
 			*(dest[9].(*bool)) = expected.Active
 			*(dest[10].(*string)) = expected.ProjectID
-			// CreatedAt and UpdatedAt at positions 11 and 12
+			*(dest[11].(*string)) = expected.Barcode
+			// CreatedAt and UpdatedAt at positions 12 and 13
 			return nil
 		},
 	}
@@ -318,8 +321,8 @@ func TestCreateDrugSuccess(t *testing.T) {
 	if !strings.Contains(call.sql, "INSERT INTO catalog.drug") {
 		t.Error("SQL should be INSERT INTO catalog.drug")
 	}
-	if len(call.args) != 9 {
-		t.Errorf("expected 9 args (with display_name + project_id), got %d", len(call.args))
+	if len(call.args) != 10 {
+		t.Errorf("expected 10 args (with display_name + project_id + barcode), got %d", len(call.args))
 	}
 }
 
