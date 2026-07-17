@@ -23,6 +23,7 @@ message Slot {
   string display_name = 11;
   // Project this slot belongs to (multi-tenant).
   string project_id = 12;
+  google.protobuf.Timestamp expiry_date = 13;
 }
 
 message ListSlotsRequest {
@@ -51,6 +52,7 @@ message RefillRequest {
   // Units added in this refill; the server computes the new quantity.
   int32 quantity_added = 2;
   string trace_id = 3;
+  google.protobuf.Timestamp expiry_date = 4;
 }
 
 message RefillResponse {
@@ -78,6 +80,7 @@ message CreateSlotRequest {
   int32 low_threshold = 5;
   // Required for SYSADMIN; project-scoped users inherit from JWT.
   string project_id = 6;
+  google.protobuf.Timestamp expiry_date = 7;
 }
 
 message CreateSlotResponse {

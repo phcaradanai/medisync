@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	inventoryv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/inventory/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/testutil"
@@ -44,14 +45,15 @@ type fakeSlotStore struct {
 	adjustResult  *Slot
 	adjustErr     error
 	// call recording
-	refillCalls  []refillCall
-	adjustCalls  []adjustCall
-	assignCalls  []assignCall
+	refillCalls []refillCall
+	adjustCalls []adjustCall
+	assignCalls []assignCall
 }
 
 type refillCall struct {
-	id    string
-	delta int32
+	id         string
+	delta      int32
+	expiryDate *time.Time
 }
 
 type adjustCall struct {
@@ -72,7 +74,7 @@ func (s *fakeSlotStore) ListSlots(_ context.Context, cabinetID, projectID string
 	return s.listResult, s.listErr
 }
 
-func (s *fakeSlotStore) CreateSlot(_ context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32) (*Slot, error) {
+func (s *fakeSlotStore) CreateSlot(_ context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32, expiryDate *time.Time) (*Slot, error) {
 	return s.createResult, s.createErr
 }
 
@@ -85,8 +87,8 @@ func (s *fakeSlotStore) AssignDrug(_ context.Context, slotID, drugID, drugCode, 
 	return s.assignResult, s.assignErr
 }
 
-func (s *fakeSlotStore) Refill(_ context.Context, id string, delta int32) (*Slot, error) {
-	s.refillCalls = append(s.refillCalls, refillCall{id, delta})
+func (s *fakeSlotStore) Refill(_ context.Context, id string, delta int32, expiryDate *time.Time) (*Slot, error) {
+	s.refillCalls = append(s.refillCalls, refillCall{id: id, delta: delta, expiryDate: expiryDate})
 	return s.refillResult, s.refillErr
 }
 
@@ -244,6 +246,7 @@ func TestHandlerAssignDrugNotFound(t *testing.T) {
 }
 
 func TestHandlerRefillSuccess(t *testing.T) {
+	expiryDate := time.Date(2027, 7, 14, 0, 0, 0, 0, time.UTC)
 	fakeStore := &fakeSlotStore{
 		getByIDResult: sampleSlot(),
 		refillResult:  sampleSlot(),
@@ -255,6 +258,7 @@ func TestHandlerRefillSuccess(t *testing.T) {
 	resp, err := server.Refill(context.Background(), newAuthedRequest(&inventoryv1.RefillRequest{
 		SlotId:        "slot-1",
 		QuantityAdded: 10,
+		ExpiryDate:    timestamppb.New(expiryDate),
 	}))
 	if err != nil {
 		t.Fatalf("Refill: %v", err)
@@ -264,6 +268,9 @@ func TestHandlerRefillSuccess(t *testing.T) {
 	}
 	if len(auditDB.Calls) != 1 {
 		t.Fatalf("expected 1 audit call, got %d", len(auditDB.Calls))
+	}
+	if len(fakeStore.refillCalls) != 1 || fakeStore.refillCalls[0].expiryDate == nil || !fakeStore.refillCalls[0].expiryDate.Equal(expiryDate) {
+		t.Fatalf("refill expiry date was not passed to store: %+v", fakeStore.refillCalls)
 	}
 }
 
@@ -431,11 +438,12 @@ func TestToProtoSlotNil(t *testing.T) {
 
 func TestToProtoSlotFull(t *testing.T) {
 	now := time.Date(2026, 7, 14, 12, 0, 0, 0, time.UTC)
+	expiryDate := now.AddDate(1, 0, 0)
 	slot := &Slot{
 		ID: "slot-1", CabinetID: "cab-1", Code: "A01",
 		DrugID: "drug-1", DrugCode: "PARA-500", DrugName: "Paracetamol",
 		Capacity: 100, Quantity: 50, LowThreshold: 10,
-		CreatedAt: now, UpdatedAt: now,
+		ExpiryDate: &expiryDate, CreatedAt: now, UpdatedAt: now,
 	}
 	pb := toProtoSlot(slot)
 	if pb.Id != "slot-1" {
@@ -467,6 +475,9 @@ func TestToProtoSlotFull(t *testing.T) {
 	}
 	if pb.UpdatedAt == nil {
 		t.Error("UpdatedAt should not be nil")
+	}
+	if pb.ExpiryDate == nil || !pb.ExpiryDate.AsTime().Equal(expiryDate) {
+		t.Errorf("ExpiryDate = %v, want %v", pb.ExpiryDate, expiryDate)
 	}
 }
 

@@ -77,7 +77,7 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowO
 
 	query := fmt.Sprintf(
 		`SELECT id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
-		        capacity, quantity, low_threshold, project_id, created_at, updated_at
+		        capacity, quantity, low_threshold, project_id, expiry_date, created_at, updated_at
 		   FROM inventory.slot %s ORDER BY cabinet_id, code ASC`, whereSQL)
 
 	rows, err := s.db.Query(ctx, query, args...)
@@ -104,7 +104,7 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowO
 func (s *Store) GetByID(ctx context.Context, id string) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
 		`SELECT id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
-		        capacity, quantity, low_threshold, project_id, created_at, updated_at
+		        capacity, quantity, low_threshold, project_id, expiry_date, created_at, updated_at
 		   FROM inventory.slot WHERE id = $1`, id)
 	return scanSlot(row)
 }
@@ -113,7 +113,7 @@ func (s *Store) GetByID(ctx context.Context, id string) (*Slot, error) {
 func (s *Store) GetByCabinetAndCode(ctx context.Context, cabinetID, code string) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
 		`SELECT id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
-		        capacity, quantity, low_threshold, project_id, created_at, updated_at
+		        capacity, quantity, low_threshold, project_id, expiry_date, created_at, updated_at
 		   FROM inventory.slot WHERE cabinet_id = $1 AND code = $2`, cabinetID, code)
 	return scanSlot(row)
 }
@@ -128,7 +128,7 @@ func (s *Store) AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugNa
 		       quantity = LEAST(quantity, $4), updated_at = now()
 		 WHERE id = $6
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
-		           capacity, quantity, low_threshold, project_id, created_at, updated_at`,
+		           capacity, quantity, low_threshold, project_id, expiry_date, created_at, updated_at`,
 		drugID, drugCode, drugName, capacity, lowThreshold, slotID)
 	return scanSlot(row)
 }
@@ -137,14 +137,14 @@ func (s *Store) AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugNa
 // quantity = quantity + $delta to prevent lost updates. Returns the
 // updated slot, or nil if not found. When the resulting quantity
 // would be negative, returns ErrInsufficientStock.
-func (s *Store) Refill(ctx context.Context, id string, delta int32) (*Slot, error) {
+func (s *Store) Refill(ctx context.Context, id string, delta int32, expiryDate *time.Time) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
 		`UPDATE inventory.slot
-		   SET quantity = quantity + $1, updated_at = now()
-		 WHERE id = $2 AND quantity + $1 >= 0
+		   SET quantity = quantity + $1, expiry_date = COALESCE($2, expiry_date), updated_at = now()
+		 WHERE id = $3 AND quantity + $1 >= 0
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
-		           capacity, quantity, low_threshold, project_id, created_at, updated_at`,
-		delta, id)
+		           capacity, quantity, low_threshold, project_id, expiry_date, created_at, updated_at`,
+		delta, expiryDate, id)
 	slot, err := scanSlot(row)
 	if err != nil {
 		return nil, err
@@ -166,14 +166,14 @@ func (s *Store) Refill(ctx context.Context, id string, delta int32) (*Slot, erro
 }
 
 // CreateSlot inserts a new empty slot into a cabinet.
-func (s *Store) CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32) (*Slot, error) {
+func (s *Store) CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32, expiryDate *time.Time) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO inventory.slot (cabinet_id, code, display_name, capacity, quantity, low_threshold, project_id)
-		 VALUES ($1, $2, $3, $4, 0, $5, $6)
+		`INSERT INTO inventory.slot (cabinet_id, code, display_name, capacity, quantity, low_threshold, project_id, expiry_date)
+		 VALUES ($1, $2, $3, $4, 0, $5, $6, $7)
 		 ON CONFLICT (cabinet_id, code) DO NOTHING
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
-		           capacity, quantity, low_threshold, project_id, created_at, updated_at`,
-		cabinetID, code, displayName, capacity, lowThreshold, projectID)
+		           capacity, quantity, low_threshold, project_id, expiry_date, created_at, updated_at`,
+		cabinetID, code, displayName, capacity, lowThreshold, projectID, expiryDate)
 	slot, err := scanSlot(row)
 	if err != nil {
 		return nil, fmt.Errorf("create slot: %w", err)
@@ -193,7 +193,7 @@ func (s *Store) AdjustStock(ctx context.Context, id string, newQuantity int32) (
 		   SET quantity = $1, updated_at = now()
 		 WHERE id = $2
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
-		           capacity, quantity, low_threshold, project_id, created_at, updated_at`,
+		           capacity, quantity, low_threshold, project_id, expiry_date, created_at, updated_at`,
 		newQuantity, id)
 	return scanSlot(row)
 }
@@ -207,7 +207,7 @@ func (s *Store) writeAudit(ctx context.Context, e audit.Entry) {
 	_ = s.auditWriter.Write(ctx, e)
 }
 
-// scanSlot maps a pgx.Row or pgx.Rows to a Slot (13 columns).
+// scanSlot maps a pgx.Row or pgx.Rows to a Slot (14 columns).
 // Returns nil when the row is empty (pgx.ErrNoRows).
 func scanSlot(row pgx.Row) (*Slot, error) {
 	var slot Slot
@@ -215,7 +215,7 @@ func scanSlot(row pgx.Row) (*Slot, error) {
 	err := row.Scan(&slot.ID, &slot.CabinetID, &slot.Code, &slot.DisplayName,
 		&slot.DrugID, &slot.DrugCode, &slot.DrugName,
 		&slot.Capacity, &slot.Quantity, &slot.LowThreshold,
-		&slot.ProjectID, &createdAt, &updatedAt)
+		&slot.ProjectID, &slot.ExpiryDate, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

@@ -230,7 +230,7 @@ func TestStoreRefill_Integration(t *testing.T) {
 		t.Fatalf("AssignDrug: %v", err)
 	}
 
-	refilled, err := store.Refill(context.Background(), slot.ID, 50)
+	refilled, err := store.Refill(context.Background(), slot.ID, 50, nil)
 	if err != nil {
 		t.Fatalf("Refill: %v", err)
 	}
@@ -253,13 +253,13 @@ func TestStoreRefillInsufficientStock_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AssignDrug: %v", err)
 	}
-	_, err = store.Refill(context.Background(), slot.ID, 10)
+	_, err = store.Refill(context.Background(), slot.ID, 10, nil)
 	if err != nil {
 		t.Fatalf("initial refill: %v", err)
 	}
 
 	// Try to remove more than we have.
-	_, err = store.Refill(context.Background(), slot.ID, -20)
+	_, err = store.Refill(context.Background(), slot.ID, -20, nil)
 	if err == nil {
 		t.Fatal("expected insufficient stock error, got nil")
 	}
@@ -275,7 +275,7 @@ func TestStoreAdjustStock_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AssignDrug: %v", err)
 	}
-	_, err = store.Refill(context.Background(), slot.ID, 100)
+	_, err = store.Refill(context.Background(), slot.ID, 100, nil)
 	if err != nil {
 		t.Fatalf("initial refill: %v", err)
 	}

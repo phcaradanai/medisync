@@ -65,7 +65,7 @@ func TestRefillConcurrency(t *testing.T) {
 			// Each goroutine gets its own Store backed by the pool.
 			// pgxpool.Pool handles connection multiplexing safely.
 			s := NewStore(pool, nil)
-			_, err := s.Refill(context.Background(), slotID, deltaPerWorker)
+			_, err := s.Refill(context.Background(), slotID, deltaPerWorker, nil)
 			if err != nil {
 				errs <- err
 			}
@@ -109,7 +109,7 @@ func TestRefillConcurrencyMixedDelta(t *testing.T) {
 	}
 
 	// Start with 100 units.
-	_, err = store.Refill(context.Background(), slotID, 100)
+	_, err = store.Refill(context.Background(), slotID, 100, nil)
 	if err != nil {
 		t.Fatalf("initial refill: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestRefillConcurrencyMixedDelta(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			s := NewStore(pool, nil)
-			_, err := s.Refill(context.Background(), slotID, deltaPerWorker)
+			_, err := s.Refill(context.Background(), slotID, deltaPerWorker, nil)
 			if err != nil {
 				errs <- err
 			}
@@ -138,7 +138,7 @@ func TestRefillConcurrencyMixedDelta(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			s := NewStore(pool, nil)
-			_, err := s.Refill(context.Background(), slotID, -deltaPerWorker)
+			_, err := s.Refill(context.Background(), slotID, -deltaPerWorker, nil)
 			if err != nil {
 				errs <- err
 			}
@@ -197,7 +197,7 @@ func TestRefillConcurrencyHighContention(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			s := NewStore(pool, nil)
-			_, err := s.Refill(context.Background(), slotID, deltaPerWorker)
+			_, err := s.Refill(context.Background(), slotID, deltaPerWorker, nil)
 			if err != nil {
 				errs <- err
 			}

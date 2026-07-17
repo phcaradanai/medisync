@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
 	dispensingv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1"
+	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
 
 	"github.com/adm-chura3inter/medisync/services/core/internal/catalog"
 	"github.com/adm-chura3inter/medisync/services/core/internal/dispensing"
@@ -99,8 +99,8 @@ func TestFullM2ChainE2E(t *testing.T) {
 
 	jwtMgr, err := identity.NewJWTManager(
 		"medisync-e2e-test-secret-32-bytes!!", // 32+ bytes required
-		1*time.Hour, // long enough for the test
-		nil,         // use real clock
+		1*time.Hour,                           // long enough for the test
+		nil,                                   // use real clock
 	)
 	if err != nil {
 		t.Fatalf("NewJWTManager: %v", err)
@@ -223,7 +223,7 @@ func TestFullM2ChainE2E(t *testing.T) {
 	}
 
 	// Refill stock.
-	refilled, err := invStore.Refill(ctx, slotID, 50)
+	refilled, err := invStore.Refill(ctx, slotID, 50, nil)
 	if err != nil {
 		t.Fatalf("refill slot: %v", err)
 	}

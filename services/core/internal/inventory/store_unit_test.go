@@ -95,12 +95,12 @@ func (r *fakeRow) Scan(dest ...any) error {
 }
 
 // rowWithSlot returns a fakeRow that fills dest with a sample slot.
-// Matches the 10-column scan used by inventory queries.
+// Matches the 14-column scan used by inventory queries.
 func rowWithSlot(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 13 {
-				return fmt.Errorf("expected 13 dests, got %d", len(dest))
+			if len(dest) != 14 {
+				return fmt.Errorf("expected 14 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
@@ -113,10 +113,13 @@ func rowWithSlot(sl Slot) *fakeRow {
 			*(dest[8].(*int32)) = sl.Quantity
 			*(dest[9].(*int32)) = sl.LowThreshold
 			*(dest[10].(*string)) = sl.ProjectID
-			if dt, ok := dest[11].(*time.Time); ok {
-				*dt = sl.CreatedAt
+			if dt, ok := dest[11].(**time.Time); ok {
+				*dt = sl.ExpiryDate
 			}
 			if dt, ok := dest[12].(*time.Time); ok {
+				*dt = sl.CreatedAt
+			}
+			if dt, ok := dest[13].(*time.Time); ok {
 				*dt = sl.UpdatedAt
 			}
 			return nil
@@ -164,8 +167,8 @@ func (r *fakeRows) Scan(dest ...any) error {
 		return errors.New("no row to scan")
 	}
 	sl := r.slots[r.current-1]
-	if len(dest) != 13 {
-		return fmt.Errorf("expected 13 dests, got %d", len(dest))
+	if len(dest) != 14 {
+		return fmt.Errorf("expected 14 dests, got %d", len(dest))
 	}
 	*(dest[0].(*string)) = sl.ID
 	*(dest[1].(*string)) = sl.CabinetID
@@ -178,29 +181,32 @@ func (r *fakeRows) Scan(dest ...any) error {
 	*(dest[8].(*int32)) = sl.Quantity
 	*(dest[9].(*int32)) = sl.LowThreshold
 	*(dest[10].(*string)) = sl.ProjectID
-	if dt, ok := dest[11].(*time.Time); ok {
-		*dt = sl.CreatedAt
+	if dt, ok := dest[11].(**time.Time); ok {
+		*dt = sl.ExpiryDate
 	}
 	if dt, ok := dest[12].(*time.Time); ok {
+		*dt = sl.CreatedAt
+	}
+	if dt, ok := dest[13].(*time.Time); ok {
 		*dt = sl.UpdatedAt
 	}
 	return nil
 }
 
-func (r *fakeRows) CommandTag() pgconn.CommandTag { return pgconn.CommandTag{} }
+func (r *fakeRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
 func (r *fakeRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
-func (r *fakeRows) Values() ([]any, error) { return nil, nil }
-func (r *fakeRows) RawValues() [][]byte { return nil }
-func (r *fakeRows) Conn() *pgx.Conn { return nil }
+func (r *fakeRows) Values() ([]any, error)                       { return nil, nil }
+func (r *fakeRows) RawValues() [][]byte                          { return nil }
+func (r *fakeRows) Conn() *pgx.Conn                              { return nil }
 
 // ── rowWithSlot11 ───────────────────────────────────────────────────
 
-// rowWithSlot11 returns a fakeRow matching the 11-column scan.
+// rowWithSlot11 returns a fakeRow matching the slot scan.
 func rowWithSlot11(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 13 {
-				return fmt.Errorf("expected 13 dests, got %d", len(dest))
+			if len(dest) != 14 {
+				return fmt.Errorf("expected 14 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
@@ -213,10 +219,13 @@ func rowWithSlot11(sl Slot) *fakeRow {
 			*(dest[8].(*int32)) = sl.Quantity
 			*(dest[9].(*int32)) = sl.LowThreshold
 			*(dest[10].(*string)) = sl.ProjectID
-			if dt, ok := dest[11].(*time.Time); ok {
-				*dt = sl.CreatedAt
+			if dt, ok := dest[11].(**time.Time); ok {
+				*dt = sl.ExpiryDate
 			}
 			if dt, ok := dest[12].(*time.Time); ok {
+				*dt = sl.CreatedAt
+			}
+			if dt, ok := dest[13].(*time.Time); ok {
 				*dt = sl.UpdatedAt
 			}
 			return nil
@@ -228,23 +237,25 @@ func rowWithSlot11(sl Slot) *fakeRow {
 
 func TestScanSlotSuccess(t *testing.T) {
 	now := time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)
+	expiryDate := now.AddDate(1, 0, 0)
 	expected := Slot{
-		ID:        "slot-1",
-		CabinetID: "cab-1",
-		Code:      "A01",
-		DrugID:    "drug-1",
-		DrugCode:  "PARA-500",
-		DrugName:  "Paracetamol",
-		Capacity:  100,
-		Quantity:  50,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:         "slot-1",
+		CabinetID:  "cab-1",
+		Code:       "A01",
+		DrugID:     "drug-1",
+		DrugCode:   "PARA-500",
+		DrugName:   "Paracetamol",
+		Capacity:   100,
+		Quantity:   50,
+		ExpiryDate: &expiryDate,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 
 	row := &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 13 {
-				return fmt.Errorf("expected 13 dests, got %d", len(dest))
+			if len(dest) != 14 {
+				return fmt.Errorf("expected 14 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = expected.ID
 			*(dest[1].(*string)) = expected.CabinetID
@@ -257,10 +268,13 @@ func TestScanSlotSuccess(t *testing.T) {
 			*(dest[8].(*int32)) = expected.Quantity
 			*(dest[9].(*int32)) = expected.LowThreshold
 			*(dest[10].(*string)) = expected.ProjectID
-			if dt, ok := dest[11].(*time.Time); ok {
-				*dt = expected.CreatedAt
+			if dt, ok := dest[11].(**time.Time); ok {
+				*dt = expected.ExpiryDate
 			}
 			if dt, ok := dest[12].(*time.Time); ok {
+				*dt = expected.CreatedAt
+			}
+			if dt, ok := dest[13].(*time.Time); ok {
 				*dt = expected.UpdatedAt
 			}
 			return nil
@@ -282,6 +296,9 @@ func TestScanSlotSuccess(t *testing.T) {
 	}
 	if slot.Quantity != expected.Quantity {
 		t.Errorf("Quantity = %d, want %d", slot.Quantity, expected.Quantity)
+	}
+	if slot.ExpiryDate == nil || !slot.ExpiryDate.Equal(expiryDate) {
+		t.Errorf("ExpiryDate = %v, want %v", slot.ExpiryDate, expiryDate)
 	}
 }
 
@@ -467,7 +484,7 @@ func TestRefillSuccess(t *testing.T) {
 	db := &fakeDB{queryRow: rowWithSlot11(expected)}
 	store := NewStoreWithDB(db, nil)
 
-	slot, err := store.Refill(context.Background(), "slot-1", 10)
+	slot, err := store.Refill(context.Background(), "slot-1", 10, nil)
 	if err != nil {
 		t.Fatalf("Refill: %v", err)
 	}
@@ -504,7 +521,7 @@ func TestRefillInsufficientStock(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	_, err := store.Refill(context.Background(), "slot-1", -100)
+	_, err := store.Refill(context.Background(), "slot-1", -100, nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -518,7 +535,7 @@ func TestRefillNotFound(t *testing.T) {
 	db := &fakeDB{queryRow: rowWithNoRows()}
 	store := NewStoreWithDB(db, nil)
 
-	slot, err := store.Refill(context.Background(), "ghost", 10)
+	slot, err := store.Refill(context.Background(), "ghost", 10, nil)
 	if err != nil {
 		t.Fatalf("Refill: %v", err)
 	}
