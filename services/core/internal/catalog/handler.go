@@ -11,6 +11,7 @@ import (
 	catalogv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/catalog/v1"
 	catalogv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/catalog/v1/catalogv1connect"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -55,7 +56,7 @@ type DrugStore interface {
 	GetByID(ctx context.Context, id string) (*Drug, error)
 	GetByCode(ctx context.Context, code string) (*Drug, error)
 	GetByBarcode(ctx context.Context, barcode string) (*Drug, error)
-	List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, error)
+	List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, int64, error)
 	Update(ctx context.Context, d Drug) (*Drug, error)
 	Deactivate(ctx context.Context, id string) (*Drug, error)
 }
@@ -199,20 +200,18 @@ func (s *CatalogServer) ListDrugs(ctx context.Context, req *connect.Request[cata
 	msg := req.Msg
 	query := ""
 	includeInactive := false
-	pageSize := int32(50)
+	pageSize := pagination.DefaultPageSize
 	pageToken := ""
 
 	if msg != nil {
 		query = msg.Query
 		includeInactive = msg.IncludeInactive
-		if msg.PageSize > 0 {
-			pageSize = msg.PageSize
-		}
+		pageSize = pagination.NormalizePageSize(msg.PageSize)
 		pageToken = msg.PageToken
 	}
 
 	projectID := claims.GetProjectID()
-	drugs, nextToken, err := s.store.List(ctx, query, includeInactive, pageSize, pageToken, projectID)
+	drugs, nextToken, totalCount, err := s.store.List(ctx, query, includeInactive, pageSize, pageToken, projectID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list drugs: %w", err))
 	}
@@ -222,7 +221,11 @@ func (s *CatalogServer) ListDrugs(ctx context.Context, req *connect.Request[cata
 		pbDrugs = append(pbDrugs, toProtoDrug(d))
 	}
 
-	return connect.NewResponse(&catalogv1.ListDrugsResponse{Drugs: pbDrugs, NextPageToken: nextToken}), nil
+	return connect.NewResponse(&catalogv1.ListDrugsResponse{
+		Drugs:         pbDrugs,
+		NextPageToken: nextToken,
+		TotalCount:    totalCount,
+	}), nil
 }
 
 func (s *CatalogServer) UpdateDrug(ctx context.Context, req *connect.Request[catalogv1.UpdateDrugRequest]) (*connect.Response[catalogv1.UpdateDrugResponse], error) {

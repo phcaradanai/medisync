@@ -59,6 +59,16 @@ func (f *fakeDB) Query(_ context.Context, sql string, args ...any) (pgx.Rows, er
 
 func (f *fakeDB) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
 	f.queryRowCalls = append(f.queryRowCalls, queryRowCall{sql: sql, args: args})
+	if strings.Contains(strings.ToUpper(sql), "COUNT(*)") {
+		count := int64(0)
+		if f.queryRows != nil {
+			count = int64(len(f.queryRows.drugs))
+		}
+		return &fakeRow{scanFn: func(dest ...any) error {
+			*(dest[0].(*int64)) = count
+			return nil
+		}}
+	}
 	return f.queryRow
 }
 
@@ -170,8 +180,8 @@ func (r *fakeRows) Scan(dest ...any) error {
 		return errors.New("no row to scan")
 	}
 	d := r.drugs[r.current-1]
-	if len(dest) != 13 {
-		return fmt.Errorf("expected 13 dests, got %d", len(dest))
+	if len(dest) != 14 {
+		return fmt.Errorf("expected 14 dests, got %d", len(dest))
 	}
 	*(dest[0].(*string)) = d.ID
 	*(dest[1].(*string)) = d.Code
@@ -184,10 +194,11 @@ func (r *fakeRows) Scan(dest ...any) error {
 	*(dest[8].(*string)) = d.StickerNote
 	*(dest[9].(*bool)) = d.Active
 	*(dest[10].(*string)) = d.ProjectID
-	if dt, ok := dest[11].(*time.Time); ok {
+	*(dest[11].(*string)) = d.Barcode
+	if dt, ok := dest[12].(*time.Time); ok {
 		*dt = d.CreatedAt
 	}
-	if dt, ok := dest[12].(*time.Time); ok {
+	if dt, ok := dest[13].(*time.Time); ok {
 		*dt = d.UpdatedAt
 	}
 	return nil
@@ -543,7 +554,7 @@ func TestListDrugsEmpty(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	drugs, nextToken, err := store.List(context.Background(), "", false, 50, "", "")
+	drugs, nextToken, totalCount, err := store.List(context.Background(), "", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -552,6 +563,9 @@ func TestListDrugsEmpty(t *testing.T) {
 	}
 	if nextToken != "" {
 		t.Errorf("nextToken = %q, want empty", nextToken)
+	}
+	if totalCount != 0 {
+		t.Errorf("totalCount = %d, want 0", totalCount)
 	}
 }
 
@@ -566,7 +580,7 @@ func TestListDrugsWithResults(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	drugs, nextToken, err := store.List(context.Background(), "", false, 50, "", "")
+	drugs, nextToken, totalCount, err := store.List(context.Background(), "", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -575,6 +589,9 @@ func TestListDrugsWithResults(t *testing.T) {
 	}
 	if nextToken != "" {
 		t.Errorf("nextToken = %q, want empty", nextToken)
+	}
+	if totalCount != 2 {
+		t.Errorf("totalCount = %d, want 2", totalCount)
 	}
 }
 
@@ -590,7 +607,7 @@ func TestListDrugsPagination(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	drugs, nextToken, err := store.List(context.Background(), "", false, 2, "", "")
+	drugs, nextToken, totalCount, err := store.List(context.Background(), "", false, 2, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -599,6 +616,9 @@ func TestListDrugsPagination(t *testing.T) {
 	}
 	if nextToken != "d2" {
 		t.Errorf("nextToken = %q, want d2", nextToken)
+	}
+	if totalCount != 3 {
+		t.Errorf("totalCount = %d, want 3", totalCount)
 	}
 }
 
@@ -612,7 +632,7 @@ func TestListDrugsWithQuery(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	_, _, err := store.List(context.Background(), "para", false, 50, "", "")
+	_, _, _, err := store.List(context.Background(), "para", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -629,7 +649,7 @@ func TestListDrugsDBError(t *testing.T) {
 	}
 	store := NewStoreWithDB(db, nil)
 
-	_, _, err := store.List(context.Background(), "", false, 50, "", "")
+	_, _, _, err := store.List(context.Background(), "", false, 50, "", "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

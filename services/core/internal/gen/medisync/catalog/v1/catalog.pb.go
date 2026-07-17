@@ -588,6 +588,7 @@ type ListDrugsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Drugs         []*Drug                `protobuf:"bytes,1,rep,name=drugs,proto3" json:"drugs,omitempty"`
 	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -634,6 +635,13 @@ func (x *ListDrugsResponse) GetNextPageToken() string {
 		return x.NextPageToken
 	}
 	return ""
+}
+
+func (x *ListDrugsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
 }
 
 type UpdateDrugRequest struct {
@@ -864,10 +872,12 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x10include_inactive\x18\x02 \x01(\bR\x0fincludeInactive\x12\x1b\n" +
 	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x04 \x01(\tR\tpageToken\"l\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken\"\x8d\x01\n" +
 	"\x11ListDrugsResponse\x12/\n" +
 	"\x05drugs\x18\x01 \x03(\v2\x19.medisync.catalog.v1.DrugR\x05drugs\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"B\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount\"B\n" +
 	"\x11UpdateDrugRequest\x12-\n" +
 	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug\"C\n" +
 	"\x12UpdateDrugResponse\x12-\n" +

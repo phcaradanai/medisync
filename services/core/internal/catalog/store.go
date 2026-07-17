@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -12,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 )
 
 // dbConn is the narrow database interface for the catalog store.
@@ -86,10 +88,8 @@ func (s *Store) GetByBarcode(ctx context.Context, barcode string) (*Drug, error)
 // and generic_name. Pagination uses a cursor based on the drug id.
 // When includeInactive is false, only active drugs are returned.
 // When projectID is non-empty, results are scoped to that project.
-func (s *Store) List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, error) {
-	if pageSize <= 0 || pageSize > 100 {
-		pageSize = 50
-	}
+func (s *Store) List(ctx context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, int64, error) {
+	pageSize = pagination.NormalizePageSize(pageSize)
 
 	args := []any{}
 	argIdx := 1
@@ -114,21 +114,25 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 		argIdx++
 	}
 
+	filterWhereSQL := ""
+	if len(whereClauses) > 0 {
+		filterWhereSQL = "WHERE " + strings.Join(whereClauses, " AND ")
+	}
+	var totalCount int64
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM catalog.drug %s", filterWhereSQL)
+	if err := s.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
+		return nil, "", 0, fmt.Errorf("count drugs: %w", err)
+	}
+
 	if pageToken != "" {
 		whereClauses = append(whereClauses, fmt.Sprintf("id > $%d", argIdx))
 		args = append(args, pageToken)
 		argIdx++
 	}
 
-	whereSQL := ""
+	whereSQL := filterWhereSQL
 	if len(whereClauses) > 0 {
-		whereSQL = "WHERE "
-		for i, clause := range whereClauses {
-			if i > 0 {
-				whereSQL += " AND "
-			}
-			whereSQL += clause
-		}
+		whereSQL = "WHERE " + strings.Join(whereClauses, " AND ")
 	}
 
 	querySQL := fmt.Sprintf(
@@ -140,7 +144,7 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 
 	rows, err := s.db.Query(ctx, querySQL, args...)
 	if err != nil {
-		return nil, "", fmt.Errorf("list drugs: %w", err)
+		return nil, "", 0, fmt.Errorf("list drugs: %w", err)
 	}
 	defer rows.Close()
 
@@ -150,15 +154,15 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 		var createdAt, updatedAt time.Time
 		if err := rows.Scan(&d.ID, &d.Code, &d.Name, &d.DisplayName, &d.GenericName,
 			&d.Form, &d.Strength, &d.Unit, &d.StickerNote,
-			&d.Active, &d.ProjectID, &createdAt, &updatedAt); err != nil {
-			return nil, "", fmt.Errorf("scan drug row: %w", err)
+			&d.Active, &d.ProjectID, &d.Barcode, &createdAt, &updatedAt); err != nil {
+			return nil, "", 0, fmt.Errorf("scan drug row: %w", err)
 		}
 		d.CreatedAt = createdAt
 		d.UpdatedAt = updatedAt
 		drugs = append(drugs, &d)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, "", fmt.Errorf("iterate drug rows: %w", err)
+		return nil, "", 0, fmt.Errorf("iterate drug rows: %w", err)
 	}
 
 	var nextPageToken string
@@ -167,7 +171,7 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 		drugs = drugs[:pageSize]
 	}
 
-	return drugs, nextPageToken, nil
+	return drugs, nextPageToken, totalCount, nil
 }
 
 // Update modifies an existing drug. It updates all mutable fields and

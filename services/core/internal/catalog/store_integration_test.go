@@ -298,7 +298,7 @@ func TestStoreListEmpty_Integration(t *testing.T) {
 		t.Fatalf("clear drugs: %v", err)
 	}
 
-	drugs, nextToken, err := store.List(context.Background(), "", false, 50, "", "")
+	drugs, nextToken, totalCount, err := store.List(context.Background(), "", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -307,6 +307,9 @@ func TestStoreListEmpty_Integration(t *testing.T) {
 	}
 	if nextToken != "" {
 		t.Errorf("nextToken should be empty, got %q", nextToken)
+	}
+	if totalCount != 0 {
+		t.Errorf("totalCount = %d, want 0", totalCount)
 	}
 }
 
@@ -328,7 +331,7 @@ func TestStoreListWithResults_Integration(t *testing.T) {
 		}
 	}
 
-	drugs, nextToken, err := store.List(context.Background(), "", false, 50, "", "")
+	drugs, nextToken, totalCount, err := store.List(context.Background(), "", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -337,6 +340,9 @@ func TestStoreListWithResults_Integration(t *testing.T) {
 	}
 	if nextToken != "" {
 		t.Errorf("nextToken should be empty with pageSize > count, got %q", nextToken)
+	}
+	if totalCount != 3 {
+		t.Errorf("totalCount = %d, want 3", totalCount)
 	}
 }
 
@@ -358,7 +364,7 @@ func TestStoreListPagination_Integration(t *testing.T) {
 	}
 
 	// First page: 2 items.
-	page1, token, err := store.List(context.Background(), "", false, 2, "", "")
+	page1, token, totalCount, err := store.List(context.Background(), "", false, 2, "", "")
 	if err != nil {
 		t.Fatalf("List page 1: %v", err)
 	}
@@ -368,9 +374,12 @@ func TestStoreListPagination_Integration(t *testing.T) {
 	if token == "" {
 		t.Fatal("nextPageToken should not be empty")
 	}
+	if totalCount != 5 {
+		t.Errorf("totalCount = %d, want 5", totalCount)
+	}
 
 	// Second page: use token.
-	page2, token2, err := store.List(context.Background(), "", false, 2, "", token)
+	page2, token2, _, err := store.List(context.Background(), "", false, 2, "", token)
 	if err != nil {
 		t.Fatalf("List page 2: %v", err)
 	}
@@ -382,7 +391,7 @@ func TestStoreListPagination_Integration(t *testing.T) {
 	}
 
 	// Third page: remaining 1 item.
-	page3, token3, err := store.List(context.Background(), "", false, 2, "", token2)
+	page3, token3, _, err := store.List(context.Background(), "", false, 2, "", token2)
 	if err != nil {
 		t.Fatalf("List page 3: %v", err)
 	}
@@ -421,7 +430,7 @@ func TestStoreListSearchQuery_Integration(t *testing.T) {
 	}
 
 	// Search for "para" should find exactly one drug.
-	drugs, _, err := store.List(context.Background(), "para", false, 50, "", "")
+	drugs, _, _, err := store.List(context.Background(), "para", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List with query: %v", err)
 	}
@@ -449,7 +458,7 @@ func TestStoreListIncludeInactive_Integration(t *testing.T) {
 	}
 
 	// Default list should include the drug.
-	drugs, _, err := store.List(context.Background(), "", false, 50, "", "")
+	drugs, _, _, err := store.List(context.Background(), "", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -464,7 +473,7 @@ func TestStoreListIncludeInactive_Integration(t *testing.T) {
 	}
 
 	// Default list should now be empty.
-	drugs, _, err = store.List(context.Background(), "", false, 50, "", "")
+	drugs, _, _, err = store.List(context.Background(), "", false, 50, "", "")
 	if err != nil {
 		t.Fatalf("List after deactivate: %v", err)
 	}
@@ -473,7 +482,7 @@ func TestStoreListIncludeInactive_Integration(t *testing.T) {
 	}
 
 	// With includeInactive=true, should get the deactivated drug.
-	drugs, _, err = store.List(context.Background(), "", true, 50, "", "")
+	drugs, _, _, err = store.List(context.Background(), "", true, 50, "", "")
 	if err != nil {
 		t.Fatalf("List with includeInactive: %v", err)
 	}

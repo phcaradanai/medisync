@@ -42,6 +42,7 @@ type fakeDrugStore struct {
 	getBarcodeErr    error
 	listResult       []*Drug
 	listNextToken    string
+	listTotalCount   int64
 	listErr          error
 	updateResult     *Drug
 	updateErr        error
@@ -71,8 +72,8 @@ func (s *fakeDrugStore) GetByBarcode(_ context.Context, barcode string) (*Drug, 
 	return s.getBarcodeResult, s.getBarcodeErr
 }
 
-func (s *fakeDrugStore) List(_ context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, error) {
-	return s.listResult, s.listNextToken, s.listErr
+func (s *fakeDrugStore) List(_ context.Context, query string, includeInactive bool, pageSize int32, pageToken, projectID string) ([]*Drug, string, int64, error) {
+	return s.listResult, s.listNextToken, s.listTotalCount, s.listErr
 }
 
 func (s *fakeDrugStore) Update(_ context.Context, d Drug) (*Drug, error) {
@@ -293,7 +294,8 @@ func TestHandlerListDrugs(t *testing.T) {
 			{ID: "d1", Code: "A", Name: "Drug A", Active: true},
 			{ID: "d2", Code: "B", Name: "Drug B", Active: true},
 		},
-		listNextToken: "d2",
+		listNextToken:  "d2",
+		listTotalCount: 3,
 	}
 	server := NewCatalogServerWithAuth(fakeStore, nil, &fakeTokenParser{claims: adminClaims()})
 
@@ -308,6 +310,9 @@ func TestHandlerListDrugs(t *testing.T) {
 	}
 	if resp.Msg.NextPageToken != "d2" {
 		t.Errorf("NextPageToken = %q, want d2", resp.Msg.NextPageToken)
+	}
+	if resp.Msg.TotalCount != 3 {
+		t.Errorf("TotalCount = %d, want 3", resp.Msg.TotalCount)
 	}
 }
 
