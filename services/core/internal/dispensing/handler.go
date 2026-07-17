@@ -312,8 +312,8 @@ func (s *DispensingServer) authenticate(header interface{ Get(string) string }) 
 // ADMIN sees all requested wards (or all if none specified). Other roles
 // are restricted to the wards in their JWT claims.
 func (s *DispensingServer) resolveWardScope(claims *TokenClaims, msg *dispensingv1.ListPrescriptionsRequest) []string {
-	if claims.Role == "ADMIN" {
-		// Admins can optionally filter by a specific ward.
+	if claims.Role == "ADMIN" || claims.Role == "KIOSK" {
+		// Admins and kiosks can optionally filter by a specific ward.
 		if msg != nil && msg.WardId != "" {
 			return []string{msg.WardId}
 		}
@@ -338,7 +338,7 @@ func (s *DispensingServer) resolveWardScope(claims *TokenClaims, msg *dispensing
 // authorizeWard returns true if the claims allow access to the given ward.
 // ADMIN can access any ward; other roles must have the ward in their WardIDs.
 func (s *DispensingServer) authorizeWard(claims *TokenClaims, wardID string) bool {
-	if claims.Role == "ADMIN" {
+	if claims.Role == "ADMIN" || claims.Role == "KIOSK" {
 		return true
 	}
 	for _, w := range claims.WardIDs {

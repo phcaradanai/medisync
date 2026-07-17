@@ -330,6 +330,16 @@ type dispensingTokenParser struct {
 }
 
 func (p *dispensingTokenParser) Parse(tokenString string) (*dispensing.TokenClaims, error) {
+	// Try kiosk token first.
+	kClaims, kErr := p.mgr.ParseKiosk(tokenString)
+	if kErr == nil {
+		return &dispensing.TokenClaims{
+			Subject:   kClaims.Code,
+			Role:      "KIOSK",
+			ProjectID: kClaims.ProjectID,
+		}, nil
+	}
+
 	claims, err := p.mgr.Parse(tokenString)
 	if err != nil {
 		return nil, err
