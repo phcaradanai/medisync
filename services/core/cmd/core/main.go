@@ -187,6 +187,40 @@ func run() (runErr error) {
 	dispensingPath, dispensingHandler := dispensingv1connect.NewDispensingServiceHandler(dispensingServer)
 	mux.Handle(dispensingPath, dispensingHandler)
 
+	// Health check endpoint — reports DB, NATS, and consumer status.
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		status := map[string]any{"status": "ok"}
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+
+		// DB ping
+		if err := pool.Ping(ctx); err != nil {
+			status["database"] = map[string]any{"status": "error", "message": err.Error()}
+		} else {
+			status["database"] = "ok"
+		}
+
+		// NATS status (check if JetStream is available)
+		if _, err := js.AccountInfo(ctx); err != nil {
+			status["nats"] = map[string]any{"status": "error", "message": err.Error()}
+		} else {
+			status["nats"] = "ok"
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if status["database"] != "ok" || status["nats"] != "ok" {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		fmt.Fprintf(w, `{"status":"%s","database":"%s","nats":"%s"}`,
+			func() string {
+				if status["database"] != "ok" || status["nats"] != "ok" {
+					return "degraded"
+				}
+				return "ok"
+			}(),
+			status["database"], status["nats"])
+	})
+
 	// Outbox publisher: polls dispensing.outbox and publishes to NATS.
 	// Runs in its own goroutine; stopped before NATS drain on shutdown.
 	publisherCtx, cancelPublisher := context.WithCancel(context.Background())
