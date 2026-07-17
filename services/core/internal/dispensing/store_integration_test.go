@@ -443,8 +443,8 @@ func TestPrescriptionSchemaUnchanged_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("count columns: %v", err)
 	}
-	if count != 12 {
-		t.Errorf("prescription table should have 12 columns, got %d", count)
+	if count != 13 {
+		t.Errorf("prescription table should have 13 columns, got %d", count)
 	}
 
 	// Verify state CHECK constraint still exists.
