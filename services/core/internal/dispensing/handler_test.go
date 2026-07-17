@@ -29,6 +29,8 @@ type fakeDispensingStore struct {
 	byID             map[string]*PrescriptionRow
 	byPrescriptionID map[string]*PrescriptionRow // key: "prescriptionID|sourceSystem"
 	byWard           map[string][]*PrescriptionRow
+	listNextToken    string
+	listTotalCount   int64
 	err              error
 }
 
@@ -46,11 +48,15 @@ func (f *fakeDispensingStore) GetByPrescriptionID(ctx context.Context, pid, ss s
 	return f.byPrescriptionID[pid+"|"+ss], nil
 }
 
-func (f *fakeDispensingStore) ListByWard(ctx context.Context, wardID string, states []State) ([]*PrescriptionRow, error) {
+func (f *fakeDispensingStore) ListByWard(ctx context.Context, wardIDs []string, states []State, pageSize int32, pageToken string) ([]*PrescriptionRow, string, int64, error) {
 	if f.err != nil {
-		return nil, f.err
+		return nil, "", 0, f.err
 	}
-	return f.byWard[wardID], nil
+	var rows []*PrescriptionRow
+	for _, wardID := range wardIDs {
+		rows = append(rows, f.byWard[wardID]...)
+	}
+	return rows, f.listNextToken, f.listTotalCount, nil
 }
 
 func newFakeStore() *fakeDispensingStore {

@@ -12,10 +12,11 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
 	dispensingv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1"
 	dispensingv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1/dispensingv1connect"
+	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 )
 
 // TokenParser is the narrow JWT interface consumed by the dispensing handler.
@@ -48,14 +49,14 @@ type UserInfo struct {
 
 // Common dispensing errors returned to callers.
 var (
-	ErrPrescriptionNotFound    = errors.New("prescription not found")
-	ErrPrescriptionIDRequired  = errors.New("prescription_id is required")
-	ErrInvalidTransition       = errors.New("invalid state transition")
-	ErrUnauthorized            = errors.New("unauthorized")
-	ErrWardRequired            = errors.New("ward_id is required for scoped access")
-	ErrAuthorizationRequired   = errors.New("authorization header is required")
-	ErrBearerSchemeRequired    = errors.New("authorization header must use Bearer scheme")
-	ErrBearerTokenRequired     = errors.New("bearer token is required")
+	ErrPrescriptionNotFound   = errors.New("prescription not found")
+	ErrPrescriptionIDRequired = errors.New("prescription_id is required")
+	ErrInvalidTransition      = errors.New("invalid state transition")
+	ErrUnauthorized           = errors.New("unauthorized")
+	ErrWardRequired           = errors.New("ward_id is required for scoped access")
+	ErrAuthorizationRequired  = errors.New("authorization header is required")
+	ErrBearerSchemeRequired   = errors.New("authorization header must use Bearer scheme")
+	ErrBearerTokenRequired    = errors.New("bearer token is required")
 )
 
 // Compile-time check: DispensingServer implements the generated handler interface.
@@ -65,14 +66,14 @@ var _ dispensingv1connect.DispensingServiceHandler = (*DispensingServer)(nil)
 type DispensingStore interface {
 	GetByID(ctx context.Context, id string) (*PrescriptionRow, error)
 	GetByPrescriptionID(ctx context.Context, prescriptionID, sourceSystem string) (*PrescriptionRow, error)
-	ListByWard(ctx context.Context, wardID string, states []State) ([]*PrescriptionRow, error)
+	ListByWard(ctx context.Context, wardIDs []string, states []State, pageSize int32, pageToken string) ([]*PrescriptionRow, string, int64, error)
 	// TransitionState requires a caller-provided tx for atomic outbox insert.
 }
 
 // DispensingServer is the Connect-RPC handler for DispensingService.
 type DispensingServer struct {
 	store  DispensingStore
-	pool   *pgxpool.Pool   // for starting transactions on Dispense
+	pool   *pgxpool.Pool // for starting transactions on Dispense
 	parser TokenParser
 	audit  *audit.Writer
 }
@@ -97,9 +98,11 @@ func (s *DispensingServer) ListPrescriptions(
 	}
 
 	msg := req.Msg
-	pageSize := int32(50)
-	if msg != nil && msg.PageSize > 0 {
-		pageSize = msg.PageSize
+	pageSize := pagination.DefaultPageSize
+	pageToken := ""
+	if msg != nil {
+		pageSize = pagination.NormalizePageSize(msg.PageSize)
+		pageToken = msg.PageToken
 	}
 
 	// Resolve ward scope from JWT claims.
@@ -113,36 +116,22 @@ func (s *DispensingServer) ListPrescriptions(
 		}
 	}
 
-	// Collect prescriptions across the authorized wards.
-	var allPrescriptions []*PrescriptionRow
-	for _, wardID := range wardIDs {
-		// Empty wardID = ADMIN wildcard = no ward filter (list all).
-		isAllWards := wardID == ""
-		var rows []*PrescriptionRow
-		var err error
-		if isAllWards {
-			rows, err = s.store.ListByWard(ctx, "", states)
-		} else {
-			rows, err = s.store.ListByWard(ctx, wardID, states)
-		}
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list prescriptions: %w", err))
-		}
-		allPrescriptions = append(allPrescriptions, rows...)
+	prescriptions, nextToken, totalCount, err := s.store.ListByWard(
+		ctx, wardIDs, states, pageSize, pageToken,
+	)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list prescriptions: %w", err))
 	}
 
-	// Apply pagination client-side (simple approach for M2).
-	if len(allPrescriptions) > int(pageSize) {
-		allPrescriptions = allPrescriptions[:pageSize]
-	}
-
-	pbPrescriptions := make([]*dispensingv1.Prescription, 0, len(allPrescriptions))
-	for _, pr := range allPrescriptions {
+	pbPrescriptions := make([]*dispensingv1.Prescription, 0, len(prescriptions))
+	for _, pr := range prescriptions {
 		pbPrescriptions = append(pbPrescriptions, toProtoPrescription(pr))
 	}
 
 	return connect.NewResponse(&dispensingv1.ListPrescriptionsResponse{
 		Prescriptions: pbPrescriptions,
+		NextPageToken: nextToken,
+		TotalCount:    totalCount,
 	}), nil
 }
 

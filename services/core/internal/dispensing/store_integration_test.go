@@ -177,12 +177,18 @@ func TestListByWard_Integration(t *testing.T) {
 		}
 	}
 
-	rows, err := store.ListByWard(ctx, wardA, nil)
+	rows, nextToken, totalCount, err := store.ListByWard(ctx, []string{wardA}, nil, 1, "")
 	if err != nil {
 		t.Fatalf("ListByWard: %v", err)
 	}
-	if len(rows) != 2 {
-		t.Errorf("ward A should have 2 prescriptions, got %d", len(rows))
+	if len(rows) != 1 {
+		t.Errorf("ward A first page should have 1 prescription, got %d", len(rows))
+	}
+	if totalCount != 2 {
+		t.Errorf("ward A totalCount = %d, want 2", totalCount)
+	}
+	if nextToken == "" {
+		t.Fatal("ward A nextPageToken should not be empty")
 	}
 	for _, r := range rows {
 		if r.WardID != wardA {
@@ -190,12 +196,23 @@ func TestListByWard_Integration(t *testing.T) {
 		}
 	}
 
-	rowsB, err := store.ListByWard(ctx, wardB, nil)
+	rowsPage2, nextToken2, totalCount2, err := store.ListByWard(ctx, []string{wardA}, nil, 1, nextToken)
+	if err != nil {
+		t.Fatalf("ListByWard page 2: %v", err)
+	}
+	if len(rowsPage2) != 1 || nextToken2 != "" || totalCount2 != 2 {
+		t.Errorf("ward A page 2 = len %d, token %q, total %d", len(rowsPage2), nextToken2, totalCount2)
+	}
+
+	rowsB, _, totalB, err := store.ListByWard(ctx, []string{wardB}, nil, 50, "")
 	if err != nil {
 		t.Fatalf("ListByWard ward B: %v", err)
 	}
 	if len(rowsB) != 1 {
 		t.Errorf("ward B should have 1 prescription, got %d", len(rowsB))
+	}
+	if totalB != 1 {
+		t.Errorf("ward B totalCount = %d, want 1", totalB)
 	}
 }
 
@@ -226,7 +243,7 @@ func TestListByWardWithStateFilter_Integration(t *testing.T) {
 	}
 
 	// List with READY state filter — should return 0.
-	rows, err := store.ListByWard(ctx, ward, []State{StateReady})
+	rows, _, _, err := store.ListByWard(ctx, []string{ward}, []State{StateReady}, 50, "")
 	if err != nil {
 		t.Fatalf("ListByWard READY: %v", err)
 	}
@@ -235,7 +252,7 @@ func TestListByWardWithStateFilter_Integration(t *testing.T) {
 	}
 
 	// List with DISPENSING state filter — should return 1.
-	rows, err = store.ListByWard(ctx, ward, []State{StateDispensing})
+	rows, _, _, err = store.ListByWard(ctx, []string{ward}, []State{StateDispensing}, 50, "")
 	if err != nil {
 		t.Fatalf("ListByWard DISPENSING: %v", err)
 	}

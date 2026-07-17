@@ -366,6 +366,7 @@ type ListPrescriptionsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Prescriptions []*Prescription        `protobuf:"bytes,1,rep,name=prescriptions,proto3" json:"prescriptions,omitempty"`
 	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -412,6 +413,13 @@ func (x *ListPrescriptionsResponse) GetNextPageToken() string {
 		return x.NextPageToken
 	}
 	return ""
+}
+
+func (x *ListPrescriptionsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
 }
 
 type GetPrescriptionRequest struct {
@@ -632,10 +640,12 @@ const file_medisync_dispensing_v1_dispensing_proto_rawDesc = "" +
 	"\x06states\x18\x02 \x03(\x0e2).medisync.dispensing.v1.PrescriptionStateR\x06states\x12\x1b\n" +
 	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x04 \x01(\tR\tpageToken\"\x8f\x01\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken\"\xb0\x01\n" +
 	"\x19ListPrescriptionsResponse\x12J\n" +
 	"\rprescriptions\x18\x01 \x03(\v2$.medisync.dispensing.v1.PrescriptionR\rprescriptions\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"(\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount\"(\n" +
 	"\x16GetPrescriptionRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"c\n" +
 	"\x17GetPrescriptionResponse\x12H\n" +

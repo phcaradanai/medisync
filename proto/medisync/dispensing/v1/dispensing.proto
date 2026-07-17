@@ -57,6 +57,7 @@ message ListPrescriptionsRequest {
 message ListPrescriptionsResponse {
   repeated Prescription prescriptions = 1;
   string next_page_token = 2;
+  int64 total_count = 3;
 }
 
 message GetPrescriptionRequest {

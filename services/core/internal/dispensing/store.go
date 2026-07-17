@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
 	"github.com/adm-chura3inter/medisync/services/core/internal/testutil"
 )
 
@@ -115,17 +116,21 @@ func (s *Store) GetByPrescriptionID(ctx context.Context, prescriptionID, sourceS
 	return scanPrescription(row)
 }
 
-// ListByWard returns prescriptions filtered by ward and (optionally) states.
+// ListByWard returns prescriptions filtered by wards and (optionally) states.
 // When states is empty, all non-terminal states are returned.
 // Used by ListPrescriptions handler; ward-scoping is enforced server-side.
-func (s *Store) ListByWard(ctx context.Context, wardID string, states []State) ([]*PrescriptionRow, error) {
+func (s *Store) ListByWard(ctx context.Context, wardIDs []string, states []State, pageSize int32, pageToken string) ([]*PrescriptionRow, string, int64, error) {
+	pageSize = pagination.NormalizePageSize(pageSize)
 	var args []any
 	argIdx := 1
 
 	var whereClauses []string
-	if wardID != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("ward_id = $%d", argIdx))
-		args = append(args, wardID)
+	allWards := len(wardIDs) == 1 && wardIDs[0] == ""
+	if !allWards && len(wardIDs) == 0 {
+		whereClauses = append(whereClauses, "FALSE")
+	} else if !allWards {
+		whereClauses = append(whereClauses, fmt.Sprintf("ward_id = ANY($%d)", argIdx))
+		args = append(args, wardIDs)
 		argIdx++
 	}
 	if len(states) > 0 {
@@ -144,22 +149,40 @@ func (s *Store) ListByWard(ctx context.Context, wardID string, states []State) (
 		whereClauses = append(whereClauses, "state NOT IN ('DISPENSED', 'FAILED', 'CANCELLED', 'EXPIRED')")
 	}
 
-	whereSQL := "WHERE "
+	filterWhereSQL := "WHERE "
 	for i, clause := range whereClauses {
 		if i > 0 {
-			whereSQL += " AND "
+			filterWhereSQL += " AND "
 		}
-		whereSQL += clause
+		filterWhereSQL += clause
+	}
+
+	var totalCount int64
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM dispensing.prescription %s", filterWhereSQL)
+	if err := s.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		return nil, "", 0, fmt.Errorf("count prescriptions: %w", err)
+	}
+
+	whereSQL := filterWhereSQL
+	if pageToken != "" {
+		whereSQL += fmt.Sprintf(
+			" AND created_at < (SELECT created_at FROM dispensing.prescription WHERE id = $%d)",
+			argIdx,
+		)
+		args = append(args, pageToken)
+		argIdx++
 	}
 
 	query := fmt.Sprintf(
 		`SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
 		        items, state, failure_reason, issued_at, created_at, updated_at
-		   FROM dispensing.prescription %s ORDER BY created_at DESC`, whereSQL)
+		   FROM dispensing.prescription %s
+		  ORDER BY created_at DESC, id DESC LIMIT $%d`, whereSQL, argIdx)
+	args = append(args, pageSize+1)
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list prescriptions: %w", err)
+		return nil, "", 0, fmt.Errorf("list prescriptions: %w", err)
 	}
 	defer rows.Close()
 
@@ -167,14 +190,20 @@ func (s *Store) ListByWard(ctx context.Context, wardID string, states []State) (
 	for rows.Next() {
 		pr, err := scanPrescription(rows)
 		if err != nil {
-			return nil, err
+			return nil, "", 0, err
 		}
 		results = append(results, pr)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate prescription rows: %w", err)
+		return nil, "", 0, fmt.Errorf("iterate prescription rows: %w", err)
 	}
-	return results, nil
+
+	var nextPageToken string
+	if len(results) > int(pageSize) {
+		nextPageToken = results[pageSize-1].ID
+		results = results[:pageSize]
+	}
+	return results, nextPageToken, totalCount, nil
 }
 
 // TransitionState validates the state transition and atomically updates the
