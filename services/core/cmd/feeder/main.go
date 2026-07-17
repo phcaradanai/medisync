@@ -85,13 +85,13 @@ func sample(ward, source string, i int) *eventsv1.PrescriptionCreated {
 		TraceId:        "feeder-" + id,
 		Items: []*eventsv1.PrescriptionItem{
 			{
-				DrugCode:   "PARA500",
+				DrugCode:   "PARA-500",
 				DrugName:   "Paracetamol 500 mg",
 				Quantity:   10,
 				DosageText: "รับประทานครั้งละ 1 เม็ด ทุก 6 ชั่วโมง เวลาปวดหรือมีไข้",
 			},
 			{
-				DrugCode:   "AMOX500",
+				DrugCode:   "CM-AMOX",
 				DrugName:   "Amoxicillin 500 mg",
 				Quantity:   21,
 				DosageText: "รับประทานครั้งละ 1 แคปซูล วันละ 3 ครั้ง หลังอาหาร",
