@@ -68,12 +68,23 @@ func (s *KioskServer) ListKiosks(
 	ctx context.Context,
 	req *connect.Request[kioskv1.ListKiosksRequest],
 ) (*connect.Response[kioskv1.ListKiosksResponse], error) {
-	if err := s.requireAdmin(req.Header()); err != nil {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
 		return nil, err
 	}
+	if claims.Role != string(RoleAdmin) {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
+	}
 
-	kiosks, err := s.store.List(ctx)
-	if err != nil {
+	projectID := claims.ProjectID
+	var kiosks []*Kiosk
+	var listErr error
+	if projectID != "" {
+		kiosks, listErr = s.store.ListByProject(ctx, projectID)
+	} else {
+		kiosks, listErr = s.store.List(ctx)
+	}
+	if listErr != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 

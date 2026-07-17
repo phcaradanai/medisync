@@ -404,8 +404,8 @@ func TestListKiosksRequiresAuth(t *testing.T) {
 func TestListKiosksSuccess(t *testing.T) {
 	store := &fakeKioskStore{
 		allKiosks: []*Kiosk{
-			{ID: "a", Code: "A", DisplayName: "First"},
-			{ID: "b", Code: "B", DisplayName: "Second"},
+			{ID: "a", Code: "A", DisplayName: "First", ProjectID: "proj-1"},
+			{ID: "b", Code: "B", DisplayName: "Second", ProjectID: "proj-1"},
 		},
 	}
 	h := setupKioskHandler(t, store, &fakeKioskJWT{}, nil)
