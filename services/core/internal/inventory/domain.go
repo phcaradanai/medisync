@@ -79,3 +79,39 @@ func AllocateFIFO(batches []SlotBatch, requested int32) ([]FIFOAllocation, int32
 	}
 	return allocs, remaining
 }
+
+// SlotCapacityInput holds the dimensions used for capacity calculation.
+type SlotCapacityInput struct {
+	SlotWidth  float64 // cm
+	SlotDepth  float64 // cm
+	SlotHeight float64 // cm
+	DrugWidth  float64 // cm per unit
+	DrugDepth  float64 // cm per unit
+	DrugHeight float64 // cm per unit
+}
+
+// CalculateSlotCapacity computes how many drug units fit in a slot
+// based on physical dimensions (all in centimeters).
+func CalculateSlotCapacity(in SlotCapacityInput) int32 {
+	if in.SlotWidth <= 0 || in.SlotDepth <= 0 || in.SlotHeight <= 0 ||
+		in.DrugWidth <= 0 || in.DrugDepth <= 0 || in.DrugHeight <= 0 {
+		return 0
+	}
+	w := int32(in.SlotWidth / in.DrugWidth)
+	d := int32(in.SlotDepth / in.DrugDepth)
+	h := int32(in.SlotHeight / in.DrugHeight)
+	if w <= 0 || d <= 0 || h <= 0 { return 0 }
+	return w * d * h
+}
+
+// SlotGroupCapacity calculates total capacity across a group of slots.
+func SlotGroupCapacity(slots []SlotCapacityInput, drug SlotCapacityInput) int32 {
+	var total int32
+	for _, s := range slots {
+		total += CalculateSlotCapacity(SlotCapacityInput{
+			SlotWidth: s.SlotWidth, SlotDepth: s.SlotDepth, SlotHeight: s.SlotHeight,
+			DrugWidth: drug.DrugWidth, DrugDepth: drug.DrugDepth, DrugHeight: drug.DrugHeight,
+		})
+	}
+	return total
+}
