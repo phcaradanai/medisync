@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from "react";
 import { create } from "@bufbuild/protobuf";
 import {
   DrugSchema,
@@ -8,431 +8,292 @@ import {
   ListDrugsRequestSchema,
 } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
 import type { Drug } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
-import {
-  ListProjectsRequestSchema,
-} from "@medisync/proto/medisync/identity/v1/identity_pb";
+import { ListProjectsRequestSchema } from "@medisync/proto/medisync/identity/v1/identity_pb";
 import type { Project } from "@medisync/proto/medisync/identity/v1/identity_pb";
 import { catalogClient, projectClient } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
+import { Icon } from "../masterdata/icons";
+import {
+  MasterHeader, ListHeading, SearchInput, Select, StatusBadge, MasterTable,
+  MasterDrawer, DrawerSection, Field, formatThaiDateTime, type Column, type Step,
+} from "../masterdata/kit";
 
-// ── Types ──────────────────────────────────────────────────────────
+const FORM_OPTIONS = ["Tablet", "Capsule", "Syrup", "Injection", "Cream", "Drops"];
+const UNIT_OPTIONS = ["เม็ด", "แคปซูล", "ขวด", "หลอด", "หน่วย", "ampoule"];
+
+const STEPS: Step[] = [
+  { num: "01", label: "ข้อมูลยา", icon: Icon.pill },
+  { num: "02", label: "การแสดงผล", icon: Icon.monitor },
+  { num: "03", label: "การเชื่อมโยง", icon: Icon.link },
+  { num: "04", label: "สถานะ", icon: Icon.checkCircle },
+];
 
 interface DrugFormData {
-  code: string;
-  name: string;
-  displayName: string;
-  genericName: string;
-  form: string;
-  strength: string;
-  unit: string;
-  stickerNote: string;
-  projectId: string;
-  active: boolean;
+  code: string; name: string; displayName: string; genericName: string;
+  form: string; strength: string; unit: string; barcode: string;
+  stickerNote: string; projectId: string; active: boolean;
+}
+const emptyForm: DrugFormData = {
+  code: "", name: "", displayName: "", genericName: "",
+  form: "Tablet", strength: "", unit: "เม็ด", barcode: "",
+  stickerNote: "", projectId: "", active: true,
+};
+function drugToForm(d: Drug): DrugFormData {
+  return {
+    code: d.code, name: d.name, displayName: d.displayName, genericName: d.genericName,
+    form: d.form, strength: d.strength, unit: d.unit, barcode: d.barcode,
+    stickerNote: d.stickerNote, projectId: d.projectId, active: d.active,
+  };
 }
 
-const emptyForm: DrugFormData = {
-  code: "",
-  name: "",
-  displayName: "",
-  genericName: "",
-  form: "",
-  strength: "",
-  unit: "",
-  stickerNote: "",
-  projectId: "",
-  active: true,
-};
-
-// ── Component ──────────────────────────────────────────────────────
-
 export function DrugsPage() {
+  const { user } = useAuth();
   const [drugs, setDrugs] = useState<Drug[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
 
-  // Modal state
-  const [showModal, setShowModal] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active">("all");
+  const [projectFilter, setProjectFilter] = useState("");
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DrugFormData>(emptyForm);
+  const [dirty, setDirty] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [editedAt, setEditedAt] = useState<Date>(new Date());
+  const sectionRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
 
-  // ── Data fetching ──────────────────────────────────────────────
-
-  const fetchDrugs = useCallback(
-    async (searchQuery?: string) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await catalogClient.listDrugs(
-          create(ListDrugsRequestSchema, {
-            query: searchQuery ?? "",
-            pageSize: 100,
-            includeInactive: true,
-          }),
-        );
-        setDrugs(res.drugs);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to load drugs");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
-
-  // ── Initial load ───────────────────────────────────────────────
-
-  useEffect(() => {
-    fetchDrugs();
-    fetchProjects();
-  }, [fetchDrugs]);
-
-  // ── Fetch projects ─────────────────────────────────────────────
-
+  const fetchDrugs = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await catalogClient.listDrugs(create(ListDrugsRequestSchema, { query: "", pageSize: 500, includeInactive: true }));
+      setDrugs(res.drugs);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "โหลดรายการยาไม่สำเร็จ");
+    } finally { setLoading(false); }
+  }, []);
   const fetchProjects = useCallback(async () => {
     try {
       const res = await projectClient.listProjects(create(ListProjectsRequestSchema, {}));
-      setProjects(res.projects.filter(p => p.active));
-    } catch (_) {
-      // projects list is non-critical for drug page
-    }
+      setProjects(res.projects.filter((p) => p.active));
+    } catch { /* non-critical */ }
   }, []);
+  useEffect(() => { fetchDrugs(); fetchProjects(); }, [fetchDrugs, fetchProjects]);
 
-  // ── Search ─────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return drugs.filter((d) => {
+      if (statusFilter === "active" && !d.active) return false;
+      if (projectFilter && d.projectId !== projectFilter) return false;
+      if (!q) return true;
+      return d.code.toLowerCase().includes(q) || d.name.toLowerCase().includes(q)
+        || d.genericName.toLowerCase().includes(q) || d.displayName.toLowerCase().includes(q);
+    });
+  }, [drugs, query, statusFilter, projectFilter]);
 
-  function handleSearch(e: FormEvent) {
-    e.preventDefault();
-    fetchDrugs(query);
-  }
-
-  // ── CRUD operations ────────────────────────────────────────────
+  const activeCount = useMemo(() => drugs.filter((d) => d.active).length, [drugs]);
+  const projectName = useCallback((id: string) => projects.find((p) => p.id === id)?.name ?? "—", [projects]);
+  const userName = user?.displayName || user?.username || "ผู้ใช้งาน";
 
   function openCreate() {
-    setEditingId(null);
-    setForm({ ...emptyForm, projectId: projects[0]?.id ?? "" });
-    setFormError(null);
-    setShowModal(true);
+    setEditingId(null); setForm({ ...emptyForm, projectId: projects[0]?.id ?? "" });
+    setDirty(false); setActiveStep(0); setFormError(null); setEditedAt(new Date()); setDrawerOpen(true);
   }
-
-  function openEdit(drug: Drug) {
-    setEditingId(drug.id);
-    setForm({
-      code: drug.code,
-      name: drug.name,
-      displayName: drug.displayName,
-      genericName: drug.genericName,
-      form: drug.form,
-      strength: drug.strength,
-      unit: drug.unit,
-      stickerNote: drug.stickerNote,
-      projectId: drug.projectId,
-      active: drug.active,
-    });
-    setFormError(null);
-    setShowModal(true);
+  function openEdit(d: Drug) {
+    setEditingId(d.id); setForm(drugToForm(d));
+    setDirty(false); setActiveStep(0); setFormError(null);
+    setEditedAt(d.updatedAt ? new Date(Number(d.updatedAt.seconds) * 1000) : new Date());
+    setDrawerOpen(true);
   }
-
-  function closeModal() {
-    setShowModal(false);
-    setEditingId(null);
-    setForm(emptyForm);
-    setFormError(null);
+  function openDuplicate(d: Drug) { openEdit(d); setEditingId(null); setDirty(true); }
+  function closeDrawer() {
+    if (dirty && !confirm("มีการแก้ไขที่ยังไม่บันทึก ต้องการปิดหรือไม่?")) return;
+    setDrawerOpen(false);
+  }
+  function setField<K extends keyof DrugFormData>(k: K, v: DrugFormData[K]) { setForm((f) => ({ ...f, [k]: v })); setDirty(true); }
+  function goToStep(i: number) { setActiveStep(i); sectionRefs[i].current?.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  function restore() {
+    if (editingId) { const d = drugs.find((x) => x.id === editingId); if (d) { setForm(drugToForm(d)); setDirty(false); } }
+    else { setForm({ ...emptyForm, projectId: projects[0]?.id ?? "" }); setDirty(false); }
   }
 
   async function handleSave(e: FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-
-    if (!form.code.trim()) {
-      setFormError("Drug code is required");
-      return;
-    }
-    if (!form.name.trim()) {
-      setFormError("Drug name is required");
-      return;
-    }
-
+    e.preventDefault(); setFormError(null);
+    if (!form.code.trim()) { setFormError("กรุณากรอกรหัสยา"); return; }
+    if (!form.name.trim()) { setFormError("กรุณากรอกชื่อยา"); return; }
+    if (!form.displayName.trim()) { setFormError("กรุณากรอกชื่อที่แสดงบน Kiosk"); return; }
     setSaving(true);
     try {
       if (editingId) {
-        const req = create(UpdateDrugRequestSchema, {
+        await catalogClient.updateDrug(create(UpdateDrugRequestSchema, {
           drug: create(DrugSchema, {
-            id: editingId,
-            code: form.code.trim(),
-            name: form.name.trim(),
-            genericName: form.genericName.trim(),
-            form: form.form.trim(),
-            strength: form.strength.trim(),
-            unit: form.unit.trim(),
-            stickerNote: form.stickerNote.trim(),
-            active: form.active,
+            id: editingId, code: form.code.trim(), name: form.name.trim(), displayName: form.displayName.trim(),
+            genericName: form.genericName.trim(), form: form.form.trim(), strength: form.strength.trim(),
+            unit: form.unit.trim(), barcode: form.barcode.trim(), stickerNote: form.stickerNote.trim(), active: form.active,
           }),
-        });
-        await catalogClient.updateDrug(req);
+        }));
       } else {
-        const req = create(CreateDrugRequestSchema, {
-          code: form.code.trim(),
-          name: form.name.trim(),
-          displayName: form.displayName.trim() || form.name.trim(),
-          genericName: form.genericName.trim(),
-          form: form.form.trim(),
-          strength: form.strength.trim(),
-          unit: form.unit.trim(),
-          stickerNote: form.stickerNote.trim(),
+        await catalogClient.createDrug(create(CreateDrugRequestSchema, {
+          code: form.code.trim(), name: form.name.trim(), displayName: form.displayName.trim() || form.name.trim(),
+          genericName: form.genericName.trim(), form: form.form.trim(), strength: form.strength.trim(),
+          unit: form.unit.trim(), barcode: form.barcode.trim(), stickerNote: form.stickerNote.trim(),
           projectId: form.projectId.trim() || undefined,
-        });
-        await catalogClient.createDrug(req);
+        }));
       }
-      closeModal();
-      await fetchDrugs();
-    } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
+      setDrawerOpen(false); await fetchDrugs();
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
+    } finally { setSaving(false); }
+  }
+  async function handleArchive(d: Drug) {
+    if (!confirm(`ปิดการใช้งาน "${d.name}" หรือไม่?`)) return;
+    try { await catalogClient.deactivateDrug(create(DeactivateDrugRequestSchema, { id: d.id })); await fetchDrugs(); }
+    catch (err: unknown) { setError(err instanceof Error ? err.message : "ปิดการใช้งานไม่สำเร็จ"); }
   }
 
-  async function handleDeactivate(id: string) {
-    if (
-      !confirm(
-        "Deactivate this drug? It will no longer appear in dispensing lists.",
-      )
-    ) {
-      return;
-    }
-    try {
-      await catalogClient.deactivateDrug(
-        create(DeactivateDrugRequestSchema, { id }),
-      );
-      await fetchDrugs();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Deactivate failed");
-    }
-  }
+  const columns: Column<Drug>[] = [
+    { key: "code", header: "รหัส", render: (d) => <span className="md-code">{d.code}</span> },
+    { key: "name", header: "ชื่อยา", render: (d) => d.name },
+    { key: "display", header: "ชื่อที่แสดง", render: (d) => d.displayName || "—" },
+    { key: "form", header: "รูปแบบ", render: (d) => d.form || "—" },
+    { key: "strength", header: "ความแรง", render: (d) => d.strength || "—" },
+    { key: "unit", header: "หน่วย", render: (d) => d.unit || "—" },
+    { key: "project", header: "โครงการ", render: (d) => <span className="md-cell-muted">{projectName(d.projectId)}</span> },
+    { key: "status", header: "สถานะ", render: (d) => <StatusBadge active={d.active} /> },
+  ];
 
-  // ── Render helpers ─────────────────────────────────────────────
-
-  function field(
-    label: string,
-    value: string,
-    setter: (v: string) => void,
-    opts?: { required?: boolean; placeholder?: string },
-  ) {
-    return (
-      <div className="form-group">
-        <label>{label}</label>
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => setter(e.target.value)}
-          placeholder={opts?.placeholder}
-          required={opts?.required}
-        />
-      </div>
-    );
-  }
-
-  // ── Render ─────────────────────────────────────────────────────
+  const previewName = form.displayName.trim() || form.name.trim() || "ชื่อยา";
+  const previewMeta = [form.code || "รหัส", form.strength, form.unit].filter(Boolean).join(" · ");
 
   return (
-    <div>
-      {/* Header */}
-      <div className="page-header">
-        <h1>Drug Catalog</h1>
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={openCreate}>
-            + Add Drug
-          </button>
-        </div>
-      </div>
+    <>
+      <MasterHeader icon={Icon.pill} title="ยา" subtitle="จัดการรายการยาในระบบ (Master Data)">
+        <button className="md-btn md-btn-outline"><Icon.upload size={18} /> นำเข้า</button>
+        <button className="md-btn md-btn-outline"><Icon.download size={18} /> ส่งออก</button>
+        <button className="md-btn md-btn-primary" onClick={openCreate}><Icon.plus size={18} /> เพิ่มยา</button>
+      </MasterHeader>
 
-      {/* Search */}
-      <form className="search-bar" onSubmit={handleSearch}>
-        <input
-          type="text"
-          placeholder="Search by code, name, or generic name…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </form>
+      {error && <div className="md-err">{error}</div>}
 
-      {/* Error banner */}
-      {error && (
-        <div
-          className="login-error mb-md"
-          style={{ marginBottom: "var(--sp-lg)" }}
-        >
-          {error}
-          <button
-            className="btn-ghost btn-sm"
-            style={{ marginLeft: "var(--sp-md)" }}
-            onClick={() => setError(null)}
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="table-wrap">
-        {loading && drugs.length === 0 ? (
-          <div className="empty-state">Loading…</div>
-        ) : drugs.length === 0 ? (
-          <div className="empty-state">
-            {query
-              ? "No drugs match your search."
-              : "No drugs in the catalog yet. Click + Add Drug to create one."}
+      <div className="md-panel">
+        <ListHeading icon={Icon.pill} title="รายการยา" count={filtered.length} />
+        <div className="md-toolbar">
+          <SearchInput value={query} onChange={setQuery} placeholder="ค้นหารหัส ชื่อยา หรือชื่อสามัญ" />
+          <div className="md-segment">
+            <button className={`md-seg-btn${statusFilter === "all" ? " active" : ""}`} onClick={() => setStatusFilter("all")}>ทั้งหมด <span className="md-seg-num">{drugs.length}</span></button>
+            <button className={`md-seg-btn${statusFilter === "active" ? " active" : ""}`} onClick={() => setStatusFilter("active")}>ใช้งาน <span className="md-seg-num">{activeCount}</span></button>
           </div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Generic Name</th>
-                <th>Form</th>
-                <th>Strength</th>
-                <th>Unit</th>
-                <th>Status</th>
-                <th style={{ width: 120 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {drugs.map((d) => (
-                <tr key={d.id}>
-                  <td className="mono">{d.code}</td>
-                  <td>{d.name}</td>
-                  <td className="text-muted">{d.genericName || "—"}</td>
-                  <td>{d.form || "—"}</td>
-                  <td className="mono">{d.strength || "—"}</td>
-                  <td>{d.unit || "—"}</td>
-                  <td>
-                    <span
-                      className={`badge ${d.active ? "badge-active" : "badge-inactive"}`}
-                    >
-                      {d.active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="inline-actions">
-                      <button
-                        className="btn-ghost btn-sm"
-                        onClick={() => openEdit(d)}
-                        title="Edit"
-                      >
-                        Edit
-                      </button>
-                      {d.active && (
-                        <button
-                          className="btn-ghost btn-sm"
-                          onClick={() => handleDeactivate(d.id)}
-                          style={{ color: "var(--semantic-error)" }}
-                          title="Deactivate"
-                        >
-                          Deactivate
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+          <Select value={projectFilter} onChange={setProjectFilter}>
+            <option value="">ทุกโครงการ</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </Select>
+          <button className="md-btn md-btn-primary" onClick={openCreate}><Icon.plus size={18} /> เพิ่มยา</button>
+        </div>
+        <MasterTable rows={filtered} columns={columns} getId={(d) => d.id} loading={loading}
+          onEdit={openEdit} onDuplicate={openDuplicate} onArchive={handleArchive} emptyText="ไม่พบรายการยา" />
       </div>
 
-      {/* ── Create / Edit modal ────────────────────────────────── */}
-      {showModal && (
-        <div
-          className="overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeModal();
-          }}
-        >
-          <form className="modal" onSubmit={handleSave}>
-            <h2>{editingId ? "Edit Drug" : "Add Drug"}</h2>
+      <MasterDrawer
+        open={drawerOpen} icon={Icon.pill}
+        title={editingId ? "แก้ไขข้อมูลยา" : "เพิ่มข้อมูลยา"}
+        entityLabel="ยา" code={form.code} dirty={dirty}
+        steps={STEPS} activeStep={activeStep} onStep={goToStep}
+        onClose={closeDrawer} onSubmit={handleSave} onRestore={restore}
+        saving={saving} timeLabel={formatThaiDateTime(editedAt)}
+      >
+        {formError && <div className="md-err" style={{ margin: "0 0 16px" }}>{formError}</div>}
 
-            {formError && <div className="login-error">{formError}</div>}
-
-            {field("Code *", form.code, (v) =>
-              setForm((f) => ({ ...f, code: v })),
-              { required: true, placeholder: "e.g. PARA500" },
-            )}
-
-            {field("Name *", form.name, (v) =>
-              setForm((f) => ({ ...f, name: v })),
-              { required: true, placeholder: "e.g. Paracetamol 500mg" },
-            )}
-
-            <div className="form-row">
-              {field("Generic Name", form.genericName, (v) =>
-                setForm((f) => ({ ...f, genericName: v })),
-                { placeholder: "e.g. Acetaminophen" },
-              )}
-              {field("Form", form.form, (v) =>
-                setForm((f) => ({ ...f, form: v })),
-                { placeholder: "e.g. tablet" },
-              )}
-            </div>
-
-            <div className="form-row">
-              {field("Strength", form.strength, (v) =>
-                setForm((f) => ({ ...f, strength: v })),
-                { placeholder: "e.g. 500 mg" },
-              )}
-              {field("Unit", form.unit, (v) =>
-                setForm((f) => ({ ...f, unit: v })),
-                { placeholder: "e.g. tab" },
-              )}
-            </div>
-
-            {field("Sticker Note", form.stickerNote, (v) =>
-              setForm((f) => ({ ...f, stickerNote: v })),
-              { placeholder: "e.g. Take with food. Avoid alcohol." },
-            )}
-
-            {field("Display Name (Thai)", form.displayName, (v) =>
-              setForm((f) => ({ ...f, displayName: v })),
-              { placeholder: "e.g. พาราเซตามอล 500 มก." },
-            )}
-
-            <div className="form-group">
-              <label>Project *</label>
-              <select
-                value={form.projectId}
-                onChange={(e) => setForm((f) => ({ ...f, projectId: e.target.value }))}
-                required
-              >
-                <option value="">-- Select Project --</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
+        <DrawerSection num="01" icon={Icon.pill} title="ข้อมูลยา" refEl={sectionRefs[0]}>
+          <div className="md-grid3">
+            <Field label="รหัสยา" required lead={<Icon.hash size={18} />}>
+              <input value={form.code} onChange={(e) => setField("code", e.target.value)} placeholder="PARA500" />
+            </Field>
+            <Field label="ชื่อยา" required lead={<span style={{ fontWeight: 700 }}>T</span>}>
+              <input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="Paracetamol 500 mg" />
+            </Field>
+            <Field label="ชื่อสามัญ" lead={<Icon.flask size={18} />}>
+              <input value={form.genericName} onChange={(e) => setField("genericName", e.target.value)} placeholder="Acetaminophen" />
+            </Field>
+            <Field label="รูปแบบยา" lead={<Icon.pill size={18} />} trailingChevron>
+              <select value={form.form} onChange={(e) => setField("form", e.target.value)}>
+                {(FORM_OPTIONS.includes(form.form) ? FORM_OPTIONS : [form.form, ...FORM_OPTIONS]).map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
-            </div>
+            </Field>
+            <Field label="ความแรง" lead={<Icon.gauge size={18} />}>
+              <input value={form.strength} onChange={(e) => setField("strength", e.target.value)} placeholder="500 mg" />
+            </Field>
+            <Field label="หน่วย" lead={<Icon.box size={18} />} trailingChevron>
+              <select value={form.unit} onChange={(e) => setField("unit", e.target.value)}>
+                {(UNIT_OPTIONS.includes(form.unit) ? UNIT_OPTIONS : [form.unit, ...UNIT_OPTIONS]).map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </Field>
+          </div>
+        </DrawerSection>
 
-            <div className="form-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={closeModal}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="btn-primary" disabled={saving}>
-                {saving
-                  ? "Saving…"
-                  : editingId
-                    ? "Save Changes"
-                    : "Create Drug"}
-              </button>
+        <DrawerSection num="02" icon={Icon.monitor} title="การแสดงผล" refEl={sectionRefs[1]}>
+          <div className="md-display-layout">
+            <div>
+              <Field label="ชื่อที่แสดงบน Kiosk" required highlight>
+                <input value={form.displayName} onChange={(e) => setField("displayName", e.target.value)} placeholder="พาราเซตามอล 500 มก." />
+              </Field>
+              <div style={{ height: 16 }} />
+              <div className="md-field no-icon" style={{ marginBottom: 16 }}>
+                <label>บาร์โค้ด</label>
+                <div className="md-input-inline">
+                  <div className="md-input-wrap">
+                    <span className="md-lead"><Icon.barcode size={18} /></span>
+                    <input value={form.barcode} onChange={(e) => setField("barcode", e.target.value)} placeholder="8850000123456" />
+                  </div>
+                  <button type="button" className="md-btn md-btn-ghost"><Icon.scan size={18} /> สแกน</button>
+                </div>
+              </div>
+              <div className="md-field no-icon">
+                <label>คำแนะนำบนฉลาก</label>
+                <textarea value={form.stickerNote} onChange={(e) => setField("stickerNote", e.target.value)} placeholder="รับประทานครั้งละ 1 เม็ด หลังอาหาร" />
+              </div>
             </div>
-          </form>
-        </div>
-      )}
-    </div>
+            <div className="md-preview">
+              <div className="md-preview-head"><Icon.monitor size={16} /> ตัวอย่างหน้าจอ</div>
+              <div className="md-preview-card">
+                <div className="md-preview-name">{previewName}</div>
+                <div className="md-preview-meta">{previewMeta}</div>
+                <div className="md-preview-badge"><Icon.checkCircle size={16} /> {form.active ? "พร้อมใช้งาน" : "ปิดใช้งาน"}</div>
+              </div>
+            </div>
+          </div>
+        </DrawerSection>
+
+        <DrawerSection num="03" icon={Icon.link} title="การเชื่อมโยง" refEl={sectionRefs[2]}>
+          <div className="md-link-row">
+            <Field label="โครงการ" required lead={<Icon.folder size={18} />} trailingChevron>
+              <select value={form.projectId} onChange={(e) => setField("projectId", e.target.value)} disabled={!!editingId} style={{ paddingLeft: 40 }}>
+                <option value="">— เลือกโครงการ —</option>
+                {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </Field>
+            <div className="md-field no-icon">
+              <label>ตู้ยา</label>
+              <div className="md-cabinet-box"><span className="md-cab-ico"><Icon.cabinet size={18} /></span> CAB-A01 · ชั้น A</div>
+            </div>
+            <button type="button" className="md-btn md-btn-ghost" style={{ height: 48 }}><Icon.link size={18} /> จัดการการเชื่อมโยง</button>
+          </div>
+        </DrawerSection>
+
+        <DrawerSection num="04" icon={Icon.checkCircle} title="สถานะ" green refEl={sectionRefs[3]}>
+          <div className="md-status-row">
+            <div className={`md-toggle${form.active ? " on" : ""}`} onClick={() => setField("active", !form.active)}>
+              <span className="md-switch" />
+              <span className="md-toggle-label">{form.active ? "ใช้งาน" : "ปิดใช้งาน"}</span>
+            </div>
+            {form.active && <span className="md-badge md-badge-soft"><Icon.checkCircle size={15} /> พร้อมเผยแพร่</span>}
+            <span className="md-status-meta">แก้ไขโดย <strong>{userName}</strong></span>
+          </div>
+        </DrawerSection>
+      </MasterDrawer>
+    </>
   );
 }

@@ -87,7 +87,7 @@ function ShelfGridScreen() {
 }
 
 function KioskShell() {
-  const { state, loading, logout } = useAuth();
+  const { state, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isRefill = location.pathname.startsWith("/refill");
@@ -111,7 +111,7 @@ function KioskShell() {
 
   return (
     <>
-      <header className="kiosk-header">
+      <header className={`kiosk-header${isWithdraw ? " kiosk-header--withdraw" : ""}`}>
         <div className="flex flex-col">
           <span className="text-white text-lg font-bold">{state.kiosk.displayName}</span>
           <span className="text-sm text-gray-400">{state.kiosk.code}</span>
@@ -134,9 +134,6 @@ function KioskShell() {
             onClick={() => navigate("/catalog")}
           >
             ▦ ผังช่องยา
-          </button>
-          <button className="kiosk-header__logout" onClick={logout}>
-            ออกจากระบบ
           </button>
         </div>
       </header>

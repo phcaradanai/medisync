@@ -36,6 +36,7 @@ export interface SlotCellProps {
   expiryWarningDays?: number;
   now?: Date;
   onSelect?: (slot: SlotCellData) => void;
+  readOnly?: boolean;
 }
 
 export interface ExpiryBadgeProps {
@@ -166,7 +167,7 @@ function getStateGlyph(state: SlotCellState): string | null {
   }
 }
 
-export default function SlotCell({
+export function SlotCell({
   slot,
   shelfNumber,
   rowNumber,
@@ -174,13 +175,14 @@ export default function SlotCell({
   expiryWarningDays = 30,
   now = new Date(),
   onSelect,
+  readOnly = false,
 }: SlotCellProps) {
   const resolvedShelfNumber = shelfNumber ?? slot?.shelf ?? 1;
   const resolvedRowNumber = rowNumber ?? slot?.rowNum ?? 1;
   const state = getSlotCellState(slot, expiryWarningDays, now);
   const glyph = getStateGlyph(state);
   const address = `S${resolvedShelfNumber}-R${resolvedRowNumber}`;
-  const disabled = !slot || state === "expired";
+  const disabled = !slot || state === "expired" || readOnly;
   const fillPercent = slot?.capacity
     ? Math.max(0, Math.min(100, (slot.quantity / slot.capacity) * 100))
     : 0;
@@ -195,23 +197,52 @@ export default function SlotCell({
       className={`slot-cell slot-cell--${state}${selected ? " slot-cell--selected" : ""}`}
       data-state={selected ? "selected" : state}
       aria-label={title}
-      aria-pressed={slot ? selected : undefined}
+      aria-pressed={slot && !readOnly ? selected : undefined}
       disabled={disabled}
       title={title}
       onClick={() => slot && !disabled && onSelect?.(slot)}
     >
-      <span className="slot-cell__row">{resolvedRowNumber}</span>
-      {glyph && (
-        <span className="slot-cell__glyph" aria-hidden="true">
-          {glyph}
+      <span className="slot-cell__header">
+        <span className="slot-cell__row">{resolvedRowNumber}</span>
+        {glyph && (
+          <span className="slot-cell__glyph" aria-label={getStateLabel(state)}>
+            <span aria-hidden="true">{glyph}</span>
+          </span>
+        )}
+      </span>
+      <span className="slot-cell__body">
+        <span className="slot-cell__drug-name">{drugName}</span>
+        <span className="slot-cell__drug-visual" aria-hidden="true">
+          {state === "empty" ? (
+            <span className="slot-cell__empty-icon">
+              <svg viewBox="0 0 40 40" fill="none" focusable="false">
+                <rect x="5" y="8" width="30" height="24" rx="6" />
+                <path d="M20 14v12M14 20h12" />
+              </svg>
+            </span>
+          ) : (
+            <svg viewBox="0 0 34 58" focusable="false">
+              <path d="M11 2h12v8l4 6v32c0 5-3 8-8 8h-4c-5 0-8-3-8-8V16l4-6z" />
+              <path d="M8 24h18v20H8z" className="slot-cell__vial-label" />
+            </svg>
+          )}
         </span>
-      )}
+      </span>
+      <span className="slot-cell__meta">
+        <span className="slot-cell__drug-code">
+          {slot?.drugCode ? `รหัส ${slot.drugCode}` : "พร้อมกำหนดยา"}
+        </span>
+        {slot && <span className="slot-cell__stock">คงเหลือ {slot.quantity}</span>}
+      </span>
       <span className="slot-cell__fill-track" aria-hidden="true">
         <span
           className="slot-cell__fill"
           style={{ width: `${fillPercent}%` }}
         />
       </span>
+      <span className="slot-cell__position">{slot?.code || address}</span>
     </button>
   );
 }
+
+export default SlotCell;

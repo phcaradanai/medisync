@@ -1,480 +1,165 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PrescriptionState } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
 
-// ── Mock the transport ─────────────────────────────────────────
+vi.mock("../transport.ts", () => ({ transport: Symbol("transport") }));
+vi.mock("@connectrpc/connect-web", () => ({ createConnectTransport: () => Symbol("staff-transport") }));
+const logout = vi.fn();
+vi.mock("../auth.tsx", () => ({ useAuth: () => ({ state: { kiosk: { id: "k1", code: "K1", displayName: "Demo Cabinet", projectId: "project-1" } }, logout }) }));
 
-vi.mock("../transport.ts", () => ({
-  transport: Symbol("mock-transport"),
+const { listPrescriptions, listSlots, cardLogin, dispense, getPrescription } = vi.hoisted(() => ({
+  listPrescriptions: vi.fn(), listSlots: vi.fn(), cardLogin: vi.fn(), dispense: vi.fn(), getPrescription: vi.fn(),
 }));
-
-// ── Mock auth: return a logged-in kiosk ────────────────────────
-
-const mockLogout = vi.fn();
-
-vi.mock("../auth.tsx", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../auth.tsx")>();
-  return {
-    ...actual,
-    useAuth: () => ({
-      state: {
-        kiosk: {
-          id: "k1",
-          code: "KIOSK-WARD3A",
-          displayName: "ตู้จ่ายยาวอร์ด 3A",
-          active: true,
-        },
-        token: "test-token",
-        expiresAt: new Date(Date.now() + 3600_000),
-      },
-      loading: false,
-      login: vi.fn(),
-      logout: mockLogout,
-    }),
-  };
+vi.mock("@connectrpc/connect", async (original) => {
+  const actual = await original<typeof import("@connectrpc/connect")>();
+  return { ...actual, createClient: () => ({ listPrescriptions, listSlots, cardLogin, dispense, getPrescription }) };
 });
-
-// ── Mock createClient for DispensingService ────────────────────
-
-const mockListPrescriptions = vi.fn();
-const mockDispense = vi.fn();
-const mockGetPrescription = vi.fn();
-
-vi.mock("@connectrpc/connect", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@connectrpc/connect")>();
-  return {
-    ...actual,
-    createClient: () => ({
-      listPrescriptions: (...args: unknown[]) => mockListPrescriptions(...args),
-      dispense: (...args: unknown[]) => mockDispense(...args),
-      getPrescription: (...args: unknown[]) => mockGetPrescription(...args),
-    }),
-  };
-});
-
-// ── Now import the component ───────────────────────────────────
 
 import WithdrawFlow from "../features/withdraw/WithdrawFlow";
 
-// ── Test fixtures ───────────────────────────────────────────────
+const storedValues = new Map<string, string>();
+Object.defineProperty(globalThis, "localStorage", {
+  configurable: true,
+  value: {
+    clear: () => storedValues.clear(),
+    getItem: (key: string) => storedValues.get(key) ?? null,
+    key: (index: number) => Array.from(storedValues.keys())[index] ?? null,
+    get length() { return storedValues.size; },
+    removeItem: (key: string) => storedValues.delete(key),
+    setItem: (key: string, value: string) => storedValues.set(key, value),
+  },
+});
 
-function makePrescription(overrides: Record<string, unknown> = {}) {
-  return {
-    id: (overrides.id as string) ?? "p1",
-    prescriptionId: (overrides.prescriptionId as string) ?? "RX-001",
-    sourceSystem: "HIS",
-    hn: (overrides.hn as string) ?? "HN-0001",
-    patientName: (overrides.patientName as string) ?? "สมชาย ใจดี",
-    wardId: "W01",
-    items: [
-      {
-        drugCode: "PARA500",
-        drugName: "Paracetamol 500mg",
-        quantity: 10,
-        dosageText: "1 tab oral tid pc",
-      },
-    ],
-    state: (overrides.state as number) ?? PrescriptionState.READY,
-    failureReason: (overrides.failureReason as string) ?? "",
-  };
+const prescription = {
+  id: "internal-rx", prescriptionId: "DEMO-RX-001", sourceSystem: "HIS",
+  hn: "HN001", patientName: "ผู้ป่วยทดสอบ", wardId: "WARD-1",
+  items: [{ drugCode: "PARA", drugName: "Paracetamol", quantity: 2, dosageText: "" }],
+  state: PrescriptionState.READY, failureReason: "",
+};
+const prescriptionB = { ...prescription, id: "internal-rx-b", prescriptionId: "DEMO-RX-002", hn: "HN002", patientName: "ผู้ป่วย ข" };
+const slot = { id: "slot-1", code: "S01", drugCode: "PARA", drugName: "Paracetamol", quantity: 10, capacity: 20, lowThreshold: 3 };
+
+async function scanRequest(user: ReturnType<typeof userEvent.setup>) {
+  await user.keyboard("DEMO-RX-001{Enter}");
+  await screen.findByRole("dialog", { name: "ตรวจสอบรายการยาที่จะเบิก" });
 }
 
-function makeDispenseResponse(state: number = PrescriptionState.DISPENSING) {
-  return {
-    prescription: makePrescription({ state }),
-  };
-}
-
-// ── Helpers ──────────────────────────────────────────────────────
-
-/** Navigate from list → confirm screen for a dispense flow. */
-async function goToConfirm(prescriptions = [makePrescription()]) {
-  mockListPrescriptions.mockResolvedValueOnce({ prescriptions });
-  render(<WithdrawFlow />);
-  await waitFor(() => {
-    expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-  });
-  await userEvent.click(screen.getByText("สมชาย ใจดี"));
-  await waitFor(() => {
-    expect(screen.getByText("ยืนยันการเบิกยา")).toBeDefined();
-  });
-}
-
-// ── Tests ────────────────────────────────────────────────────────
-
-describe("WithdrawFlow", () => {
+describe("sticker-driven withdrawal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.defineProperty(navigator, "onLine", {
-      value: true,
-      writable: true,
-      configurable: true,
-    });
+    localStorage.clear();
+    listSlots.mockResolvedValue({ slots: [slot] });
+    listPrescriptions.mockResolvedValue({ prescriptions: [prescription] });
   });
 
-  // ── List rendering ──────────────────────────────────────────
+  it("starts with the sticker scanner and validates against backend data", async () => {
+    const user = userEvent.setup(); render(<WithdrawFlow />);
+    expect(screen.getByRole("heading", { name: "สแกน Sticker เบิกยา" })).toBeDefined();
+    await scanRequest(user);
+    expect(screen.getAllByText("DEMO-RX-001").length).toBeGreaterThan(0);
+    expect(screen.getByText(/ชั้น 1 · ช่อง 1/)).toBeDefined();
+    expect(screen.getByText("คงเหลือ 10")).toBeDefined();
+    expect(screen.getByText("พร้อมจ่าย")).toBeDefined();
+    expect(listPrescriptions).toHaveBeenCalledTimes(1);
+  });
 
-  it("renders prescription list from mocked ListPrescriptions", async () => {
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [
-        makePrescription({ id: "p1", prescriptionId: "RX-001", patientName: "สมชาย ใจดี", hn: "HN-0001" }),
-        makePrescription({ id: "p2", prescriptionId: "RX-002", patientName: "สมหญิง รักดี", hn: "HN-0002" }),
-      ],
-    });
+  it("rejects an unknown and already-dispensed sticker", async () => {
+    const user = userEvent.setup(); listPrescriptions.mockResolvedValueOnce({ prescriptions: [] });
+    render(<WithdrawFlow />); await user.keyboard("UNKNOWN{Enter}");
+    expect(await screen.findByText(/ไม่พบรายการเบิกยา/)).toBeDefined();
+  });
 
+  it("warns in the medication cart when stock is insufficient", async () => {
+    listSlots.mockResolvedValue({ slots: [{ ...slot, quantity: 1 }] });
+    const user = userEvent.setup(); render(<WithdrawFlow />); await scanRequest(user);
+    expect(screen.getByText("ไม่เพียงพอ · ขาด 1")).toBeDefined();
+    expect(screen.getByText(/ปริมาณยาบางรายการไม่เพียงพอ/)).toBeDefined();
+  });
+
+  it("keeps cabinet slots read-only and highlights requested locations", async () => {
+    const user = userEvent.setup(); render(<WithdrawFlow />); await scanRequest(user);
+    await user.click(screen.getByRole("button", { name: "กลับไปตรวจสอบ" }));
+    expect(screen.getByRole("button", { name: /ชั้น 1 ช่อง 1 Paracetamol/ }).className).toContain("is-requested");
+    await user.click(screen.getByRole("button", { name: /ชั้น 1 ช่อง 1 Paracetamol/ }));
+    expect(screen.getByRole("button", { name: /S1-R1 · Paracetamol/ })).toHaveProperty("disabled", true);
+    expect(screen.queryByText(/รายการตำแหน่งที่เลือก/)).toBeNull();
+  });
+
+  it("requires staff identity and blocks an unauthorized ward", async () => {
+    const user = userEvent.setup(); render(<WithdrawFlow />); await scanRequest(user);
+    await user.click(screen.getByRole("button", { name: "ไปสแกนบัตรยืนยัน" }));
+    cardLogin.mockResolvedValue({ accessToken: "staff-jwt", user: { id: "u1", displayName: "เจ้าหน้าที่ ก", active: true, role: 3, wardIds: ["OTHER"], projectId: "project-1" } });
+    await user.type(screen.getByLabelText("รหัสบัตรเจ้าหน้าที่"), "card-token");
+    await user.click(screen.getByRole("button", { name: "ยืนยันตัวตนและส่งเข้าคิว" }));
+    expect(await screen.findByText(/ไม่มีสิทธิ์เบิกรายการ/)).toBeDefined();
+    expect(dispense).not.toHaveBeenCalled();
+  });
+
+  it("submits immediately after authorization and keeps queue counts out of the footer", async () => {
+    const user = userEvent.setup(); render(<WithdrawFlow />); await scanRequest(user);
+    await user.click(screen.getByRole("button", { name: "ไปสแกนบัตรยืนยัน" }));
+    cardLogin.mockResolvedValue({ accessToken: "staff-jwt", user: { id: "u1", displayName: "เจ้าหน้าที่ ก", active: true, role: 3, wardIds: ["WARD-1"], projectId: "project-1" } });
+    dispense.mockResolvedValue({ prescription: { ...prescription, state: PrescriptionState.DISPENSING } });
+    getPrescription.mockResolvedValue({ prescription: { ...prescription, state: PrescriptionState.DISPENSING } });
+    await user.type(screen.getByLabelText("รหัสบัตรเจ้าหน้าที่"), "card-token");
+    await user.click(screen.getByRole("button", { name: "ยืนยันตัวตนและส่งเข้าคิว" }));
+    expect(await screen.findByRole("heading", { name: "สแกน Sticker เบิกยา" })).toBeDefined();
+    expect(screen.getByText(/ส่งรายการ DEMO-RX-001 เข้าคิวสำเร็จ/)).toBeDefined();
+    expect(screen.queryByRole("button", { name: "เปิดรายละเอียดคิวเครื่อง" })).toBeNull();
+    expect(screen.queryByText(/กำลังเบิก/)).toBeNull();
+    expect(dispense).toHaveBeenCalledTimes(1);
+    await user.keyboard("DEMO-RX-001{Enter}");
+    expect(await screen.findByText(/รายการนี้ถูกส่งเข้าคิวแล้ว/)).toBeDefined();
+    expect(dispense).toHaveBeenCalledTimes(1);
+  });
+
+  it("queues separate stickers with a separate identity authorization for each request", async () => {
+    const user = userEvent.setup();
+    listPrescriptions.mockResolvedValue({ prescriptions: [prescription, prescriptionB] });
+    cardLogin
+      .mockResolvedValueOnce({ accessToken: "staff-a", user: { id: "u1", displayName: "เจ้าหน้าที่ ก", active: true, role: 1, wardIds: [], projectId: "project-1" } })
+      .mockResolvedValueOnce({ accessToken: "staff-b", user: { id: "u2", displayName: "เจ้าหน้าที่ ข", active: true, role: 1, wardIds: [], projectId: "project-1" } });
+    dispense.mockImplementation(({ prescriptionId }: { prescriptionId: string }) => Promise.resolve({ prescription: { ...(prescriptionId === "DEMO-RX-002" ? prescriptionB : prescription), state: PrescriptionState.DISPENSING } }));
     render(<WithdrawFlow />);
 
-    await waitFor(() => {
-      expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-    });
+    await scanRequest(user);
+    await user.click(screen.getByRole("button", { name: "ไปสแกนบัตรยืนยัน" }));
+    await user.type(screen.getByLabelText("รหัสบัตรเจ้าหน้าที่"), "card-a");
+    await user.click(screen.getByRole("button", { name: "ยืนยันตัวตนและส่งเข้าคิว" }));
+    await screen.findByRole("heading", { name: "สแกน Sticker เบิกยา" });
 
-    expect(screen.getByText("สมหญิง รักดี")).toBeDefined();
-    expect(screen.getByText("HN HN-0001")).toBeDefined();
-    expect(screen.getByText("HN HN-0002")).toBeDefined();
-    expect(screen.getAllByText("Paracetamol 500mg")).toHaveLength(2);
+    await user.keyboard("DEMO-RX-002{Enter}");
+    await screen.findByRole("dialog", { name: "ตรวจสอบรายการยาที่จะเบิก" });
+    expect(screen.getAllByText(/DEMO-RX-002/).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "ไปสแกนบัตรยืนยัน" }));
+    await user.type(screen.getByLabelText("รหัสบัตรเจ้าหน้าที่"), "card-b");
+    await user.click(screen.getByRole("button", { name: "ยืนยันตัวตนและส่งเข้าคิว" }));
+
+    await waitFor(() => expect(dispense).toHaveBeenCalledTimes(2));
+    expect(cardLogin).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("button", { name: "เปิดรายละเอียดคิวเครื่อง" })).toBeNull();
   });
 
-  it("shows empty state when no prescriptions", async () => {
-    mockListPrescriptions.mockResolvedValueOnce({ prescriptions: [] });
-
+  it("recovers an accepted transaction and its verified operator after refresh", async () => {
+    localStorage.setItem("medisync.active-withdrawals.v1", JSON.stringify([{ id: "internal-rx", requestId: "DEMO-RX-001", operator: "เจ้าหน้าที่ ก", acceptedAt: 1234 }]));
+    getPrescription.mockResolvedValue({ prescription: { ...prescription, state: PrescriptionState.DISPENSING } });
     render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("ไม่มีใบสั่งยาที่รอเบิกอยู่ในขณะนี้")).toBeDefined();
-    });
+    await waitFor(() => expect(getPrescription).toHaveBeenCalledWith(expect.objectContaining({ id: "internal-rx" })));
+    expect(screen.queryByRole("button", { name: "เปิดรายละเอียดคิวเครื่อง" })).toBeNull();
   });
 
-  it("shows error when ListPrescriptions fails", async () => {
-    mockListPrescriptions.mockRejectedValueOnce(new Error("Internal Server Error"));
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("เกิดข้อผิดพลาดในการเบิกจ่าย: Internal Server Error")).toBeDefined();
-    });
-  });
-
-  it("shows offline error and retry button when list fails with offline", async () => {
-    Object.defineProperty(navigator, "onLine", {
-      value: false,
-      writable: true,
-      configurable: true,
-    });
-    mockListPrescriptions.mockRejectedValueOnce(new Error("Failed to fetch"));
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้/)).toBeDefined();
-    });
-    expect(screen.getByText("ลองใหม่")).toBeDefined();
-  });
-
-  // ── Confirm screen ───────────────────────────────────────────
-
-  it("navigates to confirm screen on prescription selection", async () => {
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [makePrescription()],
-    });
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-    });
-
-    await userEvent.click(screen.getByText("สมชาย ใจดี"));
-
-    await waitFor(() => {
-      expect(screen.getByText("ยืนยันการเบิกยา")).toBeDefined();
-    });
-    expect(screen.getByText("RX-001")).toBeDefined();
-    expect(screen.getByText("Paracetamol 500mg")).toBeDefined();
-    expect(screen.getByText("×10")).toBeDefined();
-  });
-
-  it("shows kiosk name on confirm screen", async () => {
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [makePrescription()],
-    });
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-    });
-    await userEvent.click(screen.getByText("สมชาย ใจดี"));
-
-    await waitFor(() => {
-      expect(screen.getByText("ตู้จ่ายยาวอร์ด 3A")).toBeDefined();
-    });
-  });
-
-  // ── Confirm → Dispense happy path ────────────────────────────
-
-  it("confirm calls dispense", async () => {
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [makePrescription()],
-    });
-    // Return DISPENSED immediately — no polling needed.
-    mockDispense.mockResolvedValueOnce(makeDispenseResponse(PrescriptionState.DISPENSED));
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-    });
-    await userEvent.click(screen.getByText("สมชาย ใจดี"));
-
-    await waitFor(() => {
-      expect(screen.getByText("ยืนยันการเบิกยา")).toBeDefined();
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    await waitFor(() => {
-      expect(mockDispense).toHaveBeenCalledWith(
-        expect.objectContaining({
-          prescriptionId: "RX-001",
-          traceId: expect.any(String),
-        }),
-      );
-    });
-
-    // With DISPENSED response, we should see success immediately.
-    await waitFor(() => {
-      expect(screen.getByText("จ่ายยาสำเร็จ")).toBeDefined();
-    });
-  });
-
-  // ── Dispense failure paths ───────────────────────────────────
-
-  it("shows error on FailedPrecondition dispense error", async () => {
-    await goToConfirm();
-    const err = new Error("failed precondition") as Error & { code: number };
-    err.code = 9; // Code.FailedPrecondition
-    mockDispense.mockRejectedValueOnce(err);
-
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("ใบสั่งยานี้ไม่พร้อมสำหรับการเบิก กรุณาลองใหม่"),
-      ).toBeDefined();
-    });
-
-    // Should return to confirm screen.
-    expect(screen.getByText("ยืนยันการเบิกยา")).toBeDefined();
-  });
-
-  it("shows error on NotFound dispense error", async () => {
-    await goToConfirm();
-    const err = new Error("not found") as Error & { code: number };
-    err.code = 5; // Code.NotFound
-    mockDispense.mockRejectedValueOnce(err);
-
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("ไม่พบใบสั่งยานี้")).toBeDefined();
-    });
-  });
-
-  it("logs out on Unauthenticated dispense error", async () => {
-    await goToConfirm();
-    const err = new Error("unauthenticated") as Error & { code: number };
-    err.code = 16; // Code.Unauthenticated
-    mockDispense.mockRejectedValueOnce(err);
-
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    await waitFor(() => {
-      expect(mockLogout).toHaveBeenCalled();
-    });
-  });
-
-  it("shows failure screen when dispense returns FAILED state", async () => {
-    await goToConfirm();
-    mockDispense.mockResolvedValueOnce({
-      prescription: makePrescription({
-        state: PrescriptionState.FAILED,
-        failureReason: "Slot A01 timeout",
-      }),
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("การจ่ายยาล้มเหลว")).toBeDefined();
-    });
-    expect(screen.getByText("Slot A01 timeout")).toBeDefined();
-    expect(screen.getByText("กรุณาติดต่อเภสัชกรเพื่อดำเนินการต่อ")).toBeDefined();
-  });
-
-  it("shows hardware-busy error on ResourceExhausted", async () => {
-    await goToConfirm();
-    // Create a mock error with a ConnectError-like code property.
-    const err = new Error("resource exhausted") as Error & { code: number };
-    err.code = 8; // Code.ResourceExhausted
-    mockDispense.mockRejectedValueOnce(err);
-
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/เครื่องกำลังทำงานอยู่/)).toBeDefined();
-    });
-  });
-
-  // ── Back button ──────────────────────────────────────────────
-
-  it("back button returns to prescription list from confirm screen", async () => {
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [makePrescription()],
-    });
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-    });
-    await userEvent.click(screen.getByText("สมชาย ใจดี"));
-
-    await waitFor(() => {
-      expect(screen.getByText("ยืนยันการเบิกยา")).toBeDefined();
-    });
-
-    // Going back re-triggers list load.
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [makePrescription()],
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "กลับ" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("รายการยาที่รอเบิก")).toBeDefined();
-    });
-  });
-
-  // ── Failure acknowledgment flow ──────────────────────────────
-
-  it("requires acknowledgment of failure before returning to list", async () => {
-    await goToConfirm();
-    mockDispense.mockResolvedValueOnce({
-      prescription: makePrescription({
-        state: PrescriptionState.FAILED,
-        failureReason: "Hardware jam",
-      }),
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    // First click: acknowledge.
-    await waitFor(() => {
-      expect(screen.getByText("รับทราบ")).toBeDefined();
-    });
-    await userEvent.click(screen.getByText("รับทราบ"));
-
-    // After acknowledge, show "back to list" button.
-    expect(screen.getByText("กลับสู่รายการ")).toBeDefined();
-  });
-
-  // ── Duplicate-click guard (ref-based, works with real timers) ─
-
-  it("prevents duplicate dispense calls on rapid clicks", async () => {
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [makePrescription()],
-    });
-    // Resolve quickly so we can observe the guard.
-    let callCount = 0;
-    mockDispense.mockImplementation(() => {
-      callCount++;
-      return Promise.resolve(makeDispenseResponse(PrescriptionState.DISPENSED));
-    });
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-    });
-    await userEvent.click(screen.getByText("สมชาย ใจดี"));
-
-    await waitFor(() => {
-      expect(screen.getByText("ยืนยันการเบิกยา")).toBeDefined();
-    });
-
-    const dispenseBtn = screen.getByRole("button", { name: "เบิกยา" });
-    // Rapid double-click.
-    await userEvent.click(dispenseBtn);
-    await userEvent.click(dispenseBtn);
-
-    // The dispensingRef guard is synchronous — second click is ignored.
-    await waitFor(() => {
-      expect(callCount).toBe(1);
-    });
-    expect(mockDispense).toHaveBeenCalledTimes(1);
-  });
-
-  // ── Retry behavior ──────────────────────────────────────────
-
-  it("retries on transient network error then succeeds", async () => {
-    // Use real timers for rendering + interaction, then verify
-    // the internal retry by counting total dispense calls after
-    // a transient-first, success-second mock pattern.
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [makePrescription()],
-    });
-    mockDispense
-      .mockRejectedValueOnce(new Error("timeout"))
-      .mockResolvedValueOnce(makeDispenseResponse(PrescriptionState.DISPENSED));
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-    });
-    await userEvent.click(screen.getByText("สมชาย ใจดี"));
-    await waitFor(() => screen.getByText("ยืนยันการเบิกยา"));
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    // The first call fails, second succeeds after retry delay.
-    // Wait for the retry to complete and success screen to appear.
-    await waitFor(
-      () => {
-        expect(screen.getByText("จ่ายยาสำเร็จ")).toBeDefined();
-      },
-      { timeout: 5000 },
-    );
-
-    expect(mockDispense).toHaveBeenCalledTimes(2);
-  });
-
-  it("gives up after max retries on transient errors", async () => {
-    mockListPrescriptions.mockResolvedValueOnce({
-      prescriptions: [makePrescription()],
-    });
-    mockDispense
-      .mockRejectedValueOnce(new Error("timeout"))
-      .mockRejectedValueOnce(new Error("timeout"))
-      .mockRejectedValueOnce(new Error("timeout"));
-
-    render(<WithdrawFlow />);
-
-    await waitFor(() => {
-      expect(screen.getByText("สมชาย ใจดี")).toBeDefined();
-    });
-    await userEvent.click(screen.getByText("สมชาย ใจดี"));
-    await waitFor(() => screen.getByText("ยืนยันการเบิกยา"));
-    await userEvent.click(screen.getByRole("button", { name: "เบิกยา" }));
-
-    // After 3 attempts, should show timeout error.
-    await waitFor(
-      () => {
-        expect(screen.getByText(/การเชื่อมต่อขัดข้อง/)).toBeDefined();
-      },
-      { timeout: 10000 },
-    );
-
-    expect(mockDispense).toHaveBeenCalledTimes(3);
+  it("only reports completion after backend hardware-confirmed state", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime }); render(<WithdrawFlow />); await scanRequest(user);
+    await user.click(screen.getByRole("button", { name: "ไปสแกนบัตรยืนยัน" }));
+    cardLogin.mockResolvedValue({ accessToken: "staff-jwt", user: { id: "u1", displayName: "เจ้าหน้าที่ ก", active: true, role: 1, wardIds: [], projectId: "project-1" } });
+    dispense.mockResolvedValue({ prescription: { ...prescription, state: PrescriptionState.DISPENSING } });
+    getPrescription.mockResolvedValue({ prescription: { ...prescription, state: PrescriptionState.DISPENSED } });
+    await user.type(screen.getByLabelText("รหัสบัตรเจ้าหน้าที่"), "card-token"); await user.click(screen.getByRole("button", { name: "ยืนยันตัวตนและส่งเข้าคิว" }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(2100); });
+    await waitFor(() => expect(getPrescription).toHaveBeenCalledWith(expect.objectContaining({ id: "internal-rx" })));
+    expect(screen.queryByRole("button", { name: "เปิดรายละเอียดคิวเครื่อง" })).toBeNull();
+    vi.useRealTimers();
   });
 });
