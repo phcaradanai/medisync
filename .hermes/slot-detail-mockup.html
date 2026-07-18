@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slot Detail Popup — Mockup</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, 'IBM Plex Sans Thai', sans-serif; background:#f0f2f5; display:flex; justify-content:center; align-items:center; min-height:100vh; }
+  
+  .popup-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.4);
+    display:flex; align-items:center; justify-content:center;
+  }
+  
+  .popup {
+    background:#fff; border-radius:16px; width:min(720px, 90vw); max-height:90vh;
+    overflow-y:auto; box-shadow:0 8px 40px rgba(0,0,0,0.2);
+  }
+  
+  .popup-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 24px; border-bottom:1px solid #e5e7eb;
+    background:linear-gradient(135deg, #1e1e2e, #313244);
+    color:#fff; border-radius:16px 16px 0 0;
+  }
+  .popup-header h2 { font-size:1.25rem; font-weight:700; }
+  .popup-close {
+    width:36px; height:36px; border:none; background:rgba(255,255,255,0.15);
+    color:#fff; border-radius:50%; font-size:1.2rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .popup-close:hover { background:rgba(255,255,255,0.25); }
+  
+  .popup-body { display:flex; gap:20px; padding:24px; }
+  
+  /* Drug image area */
+  .drug-image-area {
+    width:180px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+  }
+  .drug-image {
+    width:160px; height:160px; border-radius:12px; background:linear-gradient(135deg, #e8f0fe, #d2e3fc);
+    display:flex; align-items:center; justify-content:center;
+    font-size:4rem; border:2px solid #1e66f5;
+  }
+  .drug-stock-bar {
+    width:100%; text-align:center;
+  }
+  .drug-stock-num { font-size:2rem; font-weight:800; color:#1e66f5; }
+  .drug-stock-label { font-size:0.75rem; color:#6b7280; }
+  .stock-bar-track { width:100%; height:6px; background:#e5e7eb; border-radius:3px; margin-top:4px; }
+  .stock-bar-fill { height:100%; background:#28a745; border-radius:3px; }
+  
+  /* Drug info */
+  .drug-info { flex:1; display:flex; flex-direction:column; gap:12px; }
+  .drug-name { font-size:1.25rem; font-weight:700; color:#1e1e2e; }
+  .drug-type-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .tag { padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+  .tag-form { background:#e8f0fe; color:#1e66f5; }
+  .tag-generic { background:#e6f7e6; color:#1e7e1e; }
+  .tag-manufacturer { background:#f5f5f5; color:#374151; }
+  
+  .alert-box { padding:10px 14px; border-radius:8px; font-size:0.8125rem; display:flex; align-items:center; gap:8px; }
+  .alert-lasa { background:#fff3cd; color:#856404; border-left:4px solid #ffc107; }
+  .alert-danger { background:#f8d7da; color:#721c24; border-left:4px solid #dc3545; }
+  
+  /* Detail rows */
+  .detail-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    padding:20px 24px; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;
+  }
+  .detail-item { display:flex; flex-direction:column; gap:2px; }
+  .detail-label { font-size:0.6875rem; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; }
+  .detail-value { font-size:0.9375rem; font-weight:600; color:#1e1e2e; }
+  .expiry-warning { color:#dc3545; }
+  .expiry-safe { color:#28a745; }
+  
+  /* Carousel */
+  .carousel-section { padding:0 24px 24px; }
+  .carousel-title { font-size:0.8125rem; font-weight:700; color:#6b7280; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px; }
+  .carousel { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; }
+  .carousel-card {
+    min-width:100px; padding:12px; border-radius:10px; border:1px solid #e5e7eb;
+    text-align:center; cursor:pointer; transition:all 0.15s; flex-shrink:0;
+  }
+  .carousel-card:hover { border-color:#1e66f5; background:#f0f5ff; }
+  .carousel-card.active { border:2px solid #1e66f5; background:#e8f0fe; }
+  .carousel-card-addr { font:700 0.875rem monospace; color:#1e1e2e; }
+  .carousel-card-qty { font-size:1.25rem; font-weight:700; color:#1e66f5; margin-top:4px; }
+  .carousel-card-label { font-size:0.6875rem; color:#9ca3af; }
+  .carousel-card-here { font-size:0.6875rem; color:#1e66f5; font-weight:600; margin-top:2px; }
+  
+  .popup-footer { padding:16px 24px; border-top:1px solid #e5e7eb; display:flex; gap:12px; justify-content:flex-end; }
+  .btn { padding:10px 24px; border-radius:8px; font-size:0.9375rem; font-weight:600; cursor:pointer; border:none; }
+  .btn-primary { background:#1e66f5; color:#fff; }
+  .btn-outline { background:#fff; color:#374151; border:1px solid #d1d5db; }
+  .btn-danger { background:#dc3545; color:#fff; }
+</style>
+</head>
+<body>
+
+<div class="popup-overlay">
+<div class="popup">
+  <!-- Header -->
+  <div class="popup-header">
+    <div>
+      <h2>🔬 รายละเอียดช่องยา</h2>
+      <span style="font-size:0.75rem;opacity:0.7;font-family:monospace;">S2-R14 · ตู้ A</span>
+    </div>
+    <button class="popup-close">✕</button>
+  </div>
+
+  <!-- Body -->
+  <div class="popup-body">
+    <!-- Left: Drug Image + Stock -->
+    <div class="drug-image-area">
+      <div class="drug-image">💊</div>
+      <div class="drug-stock-bar">
+        <div class="drug-stock-num">120</div>
+        <div class="drug-stock-label">เม็ด / 200</div>
+        <div class="stock-bar-track"><div class="stock-bar-fill" style="width:60%"></div></div>
+      </div>
+    </div>
+
+    <!-- Right: Drug Info -->
+    <div class="drug-info">
+      <div class="drug-name">PARACETAMOL 500 mg</div>
+      <div class="drug-type-row">
+        <span class="tag tag-form">💊 TABLET</span>
+        <span class="tag tag-generic">💊 ยาสามัญ</span>
+        <span class="tag tag-manufacturer">🏭 GPO</span>
+      </div>
+      
+      <div class="alert-box alert-lasa">
+        ⚠️ <b>LASA:</b> PARA-500 ดูคล้าย PANADOL-500 — ตรวจสอบชื่อยาก่อนจ่าย
+      </div>
+      <div class="alert-box alert-danger">
+        🔴 <b>HIGH ALERT:</b> ยาที่มีความเสี่ยงสูง — ต้องตรวจสอบซ้ำโดยเภสัชกรก่อนจ่าย
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Grid -->
+  <div class="detail-grid">
+    <div class="detail-item">
+      <span class="detail-label">📅 วันหมดอายุ</span>
+      <span class="detail-value expiry-safe">15 มีนาคม 2027 (อีก 243 วัน)</span>
+    </div>
+    <div class="detail-item">
+      <span class="detail-label">🏷️ Lot Number</span>
+      <span class="detail-value">LOT-20250315-GPO-001</span>
+    </div>
+    <div class="detail-item">
+      <span class="detail-label">📍 ตำแหน่ง</span>
+      <span class="detail-value">ตู้ A · ชั้น 2 · แถว 14</span>
+    </div>
+    <div class="detail-item">
+      <span class="detail-label">📦 คงเหลือ</span>
+      <span class="detail-value">120 / 200 (60%)</span>
+    </div>
+  </div>
+
+  <!-- Carousel: Same drug in other slots -->
+  <div class="carousel-section">
+    <div class="carousel-title">📍 ตำแหน่งยาตัวเดียวกันในตู้นี้</div>
+    <div class="carousel">
+      <div class="carousel-card active">
+        <div class="carousel-card-addr">S2-R14</div>
+        <div class="carousel-card-qty">120</div>
+        <div class="carousel-card-label">เม็ด</div>
+        <div class="carousel-card-here">📍 ที่นี่</div>
+      </div>
+      <div class="carousel-card">
+        <div class="carousel-card-addr">S3-R08</div>
+        <div class="carousel-card-qty">85</div>
+        <div class="carousel-card-label">เม็ด</div>
+      </div>
+      <div class="carousel-card">
+        <div class="carousel-card-addr">S4-R20</div>
+        <div class="carousel-card-qty">60</div>
+        <div class="carousel-card-label">เม็ด</div>
+      </div>
+      <div class="carousel-card">
+        <div class="carousel-card-addr">S5-R01</div>
+        <div class="carousel-card-qty">45</div>
+        <div class="carousel-card-label">เม็ด</div>
+      </div>
+      <div class="carousel-card">
+        <div class="carousel-card-addr">S5-R15</div>
+        <div class="carousel-card-qty">30</div>
+        <div class="carousel-card-label">เม็ด</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer actions -->
+  <div class="popup-footer">
+    <button class="btn btn-outline">ปิด</button>
+    <button class="btn btn-outline">📦 เติมยา</button>
+    <button class="btn btn-primary">💊 เบิกยาจากช่องนี้</button>
+  </div>
+</div>
+</div>
+
+</body>
+</html>

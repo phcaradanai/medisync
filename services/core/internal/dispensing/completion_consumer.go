@@ -10,6 +10,8 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/adm-chura3inter/medisync/services/core/internal/inventory"
+
 	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
@@ -158,32 +160,58 @@ func (c *CompletionConsumer) handleCompleted(ctx context.Context, msg jetstream.
 		return fmt.Errorf("commit transition: %w", err)
 	}
 
-	// Decrement stock for each item in the prescription.
+	// Decrement stock using FIFO (earliest expiry first).
 	if len(pr.Items) > 0 {
 		for _, item := range pr.Items {
-			if item.DrugCode == "" || item.Quantity <= 0 {
+			if item.DrugCode == "" || item.Quantity <= 0 { continue }
+
+			// Query batches for this drug across all slots, ordered by expiry.
+			rows, err := c.pool.Query(ctx,
+				`SELECT b.id, b.slot_id, s.code, b.lot_number, b.expiry_date, b.quantity
+				   FROM inventory.slot_batch b
+				   JOIN inventory.slot s ON s.id = b.slot_id
+				  WHERE s.drug_code = $1 AND b.quantity > 0
+				  ORDER BY b.expiry_date ASC NULLS LAST`, item.DrugCode)
+			if err != nil {
+				c.log.Warn("FIFO batch lookup failed", "drug_code", item.DrugCode, "error", err.Error())
 				continue
 			}
-			tag, err := c.pool.Exec(ctx,
-				`UPDATE inventory.slot
-				    SET quantity = quantity - $1, updated_at = now()
-				  WHERE drug_code = $2 AND quantity >= $1
-				  RETURNING id`, item.Quantity, item.DrugCode)
-			if err != nil {
-				c.log.Warn("stock decrement failed",
-					"prescription_id", event.PrescriptionId,
+
+			var batches []inventory.SlotBatch
+			for rows.Next() {
+				var b inventory.SlotBatch
+				if err := rows.Scan(&b.ID, &b.SlotID, &b.SlotCode, &b.LotNumber, &b.ExpiryDate, &b.Quantity); err != nil {
+					continue
+				}
+				batches = append(batches, b)
+			}
+			rows.Close()
+
+			// FIFO allocation
+			allocs, remaining := inventory.AllocateFIFO(batches, item.Quantity)
+			if remaining > 0 {
+				c.log.Warn("FIFO: insufficient stock",
 					"drug_code", item.DrugCode,
-					"error", err.Error())
-			} else if tag.RowsAffected() == 0 {
-				c.log.Warn("stock decrement: no matching slot or insufficient stock",
-					"prescription_id", event.PrescriptionId,
+					"requested", item.Quantity,
+					"available", item.Quantity-remaining)
+			}
+
+			// Apply allocations
+			for _, a := range allocs {
+				tag, err := c.pool.Exec(ctx,
+					`UPDATE inventory.slot_batch SET quantity = quantity - $1, updated_at = now()
+					  WHERE id = $2 AND quantity >= $1`, a.TakeQty, a.BatchID)
+				if err != nil || tag.RowsAffected() == 0 {
+					c.log.Warn("FIFO batch decrement failed", "batch_id", a.BatchID, "error", err)
+					continue
+				}
+				c.pool.Exec(ctx, `UPDATE inventory.slot SET quantity = quantity - $1, updated_at = now() WHERE id = (SELECT slot_id FROM inventory.slot_batch WHERE id = $2)`, a.TakeQty, a.BatchID)
+				c.log.Info("FIFO dispensed",
 					"drug_code", item.DrugCode,
-					"quantity", item.Quantity)
-			} else {
-				c.log.Info("stock decremented",
-					"prescription_id", event.PrescriptionId,
-					"drug_code", item.DrugCode,
-					"delta", -item.Quantity)
+					"slot", a.SlotCode,
+					"batch", a.BatchID[:8],
+					"lot", a.LotNumber,
+					"qty", a.TakeQty)
 			}
 		}
 	}
