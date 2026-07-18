@@ -74,3 +74,58 @@ func nilIfEmpty(s string) any {
 	}
 	return s
 }
+
+// AuditEntry is a read model returned by List.
+type AuditEntry struct {
+	ID        string `json:"id"`
+	TraceID   string `json:"trace_id"`
+	Actor     string `json:"actor"`
+	Action    string `json:"action"`
+	Entity    string `json:"entity"`
+	EntityID  string `json:"entity_id"`
+	ProjectID string `json:"project_id"`
+	Detail    string `json:"detail"`
+	CreatedAt string `json:"created_at"`
+}
+
+// List returns audit entries with pagination. Requires a connection pool.
+func List(ctx context.Context, pool *pgxpool.Pool, projectID string, pageSize int32, pageToken string) ([]AuditEntry, int64, string, error) {
+	if pageSize <= 0 || pageSize > 200 { pageSize = 50 }
+	offset := 0
+	if pageToken != "" { fmt.Sscanf(pageToken, "%d", &offset) }
+
+	var total int64
+	args := []any{}
+	countSQL := "SELECT COUNT(*) FROM audit.audit_log"
+	whereSQL := ""
+	if projectID != "" {
+		whereSQL = " WHERE project_id = $1"
+		args = append(args, projectID)
+	}
+	if err := pool.QueryRow(ctx, countSQL+whereSQL, args...).Scan(&total); err != nil {
+		return nil, 0, "", fmt.Errorf("count audit: %w", err)
+	}
+
+	sql := "SELECT id, trace_id, actor, action, entity, entity_id, COALESCE(project_id,''), COALESCE(detail::text,'{}'), created_at::text FROM audit.audit_log" + whereSQL + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d OFFSET $%d", len(args)+1, len(args)+2)
+	args = append(args, pageSize+1, offset)
+
+	rows, err := pool.Query(ctx, sql, args...)
+	if err != nil { return nil, 0, "", fmt.Errorf("list audit: %w", err) }
+	defer rows.Close()
+
+	var entries []AuditEntry
+	for rows.Next() {
+		var e AuditEntry
+		if err := rows.Scan(&e.ID, &e.TraceID, &e.Actor, &e.Action, &e.Entity, &e.EntityID, &e.ProjectID, &e.Detail, &e.CreatedAt); err != nil {
+			return nil, 0, "", fmt.Errorf("scan audit: %w", err)
+		}
+		entries = append(entries, e)
+	}
+
+	nextToken := ""
+	if len(entries) > int(pageSize) {
+		entries = entries[:pageSize]
+		nextToken = fmt.Sprintf("%d", offset+int(pageSize))
+	}
+	return entries, total, nextToken, nil
+}

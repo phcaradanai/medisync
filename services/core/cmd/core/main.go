@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -224,6 +225,26 @@ func run() (runErr error) {
 				return "ok"
 			}(),
 			status["database"], status["nats"])
+	})
+
+	// Audit log endpoint — paginated read access to audit trail.
+	mux.HandleFunc("/audit", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		projectID := q.Get("project_id")
+		pageSize := int32(50)
+		if ps := q.Get("page_size"); ps != "" { fmt.Sscanf(ps, "%d", &pageSize) }
+		pageToken := q.Get("page_token")
+
+		entries, total, nextToken, err := audit.List(r.Context(), pool, projectID, pageSize, pageToken)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"entries": entries, "total_count": total, "next_page_token": nextToken,
+		})
 	})
 
 	// Outbox publisher: polls dispensing.outbox and publishes to NATS.
