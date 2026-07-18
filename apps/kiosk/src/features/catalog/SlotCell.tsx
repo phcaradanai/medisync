@@ -18,7 +18,18 @@ export interface SlotCellData {
   lowThreshold: number;
   shelf?: number;
   rowNum?: number;
-  expiryDate?: ExpiryValue;
+  expiryDate?: any;
+  // New fields for SlotDetailPopup
+  lotNumber?: string;
+  drugType?: string;
+  lasaGroup?: string;
+  highAlert?: boolean;
+  imageUrl?: string;
+  unit?: string;
+  widthCm?: number;
+  depthCm?: number;
+  heightCm?: number;
+  cabinetId?: string;
 }
 
 export type SlotCellState =

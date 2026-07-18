@@ -9,6 +9,7 @@ import SlotCell, {
   getSlotCellState,
   type SlotCellData,
 } from "./SlotCell";
+import SlotDetailPopup from "./SlotDetailPopup";
 
 export interface ShelfGridProps {
   slots: readonly SlotCellData[];
@@ -92,9 +93,8 @@ export default function ShelfGrid({
   const [activeShelf, setActiveShelf] = useState(clampShelf(initialShelf));
   const [cabinetView, setCabinetView] = useState<"overview" | "shelf">("overview");
   const [focusedSlotId, setFocusedSlotId] = useState<string | null>(null);
-  const [internalSelectedId, setInternalSelectedId] = useState<string | null>(
-    null,
-  );
+  const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null);
+  const [popupSlot, setPopupSlot] = useState<SlotCellData | null>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const resolvedSelectedId =
     selectedSlotId === undefined ? internalSelectedId : selectedSlotId;
