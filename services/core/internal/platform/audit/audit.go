@@ -106,7 +106,7 @@ func List(ctx context.Context, pool *pgxpool.Pool, projectID string, pageSize in
 		return nil, 0, "", fmt.Errorf("count audit: %w", err)
 	}
 
-	sql := "SELECT id, trace_id, actor, action, entity, entity_id, COALESCE(project_id,''), COALESCE(detail::text,'{}'), created_at::text FROM audit.audit_log" + whereSQL + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d OFFSET $%d", len(args)+1, len(args)+2)
+	sql := "SELECT id, trace_id, actor, action, entity, entity_id, COALESCE(project_id::text,''), COALESCE(detail::text,'{}'), created_at::text FROM audit.audit_log" + whereSQL + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, pageSize+1, offset)
 
 	rows, err := pool.Query(ctx, sql, args...)
