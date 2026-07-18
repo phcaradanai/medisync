@@ -381,96 +381,123 @@ export default function WithdrawFlow() {
   // ── List screen ────────────────────────────────────────────────
 
   if (step === "list") {
-    return (
-      <div className="kiosk-screen">
-        <div className="kiosk-panel">
-          <h1 className="kiosk-panel-title">รายการยาที่รอเบิก</h1>
-          <p className="kiosk-panel-subtitle">
-            {kiosk.displayName} — เลือกรายการเพื่อเริ่มเบิกยา
-          </p>
+    const firstRx = prescriptions[0];
+    const totalItems = prescriptions.reduce((sum, rx) => sum + (rx.items?.length ?? 0), 0);
 
-          {error && (
-            <div
-              className={
-                errorKind === "offline"
-                  ? "kiosk-error kiosk-error--offline"
-                  : "kiosk-error"
-              }
-              role="alert"
-            >
-              {error}
-              {errorKind === "offline" && (
+    return (
+      <div className="kiosk-screen kiosk-screen--withdraw">
+        {/* ── Header ── */}
+        <header className="withdraw-header">
+          <div className="withdraw-header__left">
+            <span className="withdraw-header__logo">💊</span>
+            <div>
+              <h1 className="withdraw-header__title">MediSync Kiosk</h1>
+              <p className="withdraw-header__subtitle">ระบบเบิกจ่ายยาอัตโนมัติ</p>
+            </div>
+          </div>
+          <div className="withdraw-header__right">
+            <span className="withdraw-header__kiosk">{kiosk.displayName}</span>
+            <button className="withdraw-header__logout" onClick={logout}>ออกจากระบบ</button>
+          </div>
+        </header>
+
+        {error && (
+          <div className={`kiosk-error ${errorKind === "offline" ? "kiosk-error--offline" : ""}`} role="alert">
+            {error}
+            {errorKind === "offline" && (
+              <button type="button" className="kiosk-btn kiosk-btn-outline" style={{ marginTop: "var(--space-md)", minHeight: "48px", width: "100%" }} onClick={handleRetry}>ลองใหม่</button>
+            )}
+          </div>
+        )}
+
+        {busy && <div className="spinner-container"><div className="spinner" /><p className="spinner-label">กำลังโหลดรายการยา…</p></div>}
+
+        {!busy && prescriptions.length === 0 && !error && (
+          <div className="empty-state">
+            <div className="empty-state-icon">📋</div>
+            <p className="empty-state-message">ไม่มีใบสั่งยาที่รอเบิกอยู่ในขณะนี้</p>
+          </div>
+        )}
+
+        {!busy && prescriptions.length > 0 && (
+          <div className="withdraw-layout">
+            {/* ── Left: Patient Card ── */}
+            <aside className="patient-card">
+              <div className="patient-card__photo">
+                <div className="patient-card__avatar">{firstRx?.patientName?.[0] ?? "?"}</div>
+                <span className="patient-card__verified">✓</span>
+              </div>
+              <h2 className="patient-card__name">{firstRx?.patientName ?? "ไม่ระบุ"}</h2>
+              <p className="patient-card__hn">HN {firstRx?.hn ?? "—"}</p>
+              <p className="patient-card__ward">Ward {firstRx?.wardId ?? "—"}</p>
+              <div className="patient-card__stats">
+                <div className="patient-card__stat">
+                  <span className="patient-card__stat-num">{prescriptions.length}</span>
+                  <span className="patient-card__stat-label">ใบสั่งยา</span>
+                </div>
+                <div className="patient-card__stat">
+                  <span className="patient-card__stat-num">{totalItems}</span>
+                  <span className="patient-card__stat-label">รายการยา</span>
+                </div>
+              </div>
+              <div className="patient-card__status">
+                <span className="status-badge status-badge--info">พร้อมเบิก</span>
+              </div>
+            </aside>
+
+            {/* ── Right: Drug List + Actions ── */}
+            <main className="drug-list-panel">
+              <h2 className="drug-list-panel__title">
+                รายการยาที่ต้องเบิก ({prescriptions.length})
+              </h2>
+
+              <div className="drug-list">
+                {prescriptions.map((rx) => {
+                  const qty = rx.items?.[0]?.quantity ?? 0;
+                  return (
+                    <div key={rx.id} className="drug-card" onClick={() => handleSelect(rx)}>
+                      <div className="drug-card__checkbox">
+                        <input type="checkbox" checked readOnly tabIndex={-1} />
+                      </div>
+                      <div className="drug-card__info">
+                        <div className="drug-card__name">
+                          {rx.items?.map(it => it.drugName).join(", ")}
+                        </div>
+                        <div className="drug-card__dosage">
+                          {rx.items?.map(it => it.dosageText).join(" | ")}
+                        </div>
+                        <div className="drug-card__meta">
+                          <span>{rx.patientName}</span>
+                          <span>·</span>
+                          <span>HN {rx.hn}</span>
+                        </div>
+                      </div>
+                      <div className="drug-card__qty">
+                        <span className="drug-card__qty-val">{qty}</span>
+                        <span className="drug-card__qty-unit">หน่วย</span>
+                      </div>
+                      <div className="drug-card__status">
+                        <span className="status-badge status-badge--info">พร้อมเบิก</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── Confirm Button ── */}
+              <div className="withdraw-footer">
                 <button
                   type="button"
-                  className="kiosk-btn kiosk-btn-outline"
-                  style={{ marginTop: "var(--space-md)", minHeight: "48px", width: "100%" }}
-                  onClick={handleRetry}
+                  className="withdraw-confirm-btn"
+                  onClick={() => prescriptions[0] && handleSelect(prescriptions[0])}
                 >
-                  ลองใหม่
+                  ยืนยันการเบิกยา
                 </button>
-              )}
-            </div>
-          )}
-
-          {busy && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                padding: "var(--space-2xl)",
-              }}
-            >
-              <div className="spinner" />
-            </div>
-          )}
-
-          {!busy && prescriptions.length === 0 && !error && (
-            <div className="kiosk-message">
-              ไม่มีใบสั่งยาที่รอเบิกอยู่ในขณะนี้
-            </div>
-          )}
-
-          {!busy && prescriptions.length > 0 && (
-            <ul className="rx-list" role="listbox">
-              {prescriptions.map((rx) => (
-                <li
-                  key={rx.id}
-                  className="rx-card"
-                  role="option"
-                  tabIndex={0}
-                  aria-selected={false}
-                  onClick={() => handleSelect(rx)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ")
-                      handleSelect(rx);
-                  }}
-                >
-                  <div className="rx-card__info">
-                    <div className="rx-card__patient">{rx.patientName}</div>
-                    <div className="rx-card__drugs">
-                      {rx.items?.map((it) => it.drugName).join(", ")}
-                    </div>
-                  </div>
-                  <div className="rx-card__meta">
-                    <span className="rx-card__hn">HN {rx.hn}</span>
-                    <span className="status-badge status-badge--info">
-                      พร้อมเบิก
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <button
-            type="button"
-            className="kiosk-btn kiosk-btn-outline"
-            style={{ alignSelf: "center" }}
-            onClick={logout}
-          >
-            ออกจากระบบ
-          </button>
-        </div>
+                <p className="withdraw-footer__hint">กดเพื่อยืนยันและเริ่มเบิกยา</p>
+              </div>
+            </main>
+          </div>
+        )}
       </div>
     );
   }

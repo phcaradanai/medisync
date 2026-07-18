@@ -1094,3 +1094,152 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Withdraw Redesign: Modern Card-Based Layout ─────────────── */
+
+/* Header */
+.withdraw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--nav-bg);
+  color: var(--nav-text);
+}
+.withdraw-header__left { display: flex; align-items: center; gap: 12px; }
+.withdraw-header__logo { font-size: 1.5rem; }
+.withdraw-header__title { font-size: 1.125rem; font-weight: 700; color: #fff; margin: 0; }
+.withdraw-header__subtitle { font-size: 0.75rem; color: var(--nav-text); opacity: 0.7; margin: 0; }
+.withdraw-header__right { display: flex; align-items: center; gap: 12px; }
+.withdraw-header__kiosk { font-size: 0.875rem; opacity: 0.8; }
+.withdraw-header__logout { background: transparent; border: 1px solid var(--nav-text); color: var(--nav-text); border-radius: 6px; padding: 4px 12px; font-size: 0.8125rem; cursor: pointer; }
+
+/* Layout: Patient Card (left) + Drug List (right) */
+.withdraw-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  padding: 24px;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+/* Patient Card */
+.patient-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  height: fit-content;
+}
+.patient-card__photo { position: relative; }
+.patient-card__avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; font-weight: 700;
+}
+.patient-card__verified {
+  position: absolute; bottom: 0; right: 0;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--semantic-success);
+  color: var(--text-on-success);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700;
+}
+.patient-card__name { font-size: 1.125rem; font-weight: 700; color: var(--neutral-deep); margin: 0; }
+.patient-card__hn, .patient-card__ward { font-size: 0.8125rem; color: var(--neutral-text-muted); margin: 0; }
+.patient-card__stats { display: flex; gap: 24px; margin-top: 8px; }
+.patient-card__stat { text-align: center; }
+.patient-card__stat-num { display: block; font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+.patient-card__stat-label { font-size: 0.75rem; color: var(--neutral-text-muted); }
+.patient-card__status { margin-top: 8px; }
+
+/* Drug List Panel */
+.drug-list-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.drug-list-panel__title {
+  font-size: 1.125rem; font-weight: 700; color: var(--neutral-deep);
+  margin: 0 0 16px;
+}
+.drug-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+/* Drug Card */
+.drug-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--neutral-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.drug-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(30,102,245,0.12); }
+.drug-card__checkbox input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
+.drug-card__info { flex: 1; min-width: 0; }
+.drug-card__name { font-size: 1rem; font-weight: 600; color: var(--neutral-deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drug-card__dosage { font-size: 0.8125rem; color: var(--neutral-text-muted); margin-top: 2px; }
+.drug-card__meta { font-size: 0.75rem; color: var(--neutral-text-muted); margin-top: 4px; }
+.drug-card__qty { display: flex; align-items: center; gap: 4px; }
+.drug-card__qty-btn {
+  width: 36px; height: 36px;
+  border: 1px solid var(--neutral-border);
+  border-radius: 8px;
+  background: var(--neutral-subtle);
+  font-size: 1rem; font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.drug-card__qty-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+.drug-card__qty-val { width: 36px; text-align: center; font-size: 1rem; font-weight: 600; color: var(--neutral-deep); }
+.drug-card__status { flex-shrink: 0; }
+
+/* Confirm Footer */
+.withdraw-footer {
+  padding: 20px 0 0;
+  text-align: center;
+  border-top: 1px solid var(--neutral-border);
+  margin-top: 16px;
+}
+.withdraw-confirm-btn {
+  width: 100%;
+  max-width: 360px;
+  min-height: 56px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 56px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(40,167,69,0.3);
+  transition: background 0.2s, transform 0.1s;
+}
+.withdraw-confirm-btn:hover { background: #218838; }
+.withdraw-confirm-btn:active { transform: scale(0.98); }
+.withdraw-footer__hint { font-size: 0.8125rem; color: var(--neutral-text-muted); margin: 8px 0 0; }
+
+@media (max-width: 800px) {
+  .withdraw-layout { grid-template-columns: 1fr; }
+  .patient-card { flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 16px; }
+}
