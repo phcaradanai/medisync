@@ -6,6 +6,7 @@ import {
 } from "react";
 import SlotCell, {
   ExpiryBadge,
+  getSlotCellState,
   type SlotCellData,
 } from "./SlotCell";
 
@@ -15,6 +16,8 @@ export interface ShelfGridProps {
   initialShelf?: number;
   expiryWarningDays?: number;
   onSelect?: (slot: SlotCellData) => void;
+  variant?: "detail" | "overview";
+  requestedSlotIds?: readonly string[];
 }
 
 interface SlotPosition {
@@ -59,6 +62,17 @@ export function getSlotPosition(slot: SlotCellData): SlotPosition | null {
     }
   }
 
+  const sequentialAddress = /^S(\d{1,3})$/i.exec(slot.code.trim());
+  if (sequentialAddress) {
+    const position = Number(sequentialAddress[1]);
+    if (position >= 1 && position <= SHELF_COUNT * ROW_COUNT) {
+      return {
+        shelf: Math.ceil(position / ROW_COUNT),
+        row: ((position - 1) % ROW_COUNT) + 1,
+      };
+    }
+  }
+
   return null;
 }
 
@@ -72,8 +86,12 @@ export default function ShelfGrid({
   initialShelf = 1,
   expiryWarningDays = 30,
   onSelect,
+  variant = "detail",
+  requestedSlotIds = [],
 }: ShelfGridProps) {
   const [activeShelf, setActiveShelf] = useState(clampShelf(initialShelf));
+  const [cabinetView, setCabinetView] = useState<"overview" | "shelf">("overview");
+  const [focusedSlotId, setFocusedSlotId] = useState<string | null>(null);
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(
     null,
   );
@@ -99,6 +117,10 @@ export default function ShelfGrid({
   const showSelectedDetail = selectedPosition?.shelf === activeShelf;
 
   const handleSelect = (slot: SlotCellData) => {
+    if (variant === "overview") {
+      setFocusedSlotId(slot.id);
+      return;
+    }
     setInternalSelectedId(slot.id);
     onSelect?.(slot);
   };
@@ -120,6 +142,128 @@ export default function ShelfGrid({
     setActiveShelf(nextShelf);
     tabRefs.current[nextShelf - 1]?.focus();
   };
+
+  const renderCells = (shelf: number, firstRow = 1, lastRow = ROW_COUNT) => (
+    <div
+      className="shelf-grid__cells"
+      role="grid"
+      aria-label={`ช่องยาชั้น ${shelf}`}
+      aria-colcount={ROW_COUNT}
+      aria-rowcount={1}
+    >
+      {Array.from(
+        { length: lastRow - firstRow + 1 },
+        (_, index) => index + firstRow,
+      ).map((row) => {
+        const slot = slotsByPosition.get(`${shelf}:${row}`);
+        return (
+          <div
+            className="shelf-grid__cell-wrapper"
+            role="gridcell"
+            aria-colindex={row}
+            key={`${shelf}:${row}`}
+          >
+            <SlotCell
+              slot={slot}
+              shelfNumber={shelf}
+              rowNumber={row}
+              selected={slot?.id === resolvedSelectedId}
+              expiryWarningDays={expiryWarningDays}
+              onSelect={handleSelect}
+              readOnly={false}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  if (variant === "overview") {
+    const openShelf = (shelf: number, slot?: SlotCellData) => {
+      setActiveShelf(shelf);
+      setFocusedSlotId(slot?.id ?? null);
+      setCabinetView("shelf");
+    };
+
+    const compactState = (slot?: SlotCellData) => {
+      if (!slot) return "empty";
+      if (requestedSlotIds.includes(slot.id)) return "requested";
+      const state = getSlotCellState(slot, expiryWarningDays);
+      if (state === "low" || state === "expiring") return "warning";
+      if (state === "expired") return "error";
+      return "occupied";
+    };
+
+    return (
+      <section
+        className={`cabinet-browser cabinet-browser--${cabinetView}`}
+        aria-label="ผังช่องยาในตู้"
+      >
+        <nav className="cabinet-browser__nav" aria-label="มุมมองตู้และชั้นยา">
+          <button type="button" className={cabinetView === "overview" ? "is-active" : ""} onClick={() => setCabinetView("overview")}>▦ ภาพรวมตู้</button>
+          {Array.from({ length: SHELF_COUNT }, (_, index) => index + 1).map((shelf) => (
+            <button
+              type="button"
+              key={shelf}
+              className={cabinetView === "shelf" && shelf === activeShelf ? "is-active" : ""}
+              onClick={() => openShelf(shelf)}
+            >
+              ชั้น {shelf}
+            </button>
+          ))}
+        </nav>
+
+        {cabinetView === "overview" ? (
+          <div className="cabinet-overview" aria-label="ภาพรวมตู้ยาครบ 5 ชั้น 110 ช่อง">
+            {Array.from({ length: SHELF_COUNT }, (_, index) => index + 1).map((shelf) => (
+              <div className="cabinet-overview__row" key={shelf}>
+                <button type="button" className="cabinet-overview__shelf" onClick={() => openShelf(shelf)} aria-label={`เปิดรายละเอียดชั้น ${shelf}`}><span>ชั้น</span><strong>{shelf}</strong><small>{(shelf - 1) * 22 + 1}–{shelf * 22}</small></button>
+                <div className="cabinet-overview__slots" role="grid" aria-label={`ช่องยาชั้น ${shelf}`}>
+                  {Array.from({ length: ROW_COUNT }, (_, index) => index + 1).map((row) => {
+                    const slot = slotsByPosition.get(`${shelf}:${row}`);
+                    const physicalNumber = (shelf - 1) * ROW_COUNT + row;
+                    const state = compactState(slot);
+                    return (
+                      <button
+                        type="button"
+                        key={`${shelf}:${row}`}
+                        className={`cabinet-overview__slot is-${state}`}
+                        onClick={() => openShelf(shelf, slot)}
+                        aria-label={`ชั้น ${shelf} ช่อง ${physicalNumber} ${slot?.drugName || "ว่าง"}`}
+                        title={slot ? `${slot.drugName || slot.displayName} · ${slot.code}` : `ชั้น ${shelf} ช่อง ${physicalNumber} · ว่าง`}
+                      >
+                        <span className="cabinet-overview__number">{physicalNumber}</span>
+                        <span className="cabinet-overview__visual" aria-hidden="true">{slot ? "▰" : ""}</span>
+                        {state === "requested" && <span className="cabinet-overview__status" aria-label="รายการที่ Sticker ร้องขอ">★</span>}
+                        {state === "warning" && <span className="cabinet-overview__status" aria-label="คำเตือน">!</span>}
+                        {state === "error" && <span className="cabinet-overview__status" aria-label="ใช้งานไม่ได้">×</span>}
+                        <span className="cabinet-overview__code">{slot?.code || "ว่าง"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="cabinet-detail" aria-label={`รายละเอียดชั้น ${activeShelf}`}>
+            <header><div><span>รายละเอียดชั้น</span><strong>{activeShelf}</strong></div><p>ช่อง {(activeShelf - 1) * 22 + 1}–{activeShelf * 22} · ข้อมูลตำแหน่งแบบอ่านอย่างเดียว</p></header>
+            <div className="cabinet-detail__grid">
+              {Array.from({ length: ROW_COUNT }, (_, index) => index + 1).map((row) => {
+                const slot = slotsByPosition.get(`${activeShelf}:${row}`);
+                return <SlotCell key={`${activeShelf}:${row}`} slot={slot} shelfNumber={activeShelf} rowNumber={(activeShelf - 1) * ROW_COUNT + row} selected={Boolean(slot && requestedSlotIds.includes(slot.id))} expiryWarningDays={expiryWarningDays} readOnly />;
+              })}
+            </div>
+            {focusedSlotId && (() => {
+              const focused = slots.find((slot) => slot.id === focusedSlotId);
+              const position = focused ? getSlotPosition(focused) : null;
+              return focused && position ? <div className="cabinet-detail__focus" aria-live="polite"><strong>{focused.drugName || focused.displayName}</strong><span>ตู้ {focused.code} · ชั้น {position.shelf} · ช่อง {(position.shelf - 1) * 22 + position.row} · คงเหลือ {focused.quantity}/{focused.capacity}</span></div> : null;
+            })()}
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="shelf-grid" aria-label="ผังช่องยาในตู้">
@@ -167,28 +311,7 @@ export default function ShelfGrid({
             aria-colcount={ROW_COUNT}
             aria-rowcount={1}
           >
-            {Array.from({ length: ROW_COUNT }, (_, index) => index + 1).map(
-              (row) => {
-                const slot = slotsByPosition.get(`${activeShelf}:${row}`);
-                return (
-                  <div
-                    className="shelf-grid__cell-wrapper"
-                    role="gridcell"
-                    aria-colindex={row}
-                    key={`${activeShelf}:${row}`}
-                  >
-                    <SlotCell
-                      slot={slot}
-                      shelfNumber={activeShelf}
-                      rowNumber={row}
-                      selected={slot?.id === resolvedSelectedId}
-                      expiryWarningDays={expiryWarningDays}
-                      onSelect={handleSelect}
-                    />
-                  </div>
-                );
-              },
-            )}
+            {renderCells(activeShelf).props.children}
           </div>
         </div>
       </div>

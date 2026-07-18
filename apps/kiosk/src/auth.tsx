@@ -61,16 +61,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
           validateKioskToken(token).then((valid) => {
             if (!valid) {
-              clearKioskSession();
+              clearKioskSessionStorage();
               setState(null);
             }
           });
           return;
         } catch {
-          clearKioskSession();
+          clearKioskSessionStorage();
         }
       } else {
-        clearKioskSession();
+        clearKioskSessionStorage();
       }
     }
     setLoading(false);
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    clearKioskSession();
+    clearKioskSessionStorage();
     setState(null);
   }, []);
 
@@ -151,8 +151,25 @@ async function validateKioskToken(token: string): Promise<boolean> {
   }
 }
 
-function clearKioskSession(): void {
-  localStorage.removeItem(`${STORAGE_PREFIX}token`);
-  localStorage.removeItem(`${STORAGE_PREFIX}expires`);
-  localStorage.removeItem(`${STORAGE_PREFIX}kiosk`);
+const KIOSK_AUTH_STORAGE_KEYS = [
+  `${STORAGE_PREFIX}token`,
+  `${STORAGE_PREFIX}expires`,
+  `${STORAGE_PREFIX}kiosk`,
+] as const;
+
+const KIOSK_TRANSIENT_STORAGE_KEYS = [
+  "medisync.kiosk.current-sticker.v1",
+  "medisync.kiosk.current-identity.v1",
+  "medisync.kiosk.unsubmitted-request.v1",
+  "medisync.kiosk.scanner-buffer.v1",
+] as const;
+
+/** Clears only kiosk-owned authentication and transient request state.
+ * Accepted transaction recovery (`medisync.active-withdrawals.v1`) is intentionally preserved.
+ */
+export function clearKioskSessionStorage(): void {
+  for (const key of [...KIOSK_AUTH_STORAGE_KEYS, ...KIOSK_TRANSIENT_STORAGE_KEYS]) {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  }
 }

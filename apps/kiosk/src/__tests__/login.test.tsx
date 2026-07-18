@@ -27,7 +27,7 @@ vi.mock("@connectrpc/connect", async (importOriginal) => {
 
 // ── Now import components ──────────────────────────────────────
 
-import { AuthProvider } from "../auth.tsx";
+import { AuthProvider, clearKioskSessionStorage } from "../auth.tsx";
 import LoginScreen from "../LoginScreen.tsx";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -216,5 +216,19 @@ describe("kiosk login flow (code + PIN)", () => {
       // Expired session should be cleared
       expect(localStorage.getItem("medisync_kiosk_token")).toBeNull();
     });
+  });
+
+  it("clears only kiosk session keys and preserves accepted queue recovery", () => {
+    localStorage.setItem("medisync_kiosk_token", "secret");
+    localStorage.setItem("medisync.kiosk.current-sticker.v1", "sticker");
+    localStorage.setItem("medisync.active-withdrawals.v1", "accepted-queue");
+    localStorage.setItem("unrelated-device-setting", "keep");
+
+    clearKioskSessionStorage();
+
+    expect(localStorage.getItem("medisync_kiosk_token")).toBeNull();
+    expect(localStorage.getItem("medisync.kiosk.current-sticker.v1")).toBeNull();
+    expect(localStorage.getItem("medisync.active-withdrawals.v1")).toBe("accepted-queue");
+    expect(localStorage.getItem("unrelated-device-setting")).toBe("keep");
   });
 });
