@@ -250,7 +250,7 @@ export function InventoryPage() {
                   <td>{s.shelf || 1}-{s.rowNum || 1}</td>
                   <td>{s.drugCode ? <><strong>{s.drugName}</strong><br/><span className="text-muted mono">{s.drugCode}</span></> : <span className="text-muted">Unassigned</span>}</td>
                   <td><span className={s.quantity <= s.lowThreshold ? "badge badge-error" : ""}>{s.quantity}</span>{s.quantity <= s.lowThreshold && s.quantity > 0 && <span className="badge badge-warning" style={{ marginLeft: 4 }}>Low</span>}</td>
-                  <td className="text-muted">{s.expiryDate ? new Date(s.expiryDate).toLocaleDateString() : "—"}</td>
+                  <td className="text-muted">{s.expiryDate ? new Date(Number(s.expiryDate.seconds) * 1000).toLocaleDateString() : "—"}</td>
                   <td>
                     <div className="inline-actions">
                       <button className="btn-ghost btn-sm" onClick={() => openAssign(s)}>{s.drugId ? "Reassign" : "Assign"}</button>

@@ -994,6 +994,81 @@ body {
   }
 }
 
+/* ── Spinner ───────────────────────────────────────────────── */
+.spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 0.75rem;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--neutral-border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner-label {
+  color: var(--neutral-text-muted);
+  font-size: 0.875rem;
+}
+
+/* ── Empty State ──────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 1rem;
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.empty-state-message {
+  color: var(--neutral-text-muted);
+  font-size: 1rem;
+  max-width: 280px;
+}
+
+/* ── Language Toggle ──────────────────────────────────────── */
+.lang-toggle {
+  background: var(--nav-button);
+  color: var(--nav-text);
+  border: 1px solid var(--neutral-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.lang-toggle:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ── Fade-in transition ──────────────────────────────────── */
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Error variant: offline (warning tone — network problem). */
 .kiosk-error--offline {
   background: var(--semantic-warning);
