@@ -7,6 +7,16 @@ export type ExpiryValue =
       nanos?: number;
     };
 
+// A single refill batch sitting inside a slot channel. Ordered front-to-back
+// by FEFO (earliest expiry dispenses first). `refillDate` is when this batch
+// was loaded into the channel — surfaced per piece in the detail view.
+export interface SlotLotInput {
+  lotNumber: string;
+  quantity: number;
+  expiryDate?: ExpiryValue;
+  refillDate?: ExpiryValue;
+}
+
 export interface SlotCellData {
   id: string;
   code: string;
@@ -18,18 +28,29 @@ export interface SlotCellData {
   lowThreshold: number;
   shelf?: number;
   rowNum?: number;
-  expiryDate?: any;
-  // New fields for SlotDetailPopup
+  expiryDate?: ExpiryValue;
+  updatedAt?: ExpiryValue;
+  cabinetName?: string;
+  cabinetId?: string;
+  // Optional drug metadata shown as chips/badges in the detail view. Rendered
+  // only when present — the base ListSlots contract does not populate these.
+  form?: string;
+  category?: string;
+  manufacturer?: string;
+  lasa?: { code?: string; conflicts?: readonly string[] };
+  highAlert?: boolean;
+  // Per-batch breakdown of the channel contents; when absent the detail view
+  // derives a single representative lot from the aggregate slot fields.
+  lots?: readonly SlotLotInput[];
+  // Fields consumed by the sibling SlotDetailPopup implementation.
   lotNumber?: string;
   drugType?: string;
   lasaGroup?: string;
-  highAlert?: boolean;
   imageUrl?: string;
   unit?: string;
   widthCm?: number;
   depthCm?: number;
   heightCm?: number;
-  cabinetId?: string;
 }
 
 export type SlotCellState =

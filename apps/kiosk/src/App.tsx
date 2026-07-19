@@ -12,6 +12,8 @@ import LoginScreen from "./LoginScreen.tsx";
 import WithdrawFlow from "./features/withdraw/WithdrawFlow";
 import RefillFlow from "./features/refill/RefillFlow";
 import ShelfGrid from "./features/catalog/ShelfGrid";
+import SlotDetailModal from "./features/catalog/SlotDetailModal";
+import type { SlotCellData } from "./features/catalog/SlotCell";
 import { transport } from "./transport.ts";
 
 const inventoryClient = createClient(InventoryService, transport);
@@ -43,6 +45,21 @@ function ShelfGridScreen() {
   useEffect(() => {
     void fetchSlots();
   }, [fetchSlots]);
+
+  const selectedProtoSlot = selectedSlotId
+    ? slots.find((slot) => slot.id === selectedSlotId) ?? null
+    : null;
+  const selectedSlot = selectedProtoSlot as unknown as SlotCellData | null;
+
+  // Same drug loaded in other slots — powers the "ยาชนิดเดียวกันในช่องอื่น" carousel.
+  const relatedSlots: SlotCellData[] = selectedProtoSlot
+    ? (slots.filter(
+        (slot) =>
+          slot.id !== selectedProtoSlot.id &&
+          Boolean(selectedProtoSlot.drugId) &&
+          slot.drugId === selectedProtoSlot.drugId,
+      ) as unknown as SlotCellData[])
+    : [];
 
   return (
     <div className="kiosk-screen">
@@ -82,6 +99,15 @@ function ShelfGridScreen() {
           />
         )}
       </div>
+
+      {selectedSlot && (
+        <SlotDetailModal
+          slot={selectedSlot}
+          relatedSlots={relatedSlots}
+          onClose={() => setSelectedSlotId(null)}
+          onSelectRelated={(slot) => setSelectedSlotId(slot.id)}
+        />
+      )}
     </div>
   );
 }

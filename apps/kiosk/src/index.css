@@ -870,6 +870,679 @@ body {
   margin-top: var(--space-md);
 }
 
+/* ── Slot detail modal (FEFO channel view) ─────────────────── */
+.slot-detail__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-2xl);
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  animation: slot-detail-fade 160ms ease;
+}
+
+@keyframes slot-detail-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.slot-detail {
+  position: relative;
+  display: flex;
+  width: min(100%, 1180px);
+  max-height: calc(100dvh - 2rem);
+  flex-direction: column;
+  gap: var(--space-xl);
+  overflow-y: auto;
+  padding: var(--space-2xl) var(--space-3xl) var(--space-3xl);
+  border-radius: var(--radius-lg);
+  background: var(--neutral-surface);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+}
+
+.slot-detail__close {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--neutral-border-strong);
+  border-radius: 50%;
+  background: var(--neutral-surface);
+  color: var(--neutral-text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.slot-detail__close:hover {
+  background: var(--neutral-subtle);
+}
+
+.slot-detail__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-xl);
+  padding-right: 56px;
+}
+
+.slot-detail__thumb {
+  display: grid;
+  width: 92px;
+  height: 92px;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: linear-gradient(150deg, #e8f0ff, #d5e2ff);
+}
+
+.slot-detail__thumb-capsule {
+  width: 64px;
+  height: auto;
+}
+
+.slot-detail__identity {
+  display: flex;
+  min-width: 220px;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.slot-detail__name {
+  color: var(--neutral-deep);
+  font: 800 2rem / 1.15 var(--font-family);
+}
+
+.slot-detail__location {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--neutral-text);
+  font: 600 1.1rem / 1.2 var(--font-family);
+}
+
+.slot-detail__address {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.slot-detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.slot-detail__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 9%, #fff);
+  color: #1e4fce;
+  font: 700 0.95rem / 1 var(--font-family);
+}
+
+.slot-detail__chip--code {
+  background: var(--neutral-subtle);
+  color: var(--neutral-text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Single classification badge — highest risk wins (see classify()). */
+.slot-detail__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font: 800 1.05rem / 1 var(--font-family);
+}
+
+.slot-detail__status-icon {
+  font-size: 1.15rem;
+}
+
+.slot-detail__status--normal {
+  background: linear-gradient(135deg, #d7f5df, #b6ecc4);
+  color: #157a3a;
+}
+
+.slot-detail__status--lasa {
+  background: linear-gradient(135deg, #fde7c4, #f7d590);
+  color: #8a5a06;
+}
+
+.slot-detail__status--danger {
+  background: linear-gradient(135deg, #ff6b81, #e11d48);
+  color: #fff;
+  box-shadow: 0 6px 16px -6px rgba(225, 29, 72, 0.6);
+}
+
+.slot-detail__stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+.slot-detail__count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.slot-detail__count-value {
+  background: linear-gradient(120deg, #1e66f5, #7c3aed);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font: 800 3rem / 1 var(--font-family);
+}
+
+.slot-detail__count-total {
+  color: var(--neutral-text-muted);
+  font: 700 1.35rem / 1 var(--font-family);
+}
+
+.slot-detail__count-unit {
+  color: var(--neutral-text-muted);
+  font: 600 1.05rem / 1 var(--font-family);
+}
+
+.slot-detail__progress {
+  flex: 1;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--neutral-border);
+}
+
+.slot-detail__progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1e66f5, #7c3aed);
+}
+
+.slot-detail__lot-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: var(--space-xl);
+  border-left: 1px solid var(--neutral-border);
+  color: var(--neutral-text);
+  font: 600 1.1rem / 1 var(--font-family);
+}
+
+.slot-detail__lot-count strong {
+  color: var(--neutral-deep);
+  font-size: 1.35rem;
+}
+
+.slot-detail > * {
+  flex-shrink: 0;
+}
+
+.slot-channel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  /* Clip only the tilted rail's horizontal spill; keep callout/ruler visible. */
+  overflow-x: clip;
+  padding: var(--space-xl);
+  border-radius: var(--radius-md);
+  background: linear-gradient(160deg, #f3f7ff, #eef2fb);
+}
+
+.slot-channel__ends {
+  display: flex;
+  justify-content: space-between;
+  color: #33507f;
+  font: 700 0.95rem / 1 var(--font-family);
+}
+
+.slot-channel__direction {
+  overflow: hidden;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: #d7f5df;
+  color: #1f7a3d;
+}
+
+/* Flowing highlight sweeping toward the dispensing end. */
+.slot-channel__direction-text {
+  background: linear-gradient(
+    90deg,
+    #1f7a3d 0%,
+    #1f7a3d 35%,
+    #35d07f 50%,
+    #1f7a3d 65%,
+    #1f7a3d 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: slot-flow 2.4s linear infinite;
+}
+
+@keyframes slot-flow {
+  from {
+    background-position: 220% 0;
+  }
+  to {
+    background-position: -20% 0;
+  }
+}
+
+.slot-channel__track {
+  padding: 6px 2px;
+}
+
+.slot-channel__rail {
+  display: flex;
+  min-height: 96px;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #fff;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #ffffff, #eef3fd);
+  box-shadow: inset 0 1px 0 #fff, 0 12px 26px -18px rgba(30, 58, 138, 0.45);
+}
+
+.slot-channel__filled {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 6px;
+}
+
+.slot-lot {
+  display: flex;
+  min-width: 40px;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  overflow: hidden;
+  padding: 8px 5px 6px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--lot) 12%, #fff);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.slot-lot:hover {
+  transform: translateY(-2px);
+}
+
+.slot-lot--selected {
+  border-color: var(--lot);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lot) 35%, transparent);
+}
+
+.slot-lot__cards {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-evenly;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+}
+
+/* Rounded "pill card" tinted to its lot colour. */
+.slot-lot__card {
+  display: grid;
+  width: 20px;
+  min-width: 8px;
+  max-width: 22px;
+  height: 50px;
+  flex: 1 1 12px;
+  place-items: center;
+  border-radius: 6px;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--lot) 78%, #fff) 0%,
+    var(--lot) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 3px 6px -2px color-mix(in srgb, var(--lot) 55%, transparent);
+}
+
+.slot-lot__card--head {
+  outline: 2px solid #fff;
+  box-shadow: 0 0 0 3px var(--lot), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.slot-lot__tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: color-mix(in srgb, var(--lot) 65%, #1e1e2e);
+  font: 800 1rem / 1 var(--font-family);
+}
+
+.slot-lot__lead {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--lot);
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.slot-channel__empty {
+  display: flex;
+  min-width: 84px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 2px dashed #b9c9ea;
+  border-radius: var(--radius-md);
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(226, 234, 250, 0.5) 0 10px,
+    rgba(255, 255, 255, 0.5) 10px 20px
+  );
+  color: #6178a6;
+  font: 800 1rem / 1 var(--font-family);
+}
+
+.slot-channel__empty-icon {
+  font-size: 1.4rem;
+}
+
+.slot-lot__capsule {
+  width: 13px;
+  height: auto;
+}
+
+.slot-capsule__half {
+  fill: rgba(255, 255, 255, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-channel__direction-text {
+    animation: none;
+  }
+  .slot-detail__backdrop {
+    animation: none;
+  }
+}
+
+.slot-lot__capsule rect,
+.slot-detail__thumb-capsule rect,
+.slot-related__capsule rect {
+  stroke: none;
+}
+
+.slot-lot__capsule > rect:first-child {
+  fill: rgba(255, 255, 255, 0.92);
+}
+
+.slot-lot__capsule .slot-capsule__half {
+  fill: rgba(255, 255, 255, 0.6);
+}
+
+.slot-detail__thumb-capsule > rect:first-child,
+.slot-related__capsule > rect:first-child {
+  fill: #ef4d5b;
+}
+
+.slot-detail__thumb-capsule .slot-capsule__half,
+.slot-related__capsule .slot-capsule__half {
+  fill: #f4b73d;
+}
+
+.slot-piece {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-lg) var(--space-2xl);
+  padding: var(--space-lg) var(--space-xl);
+  border: 1px solid #dbe6fb;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #ffffff, #f6f9ff);
+}
+
+.slot-piece__seq {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: var(--space-lg);
+  border-right: 1px solid var(--neutral-border);
+  font-size: 1.4rem;
+}
+
+.slot-piece__seq strong {
+  background: linear-gradient(120deg, #1e66f5, #7c3aed);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font: 800 1.5rem / 1 var(--font-mono);
+}
+
+.slot-piece__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg) var(--space-2xl);
+}
+
+.slot-piece__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slot-piece__ico {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 10%, #fff);
+  font-size: 1rem;
+}
+
+.slot-piece__field dt {
+  color: var(--neutral-text-muted);
+  font: 600 0.8rem / 1.2 var(--font-family);
+}
+
+.slot-piece__field dd {
+  color: var(--neutral-deep);
+  font: 700 1.05rem / 1.2 var(--font-family);
+}
+
+.slot-piece__lot {
+  font-family: var(--font-mono);
+}
+
+.slot-piece__exp--expiring {
+  color: #92600a;
+}
+
+.slot-piece__exp--expired {
+  color: #a51b37;
+}
+
+.slot-piece__fefo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #d7f5df, #b6ecc4);
+  color: #157a3a;
+  font: 800 1rem / 1 var(--font-family);
+}
+
+.slot-channel__ruler {
+  position: relative;
+  height: 26px;
+  margin: 0 var(--space-sm);
+  border-top: 1px solid #b9c9ea;
+}
+
+.slot-channel__tick {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  color: #5b6b8c;
+  font: 600 0.85rem / 1 var(--font-mono);
+}
+
+.slot-channel__tick--current {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+}
+
+.slot-related__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  color: var(--neutral-deep);
+  font: 700 1.2rem / 1 var(--font-family);
+}
+
+.slot-related__row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-sm);
+}
+
+.slot-related__nav {
+  flex: 0 0 auto;
+  width: 44px;
+  border: 1px solid var(--neutral-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--neutral-surface);
+  color: var(--neutral-text);
+  font-size: 1.4rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.slot-related__nav:hover {
+  background: var(--neutral-subtle);
+}
+
+.slot-related__cards {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: var(--space-md);
+  overflow-x: auto;
+  padding-bottom: var(--space-xs);
+  scroll-snap-type: x mandatory;
+}
+
+.slot-related__card {
+  display: flex;
+  min-width: 220px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--neutral-border);
+  border-radius: var(--radius-md);
+  background: var(--neutral-surface);
+  cursor: pointer;
+  scroll-snap-align: start;
+  touch-action: manipulation;
+}
+
+.slot-related__card:hover {
+  border-color: var(--primary);
+}
+
+.slot-related__card-visual {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: linear-gradient(150deg, #e8f0ff, #e6ddff);
+}
+
+.slot-related__capsule {
+  width: 34px;
+  height: auto;
+}
+
+.slot-related__card-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.slot-related__card-body strong {
+  color: var(--neutral-deep);
+  font: 700 1.1rem / 1.1 var(--font-mono);
+}
+
+.slot-related__exp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #157a3a;
+  font: 600 0.9rem / 1.2 var(--font-family);
+}
+
+.slot-related__exp--expiring {
+  color: #92600a;
+}
+
+.slot-related__exp--expired {
+  color: #a51b37;
+}
+
+.slot-related__card-qty {
+  flex: 0 0 auto;
+  background: linear-gradient(120deg, #1e66f5, #7c3aed);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font: 800 1.35rem / 1 var(--font-family);
+}
+
+@media (max-width: 720px) {
+  .slot-detail {
+    padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+  }
+
+  .slot-detail__stats {
+    flex-wrap: wrap;
+  }
+
+  .slot-detail__lot-count {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
 /* ── Drug barcode scanner dialog ───────────────────────────── */
 .barcode-dialog {
   width: min(calc(100% - 2rem), var(--kiosk-max-width));
