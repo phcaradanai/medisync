@@ -31,7 +31,6 @@ export interface SlotCellData {
   expiryDate?: ExpiryValue;
   updatedAt?: ExpiryValue;
   cabinetName?: string;
-  cabinetId?: string;
   // Optional drug metadata shown as chips/badges in the detail view. Rendered
   // only when present — the base ListSlots contract does not populate these.
   form?: string;
@@ -42,15 +41,6 @@ export interface SlotCellData {
   // Per-batch breakdown of the channel contents; when absent the detail view
   // derives a single representative lot from the aggregate slot fields.
   lots?: readonly SlotLotInput[];
-  // Fields consumed by the sibling SlotDetailPopup implementation.
-  lotNumber?: string;
-  drugType?: string;
-  lasaGroup?: string;
-  imageUrl?: string;
-  unit?: string;
-  widthCm?: number;
-  depthCm?: number;
-  heightCm?: number;
 }
 
 export type SlotCellState =
