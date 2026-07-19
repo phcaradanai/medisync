@@ -93,6 +93,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body:has(.adm-home) {
+  overflow: hidden;
+}
+
 /* ── Kiosk step screen ─────────────────────────────────────── */
 .kiosk-screen {
   min-height: 100vh;
@@ -483,6 +487,10 @@ body {
   min-height: 48px;
 }
 
+.kiosk-header--withdraw {
+  display: none;
+}
+
 /* ── Step indicator ────────────────────────────────────────── */
 .step-indicator {
   font: 400 1rem / 1.4 var(--font-family);
@@ -868,6 +876,2239 @@ body {
 .shelf-grid-screen__retry {
   width: 100%;
   margin-top: var(--space-md);
+}
+
+/* ── Drug barcode scanner dialog ───────────────────────────── */
+.barcode-dialog {
+  width: min(calc(100% - 2rem), var(--kiosk-max-width));
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--neutral-surface);
+  color: var(--neutral-text);
+  box-shadow: var(--shadow-panel);
+}
+
+.barcode-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.barcode-dialog__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+  padding: var(--space-3xl);
+}
+
+.barcode-dialog__title {
+  color: var(--neutral-deep);
+  font: var(--type-kiosk-title);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.barcode-dialog__glyph {
+  width: 64px;
+  height: 48px;
+  color: var(--neutral-text-muted);
+}
+
+.barcode-dialog__matched {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  text-align: center;
+}
+
+.barcode-dialog__mono {
+  color: inherit;
+  font: 600 1.25rem / 1.4 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.barcode-dialog__drug-code {
+  color: var(--neutral-text-muted);
+  font: 400 1rem / 1.4 var(--font-mono);
+}
+
+.barcode-dialog__error {
+  display: flex;
+  min-height: 120px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--semantic-error);
+  color: var(--text-on-error);
+  font: 600 1.25rem / 1.4 var(--font-family);
+  text-align: center;
+}
+
+.barcode-dialog__manual {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.barcode-dialog__manual-row,
+.barcode-dialog__actions {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-md);
+}
+
+.barcode-dialog__manual-input {
+  min-width: 0;
+  font-family: var(--font-mono);
+}
+
+.barcode-dialog__manual-row .kiosk-btn {
+  min-width: 160px;
+}
+
+.barcode-dialog__actions .kiosk-btn {
+  flex: 1;
+}
+
+.barcode-dialog__dismiss {
+  align-self: center;
+}
+
+@media (max-width: 600px) {
+  .barcode-dialog__panel {
+    padding: var(--space-xl);
+  }
+
+  .barcode-dialog__manual-row,
+  .barcode-dialog__actions,
+  .shelf-grid__detail-heading {
+    flex-direction: column;
+  }
+
+  .barcode-dialog__manual-row .kiosk-btn,
+  .barcode-dialog__actions .kiosk-btn {
+    width: 100%;
+  }
+
+  .shelf-grid__hint {
+    display: none;
+  }
+}
+/* Error variant: offline (warning tone — network problem). */
+.kiosk-error--offline {
+  background: var(--semantic-warning);
+  color: var(--text-on-warning);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Error variant: warning (hardware busy, transient). */
+.kiosk-error--warning {
+  background: var(--semantic-warning);
+  color: var(--text-on-warning);
+}
+
+/* ── Reduced motion ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── ADM withdrawal home ──────────────────────────────────── */
+.adm-home {
+  --adm-blue: #075dbd;
+  --adm-blue-deep: #08449b;
+  --adm-green: #159447;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: clamp(92px, 12.5vh, 138px) minmax(0, 1fr) clamp(112px, 15vh, 164px);
+  gap: clamp(7px, 1vh, 12px);
+  padding: clamp(10px, 1.3vw, 24px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 16% 7%, rgba(81, 185, 244, 0.18), transparent 23%),
+    radial-gradient(circle at 81% 10%, rgba(31, 137, 220, 0.12), transparent 25%),
+    linear-gradient(145deg, #f7fcff 0%, #eaf7ff 55%, #f8fdff 100%);
+  color: #12335a;
+}
+
+.adm-header {
+  display: grid;
+  grid-template-columns: minmax(310px, 1fr) minmax(300px, .9fr) minmax(310px, 1fr);
+  align-items: stretch;
+  gap: clamp(12px, 2vw, 38px);
+  min-height: 0;
+}
+
+.adm-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: clamp(8px, 1vw, 18px);
+  min-width: 0;
+  padding: clamp(9px, 1vw, 18px);
+  border: 1px solid #c0def3;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 8px 24px rgba(17, 95, 158, .12);
+}
+
+.adm-header-card--environment > div:nth-child(2),
+.adm-health div, .adm-clock, .adm-network-state, .adm-security-card div,
+.adm-step-copy { display: flex; flex-direction: column; min-width: 0; }
+.adm-metric-icon { color: #0873c8; font-size: clamp(2rem, 3.1vw, 3.8rem); line-height: 1; }
+.adm-card-label { color: #446887; font-size: clamp(.68rem, .8vw, .92rem); }
+.adm-unavailable { color: #24557f; font-size: clamp(.76rem, .95vw, 1.05rem); white-space: nowrap; }
+.adm-divider { width: 1px; height: 65%; flex: 0 0 1px; background: #c9dcea; }
+.adm-health { display: flex; align-items: center; gap: 10px; color: var(--adm-green); }
+.adm-health strong { font-size: clamp(.9rem, 1.2vw, 1.35rem); }
+.adm-health span { font-size: clamp(.68rem, .8vw, .9rem); }
+.adm-shield { display: grid; place-items: center; flex: 0 0 auto; width: clamp(38px, 3.4vw, 56px); aspect-ratio: 1; border-radius: 35% 35% 48% 48%; background: linear-gradient(145deg, #0e77d5, #0750a8); color: #a8f24a; font-size: clamp(1.2rem, 1.7vw, 1.8rem); box-shadow: inset 0 0 0 2px rgba(255,255,255,.18); }
+
+.adm-brand { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; color: var(--adm-blue-deep); text-align: center; }
+.adm-brand strong { font-size: clamp(3.3rem, 5.4vw, 6.4rem); line-height: .72; letter-spacing: .08em; background: linear-gradient(160deg, #21a36a, #0872cf 48%, #073d94); color: transparent; background-clip: text; }
+.adm-brand span { margin-top: 9px; font-size: clamp(.56rem, .85vw, 1rem); font-weight: 800; letter-spacing: .05em; white-space: nowrap; }
+.adm-brand small { max-width: 100%; margin-top: 3px; padding: 2px 14px; border-radius: 999px; background: var(--adm-blue); color: white; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.adm-network-state { align-items: center; color: var(--adm-green); text-align: center; }
+.adm-status-icon { display: grid; place-items: center; width: clamp(34px, 3vw, 50px); height: clamp(26px, 2.5vw, 42px); font-size: clamp(2rem, 2.8vw, 3.4rem); line-height: .5; transform: rotate(-12deg); }
+.adm-network-state strong { font-size: clamp(.8rem, 1vw, 1.05rem); }
+.adm-network-state span { color: #5c7187; font-size: clamp(.62rem, .72vw, .82rem); }
+.adm-header-card.is-offline .adm-network-state { color: #bd2c36; }
+.adm-clock time { color: #104ba8; font-size: clamp(2.2rem, 4vw, 4.8rem); font-weight: 800; line-height: .95; letter-spacing: .03em; }
+.adm-clock span { margin-top: 7px; color: #174da2; font-size: clamp(.72rem, 1vw, 1.15rem); font-weight: 700; text-align: center; white-space: nowrap; }
+
+.adm-cabinet { min-height: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #acd4ed; border-radius: 13px; background: rgba(255,255,255,.78); box-shadow: 0 8px 28px rgba(17, 95, 158, .1); }
+.adm-cabinet-heading { display: flex; justify-content: space-between; align-items: center; min-height: clamp(25px, 3.2vh, 38px); padding: 3px 12px; border-bottom: 1px solid #c6deed; color: #47657d; font-size: clamp(.66rem, .78vw, .88rem); }
+.adm-cabinet-heading b { color: #0a4c91; font-size: 1.12em; }
+.adm-ready { display: flex; align-items: center; gap: 6px; color: #147e3c; font-weight: 700; }
+.adm-ready i { width: 9px; height: 9px; border-radius: 50%; background: #23aa55; box-shadow: 0 0 0 4px rgba(35,170,85,.15); }
+.adm-grid-state { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; color: #53718b; font-size: clamp(1rem, 1.3vw, 1.45rem); }
+.adm-grid-state--error { color: #9b2331; background: #fff4f5; }
+.adm-grid-state button, .adm-retry { min-height: 44px; padding: 8px 18px; border: 1px solid #b22d3d; border-radius: 9px; background: white; color: #9b2331; font: 700 .9rem var(--font-family); cursor: pointer; }
+
+.shelf-grid--overview { flex: 1; min-height: 0; gap: 10px; padding: 10px; }
+.shelf-grid__overview-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.shelf-grid__overview-tabs button { min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 2px solid #b4d2e6; border-radius: 10px; background: #fff; color: #174e77; cursor: pointer; font: 700 16px/1 var(--font-family); }
+.shelf-grid__overview-tabs button strong { font-size: 24px; }
+.shelf-grid__overview-tabs button.is-active { border-color: #0871c5; background: linear-gradient(145deg, #35aa7a, #0874c5); color: #fff; box-shadow: 0 4px 12px rgba(7,91,164,.2); }
+.shelf-grid__overview-tabs button:focus-visible, .shelf-grid__pager button:focus-visible { outline: 4px solid #f0a51a; outline-offset: 2px; }
+.shelf-grid__overview-stage { flex: 1; min-height: 0; display: grid; grid-template-columns: clamp(72px, 5.5vw, 96px) minmax(0, 1fr); overflow: hidden; border: 1px solid #9fc7df; border-radius: 10px; }
+.shelf-grid__shelf-label { display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(145deg, #48b98b, #0878ba); color: white; text-shadow: 0 1px 2px rgba(0,0,0,.16); }
+.shelf-grid__shelf-label strong { font-size: clamp(48px, 4vw, 68px); line-height: 1; }
+.shelf-grid__shelf-label span { font-size: 16px; font-weight: 700; }
+.shelf-grid--overview .shelf-grid__cells { grid-template-columns: repeat(11, minmax(0, 1fr)); min-width: 0; gap: 0; }
+.shelf-grid--overview .shelf-grid__cell-wrapper { min-width: 0; border-right: 1px solid #b9d0df; }
+.shelf-grid--overview .slot-cell { height: 100%; min-width: 0; min-height: 0; display: grid; grid-template-rows: 13% minmax(38px, 18%) 1fr 13% 12% 16%; place-items: center; padding: 0; border: 0; border-radius: 0; background: rgba(255,255,255,.88); color: #173f60; }
+.shelf-grid--overview .slot-cell:hover:not(:disabled) { box-shadow: inset 0 0 0 3px #1677cc; }
+.shelf-grid--overview .slot-cell--selected { z-index: 1; box-shadow: inset 0 0 0 4px #086ac7; background: #e2f3ff; }
+.shelf-grid--overview .slot-cell--empty { background: rgba(241,248,252,.72); color: #7d95a7; }
+.shelf-grid--overview .slot-cell--low, .shelf-grid--overview .slot-cell--expiring { background: #fff9e8; color: #985d00; }
+.shelf-grid--overview .slot-cell--expired { background: #fff0f1; color: #a31d2f; }
+.shelf-grid--overview .slot-cell__row { align-self: center; color: #11732b; font: 800 20px/1 var(--font-family); }
+.slot-cell__drug-name { display: -webkit-box; width: 92%; overflow: hidden; color: currentColor; font-size: 16px; font-weight: 800; line-height: 1.12; text-align: center; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.slot-cell__drug-visual { display: grid; place-items: center; min-height: 0; height: 100%; max-height: 130px; }
+.slot-cell__drug-visual svg { width: auto; height: 94%; max-width: 72px; fill: #c8d6df; stroke: #47718d; stroke-width: 1.4; }
+.slot-cell__vial-label { fill: #e6f3fa; stroke: #0c75b8; }
+.slot-cell__empty-icon { color: #61798b; font-size: 16px; font-weight: 700; }
+.slot-cell__stock { display: none; }
+.shelf-grid--overview .slot-cell__drug-code, .shelf-grid--overview .slot-cell__stock { width: 94%; overflow: hidden; font: 600 16px/1 var(--font-family); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.shelf-grid--overview .slot-cell__stock { display: block; color: #285a3c; }
+.slot-cell__position { align-self: stretch; display: grid; place-items: center; width: 100%; overflow: hidden; padding: 2px; background: linear-gradient(#0877cf, #0755ab); color: white; font: 800 18px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.shelf-grid--overview .slot-cell__fill-track { display: none; }
+.shelf-grid--overview .slot-cell__glyph { top: 2px; right: 2px; z-index: 2; display: grid; place-items: center; min-width: 14px; height: 14px; border-radius: 50%; background: #fff; color: #bd2636; font-size: 10px; }
+.shelf-grid__pager { display: grid; grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr); align-items: center; gap: 14px; color: #284e6d; font-size: 16px; text-align: center; }
+.shelf-grid__pager button { min-height: 52px; border: 2px solid #0b68b7; border-radius: 10px; background: #fff; color: #0759a5; cursor: pointer; font: 800 16px/1 var(--font-family); }
+.shelf-grid__pager button:disabled { border-color: #ccdbe5; background: #edf3f7; color: #718493; cursor: not-allowed; }
+
+.adm-actions { display: grid; grid-template-columns: 1.25fr 1fr .82fr; gap: clamp(8px, 1.2vw, 18px); min-height: 0; }
+.adm-step-card, .adm-security-card { min-width: 0; display: flex; align-items: center; gap: clamp(8px, 1vw, 16px); padding: clamp(8px, 1vw, 16px); overflow: hidden; border: 1px solid #bad9ed; border-radius: 14px; background: rgba(255,255,255,.88); box-shadow: 0 5px 18px rgba(24,94,150,.09); }
+.adm-step-number { display: grid; place-items: center; flex: 0 0 auto; width: clamp(35px, 3vw, 50px); aspect-ratio: 1; border-radius: 50%; background: linear-gradient(145deg, #1b9c4d, #0874c9); color: white; font-size: clamp(1.2rem, 1.8vw, 2rem); font-weight: 800; }
+.adm-step-icon { flex: 0 0 auto; color: #0959b3; font-size: clamp(2rem, 3vw, 3.4rem); line-height: 1; }
+.adm-step-copy { flex: 0 1 auto; }
+.adm-step-copy strong { color: #0755ad; font-size: clamp(.9rem, 1.15vw, 1.3rem); text-transform: uppercase; }
+.adm-step-copy span { color: #426683; font-size: clamp(.62rem, .75vw, .86rem); }
+.adm-prescription-list { flex: 1; min-width: 140px; max-height: 100%; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.adm-prescription-list > button:not(.adm-retry) { min-height: 44px; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 9px; overflow: hidden; border: 1px solid #a7cae2; border-radius: 8px; background: #f5fbff; color: #153f65; cursor: pointer; text-align: left; }
+.adm-prescription-list button strong, .adm-prescription-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-prescription-list button span { color: #55738b; font-size: .68rem; }
+.adm-inline-status { display: flex; align-items: center; gap: 8px; color: #287047; font-size: clamp(.7rem, .8vw, .9rem); }
+.adm-inline-status .spinner { width: 24px; height: 24px; }
+.adm-prescription-error { display: flex; align-items: center; gap: 6px; min-width: 0; color: #9b2331; font-size: .68rem; }
+.adm-prescription-error > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.adm-prescription-drugs { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.adm-security-card { justify-content: center; }
+.adm-shield--large { width: clamp(45px, 4vw, 68px); }
+.adm-security-card strong { color: #0759b4; font-size: clamp(.9rem, 1.1vw, 1.25rem); }
+.adm-security-card span { color: #17833e; font-size: clamp(.68rem, .82vw, .95rem); }
+.adm-security-card small { margin-top: 5px; color: #32628b; font-size: clamp(.48rem, .58vw, .68rem); white-space: nowrap; }
+.adm-security-card button { align-self: flex-end; min-width: 44px; min-height: 44px; padding: 5px 9px; border: 1px solid #bed5e5; border-radius: 8px; background: white; color: #355c79; cursor: pointer; font: 600 clamp(.56rem, .65vw, .72rem) var(--font-family); }
+
+@media (max-width: 1450px), (max-height: 820px) {
+  .adm-home { grid-template-rows: 104px minmax(0, 1fr) 132px; padding: 8px 10px; gap: 7px; }
+  .adm-header { grid-template-columns: 1fr .75fr 1fr; gap: 10px; }
+  .adm-header-card { padding: 7px 9px; border-radius: 13px; }
+  .adm-brand strong { font-size: clamp(3rem, 5vw, 4.4rem); }
+  .adm-step-card, .adm-security-card { padding: 7px; }
+  .adm-step-icon { display: none; }
+  .adm-prescription-list > button:nth-of-type(n+2) { display: none; }
+  .shelf-grid--overview { gap: 6px; padding: 6px; }
+  .shelf-grid__overview-tabs button { min-height: 48px; }
+  .shelf-grid__overview-tabs button span { display: none; }
+  .shelf-grid__pager { grid-template-columns: 1fr 1fr; }
+  .shelf-grid__pager > span { display: none; }
+  .slot-cell__drug-visual { max-height: 82px; }
+}
+
+/* Hybrid physical cabinet map + focused shelf interaction. */
+.cabinet-browser { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px; overflow: hidden; }
+.cabinet-browser__nav { display: grid; grid-template-columns: 1.35fr repeat(5, 1fr); gap: 6px; flex: 0 0 auto; }
+.cabinet-browser__nav button { min-height: 48px; border: 2px solid #b7d3e5; border-radius: 9px; background: #fff; color: #174e77; cursor: pointer; font: 800 16px/1 var(--font-family); touch-action: manipulation; }
+.cabinet-browser__nav button.is-active { border-color: #0871c5; background: linear-gradient(145deg, #2ea874, #0872c6); color: #fff; box-shadow: 0 3px 10px rgba(7,91,164,.2); }
+.cabinet-browser button:focus-visible { z-index: 5; outline: 4px solid #f4a51c; outline-offset: 1px; }
+.cabinet-overview { flex: 1; min-height: 0; display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); overflow: hidden; border: 1px solid #9fc7df; border-radius: 10px; background: rgba(255,255,255,.76); }
+.cabinet-overview__row { min-height: 0; display: grid; grid-template-columns: clamp(68px, 5vw, 92px) minmax(0, 1fr); border-bottom: 2px solid #8fb9d3; }
+.cabinet-overview__row:last-child { border-bottom: 0; }
+.cabinet-overview__shelf { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 0; border-right: 2px solid #9fc7df; background: linear-gradient(145deg, #42b484, #0876bd); color: #fff; cursor: pointer; touch-action: manipulation; }
+.cabinet-overview__shelf span { font: 700 14px/1 var(--font-family); }
+.cabinet-overview__shelf strong { font: 900 clamp(40px, 3vw, 58px)/.95 var(--font-family); }
+.cabinet-overview__shelf small { margin-top: 3px; font: 700 11px/1 var(--font-mono); }
+.cabinet-overview__slots { min-width: 0; display: grid; grid-template-columns: repeat(22, minmax(0, 1fr)); }
+.cabinet-overview__slot { position: relative; min-width: 0; min-height: 0; display: grid; grid-template-rows: 28% 1fr 24%; place-items: center; padding: 0; overflow: hidden; border: 0; border-right: 1px solid #c3d8e5; background: #fff; color: #184766; cursor: pointer; touch-action: manipulation; }
+.cabinet-overview__slot:last-child { border-right: 0; }
+.cabinet-overview__slot.is-empty { background: #f1f6f9; color: #718493; }
+.cabinet-overview__slot.is-selected { box-shadow: inset 0 0 0 3px #066ac2; background: #dff2ff; }
+.cabinet-overview__slot.is-warning { box-shadow: inset 0 0 0 2px #dc8b00; background: #fff6dc; }
+.cabinet-overview__slot.is-error { box-shadow: inset 0 0 0 2px #bb2638; background: #fff0f2; }
+.cabinet-overview__number { color: #126f2a; font: 900 clamp(11px, .85vw, 16px)/1 var(--font-family); }
+.cabinet-overview__visual { color: #287caa; font-size: clamp(13px, 1.5vw, 28px); transform: rotate(90deg); }
+.cabinet-overview__code { align-self: stretch; display: grid; place-items: center; width: 100%; overflow: hidden; background: #0864b7; color: #fff; font: 800 clamp(8px, .65vw, 12px)/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.cabinet-overview__slot.is-empty .cabinet-overview__code { background: #dbe7ed; color: #617786; }
+.cabinet-overview__status { position: absolute; top: 2px; right: 2px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #fff; color: #0a62aa; font: 900 13px/1 var(--font-family); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+.cabinet-overview__slot.is-warning .cabinet-overview__status { color: #9a5b00; }
+.cabinet-overview__slot.is-error .cabinet-overview__status { color: #a51e30; }
+
+.cabinet-detail { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; overflow: hidden; }
+.cabinet-detail > header { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 6px 14px; border-radius: 10px; background: #e9f5fc; color: #18496d; }
+.cabinet-detail > header div { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.cabinet-detail > header strong { color: #0963ad; font-size: 34px; }
+.cabinet-detail > header p { margin: 0; font-size: 16px; }
+.cabinet-detail__grid { min-height: 0; display: grid; grid-template-columns: repeat(6, minmax(130px, 1fr)); gap: 10px; padding: 3px; overflow-y: auto; overscroll-behavior: contain; }
+.cabinet-detail__grid .slot-cell { min-height: 190px; display: grid; grid-template-rows: 30px 42px minmax(70px, 1fr) 26px 24px 30px; place-items: center; padding: 0; border: 2px solid #b6d0df; border-radius: 12px; background: #fff; }
+.cabinet-detail__grid .slot-cell--selected { border: 4px solid #0768bd; background: #e4f4ff; box-shadow: 0 4px 12px rgba(7,104,189,.18); }
+.cabinet-detail__grid .slot-cell--empty { border-style: dashed; background: #f2f6f8; }
+.cabinet-detail__grid .slot-cell__row { font-size: 20px; color: #12732d; }
+.cabinet-detail__grid .slot-cell__drug-visual { max-height: 110px; }
+.cabinet-detail__grid .slot-cell__drug-code, .cabinet-detail__grid .slot-cell__stock { font-size: 16px; }
+.cabinet-detail__grid .slot-cell__stock { display: block; }
+.cabinet-detail__grid .slot-cell__position { font-size: 17px; border-radius: 0 0 9px 9px; }
+.cabinet-detail__focus { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 14px; border: 2px solid #0a67b5; border-radius: 10px; background: #e8f5ff; color: #153f61; font-size: 16px; }
+.cabinet-detail__focus strong { color: #075aa8; font-size: 18px; }
+
+.adm-selection-summary { align-items: stretch; }
+.adm-selection-summary__items { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.adm-selection-summary__items button { min-height: 38px; display: grid; grid-template-columns: minmax(0,1fr) auto 28px; align-items: center; gap: 6px; border: 1px solid #a9cae0; border-radius: 7px; background: #f4fbff; color: #174768; font: 700 13px/1 var(--font-family); cursor: pointer; }
+.adm-selection-summary__items button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-selection-summary__items button i { color: #a72838; font-style: normal; font-size: 20px; }
+
+@media (orientation: portrait) {
+  .adm-home { grid-template-rows: clamp(118px, 8vh, 150px) minmax(0, 1fr) clamp(210px, 15vh, 270px); padding: 10px; gap: 10px; }
+  .adm-header { grid-template-columns: 1fr .8fr 1fr; gap: 8px; }
+  .adm-header-card { padding: 8px; }
+  .adm-card-label, .adm-unavailable, .adm-network-state span { font-size: 13px; }
+  .adm-metric-icon, .adm-header-card--environment .adm-divider { display: none; }
+  .adm-brand strong { font-size: clamp(48px, 7vw, 72px); }
+  .adm-brand span { font-size: 10px; }
+  .adm-clock time { font-size: clamp(34px, 5vw, 52px); }
+  .adm-clock span { font-size: 14px; }
+  .cabinet-browser__nav { grid-template-columns: repeat(3, 1fr); }
+  .cabinet-browser__nav button { min-height: 52px; }
+  .cabinet-overview__row { grid-template-columns: 70px minmax(0, 1fr); }
+  .cabinet-overview__number { font-size: clamp(10px, 1.35vw, 14px); }
+  .cabinet-overview__visual { font-size: clamp(12px, 2vw, 22px); }
+  .cabinet-overview__code { font-size: clamp(7px, 1vw, 10px); }
+  .cabinet-overview__status { width: 15px; height: 15px; font-size: 11px; }
+  .cabinet-detail__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cabinet-detail__grid .slot-cell { min-height: 230px; }
+  .adm-actions { grid-template-columns: 1fr; grid-template-rows: repeat(3, minmax(0, 1fr)); overflow-y: auto; }
+  .adm-step-card, .adm-security-card { min-height: 68px; }
+}
+
+@media (orientation: portrait) and (max-width: 820px) {
+  .adm-home { grid-template-rows: 112px minmax(0, 1fr) 210px; padding: 7px; gap: 7px; }
+  .adm-header-card--environment .adm-card-label, .adm-header-card--environment .adm-unavailable, .adm-health span, .adm-network-state span { display: none; }
+  .adm-brand span { display: none; }
+  .cabinet-browser { padding: 5px; gap: 5px; }
+  .cabinet-browser__nav { gap: 4px; }
+  .cabinet-browser__nav button { min-height: 48px; font-size: 14px; }
+  .cabinet-overview__row { grid-template-columns: 58px minmax(0, 1fr); }
+  .cabinet-overview__shelf strong { font-size: 40px; }
+  .cabinet-overview__shelf small { display: none; }
+  .cabinet-overview__code { font-size: 7px; }
+  .cabinet-detail__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .cabinet-detail > header p { display: none; }
+}
+
+/* Medical kiosk header and instruction dock refinement. */
+.withdraw-workflow.withdraw-workflow--cabinet { grid-template-rows: 112px minmax(0,1fr) 300px; }
+.medical-header { min-width: 0; display: grid; grid-template-columns: minmax(280px,1fr) minmax(260px,.9fr) minmax(280px,1fr); align-items: stretch; gap: 12px; }
+.medical-header__card { min-width: 0; display: grid; grid-template-columns: 42px minmax(0,1fr) 42px minmax(0,1fr); align-items: center; gap: 8px; padding: 12px 16px; border: 1px solid #b9dbea; border-radius: 16px; background: #fff; box-shadow: 0 4px 15px rgba(13,84,135,.09); }
+.medical-header__card div { min-width: 0; display: flex; flex-direction: column; }
+.medical-header__card strong { overflow: hidden; color: #174e72; font-size: 16px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.medical-header__card small { color: #627f92; font-size: 13px; line-height: 1.45; }
+.medical-header__icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; font-size: 22px; font-weight: 900; }
+.medical-header__icon.is-neutral { background: #edf1f3; color: #7a858c; }
+.medical-header__icon.is-ready { background: #e4f7ed; color: #16834a; }
+.medical-header__icon.is-warning { background: #fff2d6; color: #a56200; }
+.medical-header__brand { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 16px; text-align: center; }
+.medical-header__brand > strong { background: linear-gradient(100deg,#0875c4,#12a46a); background-clip: text; color: transparent; font-size: 46px; line-height: .85; letter-spacing: .08em; }
+.medical-header__brand > span { margin-top: 6px; color: #1973a6; font-size: 10px; font-weight: 900; letter-spacing: .06em; }
+.medical-header__brand > b { max-width: 100%; overflow: hidden; margin-top: 5px; color: #18547a; font-size: 16px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.medical-header__brand > small { color: #50809b; font-size: 13px; font-weight: 800; }
+.connection-card { grid-template-columns: minmax(120px,.8fr) minmax(155px,1fr); }
+.medical-header__network { min-width: 0; display: flex !important; flex-direction: row !important; align-items: center; gap: 10px; padding-right: 12px; border-right: 1px solid #d5e6ee; }
+.medical-header__network > span { font-size: 27px; }
+.medical-header__network.is-online { color: #18844b; }
+.medical-header__network.is-offline { color: #b24439; }
+.medical-header__network strong { color: inherit; }
+.connection-card time { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.connection-card time strong { color: #075bae; font-size: 34px; line-height: 1; }
+.connection-card time span { margin-top: 7px; color: #406b85; font-size: 14px; font-weight: 700; }
+.step-number { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(145deg,#0878c6,#11a16c); color: #fff; font-size: 22px; font-weight: 900; }
+.withdraw-dock .sticker-scanner { grid-template-columns: 46px minmax(0,1fr); align-content: start; overflow: hidden; }
+.sticker-scanner h1 { display: flex; flex-direction: column; line-height: 1.2; }
+.sticker-scanner h1 span { color: #0870bd; font-size: 13px; letter-spacing: .08em; }
+.withdraw-dock .sticker-scanner__frame { flex-direction: row; min-height: 92px; }
+.decorative-qr { width: 68px; height: 68px; flex: 0 0 68px; display: grid; grid-template-columns: repeat(5,1fr); grid-template-rows: repeat(5,1fr); gap: 3px; padding: 5px; border: 2px solid #0871c5; border-radius: 7px; background: #fff; }
+.decorative-qr i { width: auto !important; height: auto !important; border: 0 !important; background: #d8e7ef !important; opacity: 1 !important; }
+.decorative-qr i:nth-child(1),.decorative-qr i:nth-child(2),.decorative-qr i:nth-child(3),.decorative-qr i:nth-child(6),.decorative-qr i:nth-child(8),.decorative-qr i:nth-child(11),.decorative-qr i:nth-child(12),.decorative-qr i:nth-child(13),.decorative-qr i:nth-child(5),.decorative-qr i:nth-child(9),.decorative-qr i:nth-child(17),.decorative-qr i:nth-child(19),.decorative-qr i:nth-child(21),.decorative-qr i:nth-child(22),.decorative-qr i:nth-child(23),.decorative-qr i:nth-child(25) { background: #173f60 !important; }
+.identity-step-heading { display: flex; align-items: center; gap: 10px; }
+.identity-step-heading > div { display: flex; flex: 1; flex-direction: column; }
+.identity-step-heading strong { color: #075fa9; font-size: 17px; }
+.identity-step-heading span { color: #526f82; font-size: 14px; }
+.identity-visual { color: #15935a !important; font-size: 27px !important; font-weight: 900; }
+.identity-request-state { margin: 0; padding: 6px 8px; border-radius: 7px; background: #eef8fd; color: #315e78; font-size: 13px; font-weight: 700; }
+.queue-indicator { min-height: 64px; }
+
+@media (orientation: portrait) {
+  .withdraw-workflow.withdraw-workflow--cabinet { grid-template-rows: 142px minmax(0,1fr) 400px; }
+  .medical-header { grid-template-columns: 1fr .85fr 1fr; gap: 7px; }
+  .medical-header__card { grid-template-columns: 34px minmax(0,1fr); padding: 9px; }
+  .medical-header__icon { width: 32px; height: 32px; font-size: 18px; }
+  .medical-header__card strong { font-size: 13px; }
+  .medical-header__card small { font-size: 11px; }
+  .medical-header__brand > strong { font-size: 40px; }
+  .connection-card { grid-template-columns: 1fr; }
+  .medical-header__network { flex-direction: row !important; justify-content: center; padding: 0 0 5px; border: 0; border-bottom: 1px solid #d5e6ee; }
+  .connection-card time strong { font-size: 28px; }
+  .connection-card time span { font-size: 12px; }
+}
+
+@media (orientation: landscape) and (max-height: 800px) {
+  .withdraw-workflow.withdraw-workflow--cabinet { grid-template-rows: 96px minmax(0,1fr) 250px; gap: 7px; padding: 7px; }
+  .medical-header__card { padding: 8px 12px; }
+  .withdraw-dock .sticker-scanner__frame { min-height: 72px; }
+  .decorative-qr { width: 54px; height: 54px; flex-basis: 54px; }
+  .dock-steps .withdraw-steps { display: none; }
+}
+
+/* Cabinet-first withdrawal: keep the physical cabinet as the main reference. */
+.withdraw-workflow--cabinet { grid-template-rows: 92px minmax(0,1fr) 300px; gap: 10px; padding: 10px; background: linear-gradient(155deg,#f4fbff,#e7f5fc 58%,#edf8f2); }
+.withdraw-workflow--cabinet .withdraw-system-header { grid-template-columns: minmax(260px,1fr) auto auto auto; }
+.queue-header-button { min-width: 190px !important; display: flex; flex-direction: column; justify-content: center; border-color: #8fc6df !important; background: #edf9ff !important; }
+.queue-header-button span { font-size: 13px; }
+.queue-header-button strong { color: #075ca7; font-size: 16px; }
+.cabinet-stage { position: relative; min-height: 0; display: grid; grid-template-rows: 44px minmax(0,1fr); overflow: hidden; border: 1px solid #9ccae3; border-radius: 14px; background: rgba(255,255,255,.96); box-shadow: 0 5px 18px rgba(24,94,150,.09); }
+.cabinet-stage > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 7px 14px; border-bottom: 1px solid #bad8e9; background: #f5fbff; }
+.cabinet-stage > header > div { display: flex; align-items: baseline; gap: 12px; }
+.cabinet-stage > header strong { color: #075ca7; font-size: 18px; }
+.cabinet-stage > header span { color: #4c6d83; font-size: 14px; }
+.cabinet-stage__ready { color: #187742 !important; font-weight: 800; }
+.cabinet-stage__attention { color: #9b5200 !important; font-weight: 800; }
+.cabinet-stage .cabinet-browser { padding: 7px; }
+.request-location-banner { position: absolute; top: 50px; right: 14px; z-index: 8; display: flex; gap: 10px; align-items: center; max-width: 560px; padding: 8px 12px; border: 2px solid #7441bd; border-radius: 10px; background: rgba(250,247,255,.96); color: #542c8c; box-shadow: 0 5px 16px rgba(66,31,112,.18); }
+.request-location-banner strong { font-size: 16px; }
+.request-location-banner span { font-size: 14px; }
+.withdraw-dock { min-height: 0; display: grid; grid-template-columns: minmax(360px,1.1fr) minmax(270px,.8fr) minmax(390px,1.1fr); gap: 10px; }
+.withdraw-dock .withdraw-context,.withdraw-dock .dock-steps,.withdraw-dock .withdraw-actionbar { min-height: 0; border: 1px solid #a9cee3; border-radius: 14px; background: #fff; box-shadow: 0 4px 14px rgba(16,76,122,.08); }
+.withdraw-dock .withdraw-context { overflow: hidden; }
+.withdraw-dock .sticker-scanner { display: grid; grid-template-columns: 58px minmax(0,1fr); grid-auto-rows: min-content; align-content: center; align-items: center; gap: 5px 12px; padding: 14px 18px; text-align: left; }
+.withdraw-dock .sticker-scanner__icon { grid-row: 1/3; font-size: 52px; }
+.withdraw-dock .sticker-scanner h1 { font-size: 24px; }
+.withdraw-dock .sticker-scanner p { font-size: 14px; }
+.withdraw-dock .sticker-scanner__frame { grid-column: 1/-1; width: 100%; min-height: 72px; padding: 8px 12px; border-width: 2px; border-radius: 11px; }
+.withdraw-dock .sticker-scanner__frame i { height: 24px; }
+.withdraw-dock .sticker-scanner__frame strong { font-size: 16px; }
+.withdraw-dock .sticker-scanner__frame small { font-size: 12px; }
+.withdraw-dock .sticker-scanner form { grid-column: 1/-1; width: 100%; }
+.withdraw-dock .sticker-scanner form label { font-size: 12px; }
+.withdraw-dock .sticker-scanner input,.withdraw-dock .sticker-scanner button { min-height: 44px; }
+.withdraw-dock .request-review { padding: 12px; gap: 7px; }
+.withdraw-dock .request-review > header strong { font-size: 18px; }
+.withdraw-dock .patient-context { padding: 8px 10px; }
+.withdraw-dock .patient-context strong { font-size: 18px; }
+.withdraw-dock .requested-medications { gap: 5px; }
+.withdraw-dock .requested-medications article { padding: 7px 9px; }
+.dock-steps { display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow: hidden; }
+.dock-steps .withdraw-steps { grid-template-columns: 1fr; flex: 1; }
+.dock-steps .withdraw-steps li { min-height: 45px; padding: 5px 8px; }
+.dock-steps .withdraw-steps li b { flex-basis: 30px; height: 30px; font-size: 15px; }
+.dock-steps .withdraw-steps li span { font-size: 14px; }
+.dock-steps .queue-indicator { flex: 0 0 auto; grid-template-columns: 1fr; gap: 2px; min-height: 72px; }
+.dock-steps .queue-indicator strong { font-size: 17px; }
+.dock-steps .queue-indicator small { font-size: 13px; }
+.withdraw-dock .withdraw-actionbar { flex-direction: column; align-items: stretch; justify-content: center; padding: 14px 18px; }
+.withdraw-dock .withdraw-actionbar > div { gap: 5px; }
+.withdraw-dock .withdraw-actionbar strong { font-size: 19px; }
+.withdraw-dock .withdraw-actionbar span { font-size: 14px; }
+.withdraw-dock .action-group,.withdraw-dock .identity-form { width: 100%; display: grid; grid-template-columns: 1fr 1.35fr; }
+.withdraw-dock .identity-form input { grid-column: 1/-1; max-width: none; }
+.withdraw-dock .action-group button,.withdraw-dock .identity-form button,.withdraw-dock .withdraw-actionbar > button { min-width: 0; min-height: 54px; }
+
+@media (orientation: portrait) {
+  .withdraw-workflow--cabinet { grid-template-rows: 150px minmax(0,1fr) 410px; }
+  .withdraw-workflow--cabinet .withdraw-system-header { grid-template-columns: 1fr auto; }
+  .withdraw-workflow--cabinet .withdraw-system-header > div { justify-content: center; }
+  .withdraw-workflow--cabinet .withdraw-system-header .status-badge { display: inline-flex; }
+  .queue-header-button { display: none; }
+  .withdraw-dock { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0,1fr) 135px; }
+  .withdraw-dock .withdraw-context { grid-column: 1; grid-row: 1; }
+  .withdraw-dock .dock-steps { grid-column: 2; grid-row: 1; }
+  .withdraw-dock .withdraw-actionbar { grid-column: 1/-1; grid-row: 2; }
+  .dock-steps .withdraw-steps { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .dock-steps .withdraw-steps li { flex-direction: column; text-align: center; }
+  .dock-steps .queue-indicator { min-height: 64px; }
+}
+
+@media (orientation: portrait) and (max-width: 820px) {
+  .withdraw-workflow--cabinet { grid-template-rows: 92px minmax(0,1fr) 480px; padding: 6px; gap: 6px; }
+  .withdraw-workflow--cabinet .withdraw-system-header { grid-template-columns: 1fr auto; }
+  .withdraw-dock { grid-template-columns: 1fr; grid-template-rows: minmax(0,1fr) 105px 145px; gap: 6px; }
+  .withdraw-dock .withdraw-context { grid-column: 1; grid-row: 1; }
+  .withdraw-dock .dock-steps { grid-column: 1; grid-row: 2; }
+  .withdraw-dock .withdraw-actionbar { grid-column: 1; grid-row: 3; }
+  .dock-steps .withdraw-steps { display: none; }
+  .request-location-banner { left: 8px; right: 8px; max-width: none; }
+}
+
+/* Sticker-driven withdrawal workflow. */
+.withdraw-workflow { width: 100vw; height: 100dvh; display: grid; grid-template-rows: 86px 78px minmax(0,1fr) 112px; gap: 10px; padding: 12px; overflow: hidden; user-select: none; background: linear-gradient(145deg,#f8fdff,#eaf6fd); color: #173f60; }
+.withdraw-system-header { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 20px; padding: 10px 18px; border: 1px solid #bad9ed; border-radius: 16px; background: #fff; box-shadow: 0 5px 18px rgba(24,94,150,.09); }
+.withdraw-system-header > div { display: flex; align-items: center; gap: 16px; }
+.withdraw-system-header > div strong { color: #0763b4; font-size: 42px; line-height: 1; }
+.withdraw-system-header > div span { font-size: 17px; font-weight: 700; }
+.withdraw-system-header button { min-width: 112px; min-height: 48px; border: 1px solid #b8cede; border-radius: 9px; background: #fff; color: #315b78; font: 700 16px var(--font-family); cursor: pointer; }
+.withdraw-steps { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 7px; margin: 0; padding: 0; list-style: none; }
+.withdraw-steps li { min-width: 0; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 2px solid #c3d7e4; border-radius: 11px; background: #fff; color: #567085; }
+.withdraw-steps li b { display: grid; place-items: center; flex: 0 0 38px; height: 38px; border-radius: 50%; background: #e1eaf0; color: #526b7c; font-size: 18px; }
+.withdraw-steps li span { overflow: hidden; font-size: 15px; font-weight: 700; line-height: 1.2; }
+.withdraw-steps li.is-current { border-color: #0870c1; background: #e9f5ff; color: #0759a3; }
+.withdraw-steps li.is-current b { background: #0870c1; color: #fff; }
+.withdraw-steps li.is-done { border-color: #65b688; color: #17683a; }
+.withdraw-steps li.is-done b { background: #1a934b; color: #fff; }
+.withdraw-main { min-height: 0; display: grid; grid-template-columns: minmax(370px,.7fr) minmax(0,1.3fr); gap: 10px; }
+.withdraw-context,.withdraw-cabinet { min-height: 0; overflow: hidden; border: 1px solid #b8d7e9; border-radius: 14px; background: rgba(255,255,255,.92); }
+.withdraw-cabinet { display: flex; }
+.sticker-scanner { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: clamp(18px,3vh,38px); overflow-y: auto; text-align: center; }
+.sticker-scanner__icon { color: #0968b9; font-size: 72px; line-height: 1; }
+.sticker-scanner h1 { margin: 0; color: #0758a8; font-size: clamp(28px,2.5vw,42px); }
+.sticker-scanner p { margin: 0; color: #3f617a; font-size: 18px; }
+.sticker-scanner__frame { width: min(100%,520px); min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; border: 4px solid #15955a; border-radius: 20px; background: linear-gradient(135deg,#f6fcff,#e6f7ef); color: #17623d; }
+.sticker-scanner__frame strong { font-size: 20px; }
+.sticker-scanner__frame small { font-size: 14px; }
+.sticker-scanner form { width: min(100%,560px); display: flex; flex-direction: column; gap: 7px; text-align: left; }
+.sticker-scanner form label { color: #315b76; font-size: 15px; font-weight: 700; }
+.sticker-scanner form > div,.identity-form { display: flex; gap: 8px; }
+.sticker-scanner input,.identity-form input { min-width: 0; flex: 1; min-height: 52px; padding: 10px 14px; border: 2px solid #a9c9dd; border-radius: 9px; background: #fff; color: #173f60; font: 600 17px var(--font-family); user-select: text; }
+.sticker-scanner button,.identity-form button { min-height: 52px; padding: 9px 18px; border: 0; border-radius: 9px; background: #0868b8; color: #fff; font: 800 16px var(--font-family); cursor: pointer; }
+.sticker-scanner button:disabled,.identity-form button:disabled { background: #b7c6d0; cursor: not-allowed; }
+.withdraw-alert { width: 100%; padding: 12px 16px; border: 2px solid #d68a18; border-radius: 10px; background: #fff7e5; color: #774500; font-size: 16px; font-weight: 700; }
+.request-review { height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px; overflow-y: auto; }
+.request-review > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.request-review > header > div { display: flex; flex-direction: column; }
+.request-review > header span { font-size: 14px; }
+.request-review > header strong { color: #075baa; font-size: 24px; }
+.patient-context { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 14px; border: 2px solid #91bfdd; border-radius: 11px; background: #edf8ff; }
+.patient-context span { grid-column: 1/-1; color: #42677f; font-size: 14px; font-weight: 700; }
+.patient-context strong { color: #123f63; font-size: 22px; }
+.patient-context b { color: #075ba8; font-size: 18px; }
+.patient-context small { grid-column: 1/-1; font-size: 15px; }
+.requested-medications { display: flex; flex-direction: column; gap: 7px; }
+.requested-medications article { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 12px; padding: 10px 12px; border: 2px solid #a9cde3; border-radius: 10px; background: #fff; }
+.requested-medications article > div { display: flex; flex-direction: column; min-width: 0; }
+.requested-medications article strong { overflow: hidden; color: #153f61; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+.requested-medications article > span,.requested-medications article > small { grid-column: 1/-1; color: #3e647d; font-size: 14px; }
+.requested-medications article.has-warning { border-color: #d07d13; background: #fff8e8; }
+.verified-operator { display: flex; align-items: center; gap: 12px; padding: 11px; border-radius: 9px; background: #e8f7ee; color: #17683b; }
+.verified-operator small { margin-left: auto; }
+.withdraw-actionbar { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 20px; border: 1px solid #a8cee5; border-radius: 15px; background: #fff; box-shadow: 0 -5px 18px rgba(18,83,132,.1); }
+.withdraw-actionbar > div { display: flex; flex-direction: column; min-width: 0; }
+.withdraw-actionbar strong { color: #075ba7; font-size: 20px; }
+.withdraw-actionbar span { color: #486981; font-size: 16px; }
+.withdraw-actionbar > button,.hardware-modal > button { min-width: 230px; min-height: 64px; padding: 12px 24px; border: 0; border-radius: 12px; background: linear-gradient(145deg,#15955a,#0870c1); color: #fff; font: 900 20px var(--font-family); cursor: pointer; }
+.withdraw-steps--compact { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.queue-toast { position: fixed; z-index: 80; top: 92px; left: 50%; width: min(760px,calc(100% - 32px)); padding: 14px 18px; transform: translateX(-50%); border: 2px solid #32a767; border-radius: 12px; background: #effcf5; color: #126c3d; box-shadow: 0 10px 28px rgba(8,64,43,.2); font-size: 17px; font-weight: 800; text-align: center; }
+.queue-indicator { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; min-height: 58px; padding: 8px 16px; border: 2px solid #8ebfdd; border-radius: 12px; background: #eef8fe; color: #184f75; cursor: pointer; text-align: left; }
+.queue-indicator strong { font-size: 18px; color: #075da9; }
+.queue-indicator small { color: #147441; font-size: 15px; font-weight: 800; }
+.queue-indicator .has-attention { padding: 5px 9px; border-radius: 999px; background: #fff0dc; color: #994f00; }
+.immediate-warning { color: #9a4d00 !important; font-weight: 900; }
+.action-group { display: flex !important; flex-direction: row !important; gap: 10px; }
+.action-group button,.identity-form button,.reconcile-button { min-height: 56px; padding: 9px 18px; border: 0; border-radius: 10px; background: #0870c1; color: #fff; font: 800 17px var(--font-family); cursor: pointer; }
+.action-group .secondary,.identity-form .secondary { border: 2px solid #9dbacd; background: #fff; color: #365f7a; }
+.identity-form { flex: 1; justify-content: flex-end; }
+.identity-form input { max-width: 390px; }
+.identity-form button.secondary { border: 2px solid #a9c7d9; background: #fff; color: #315b76; }
+.cabinet-overview__slot.is-requested { box-shadow: inset 0 0 0 3px #7a3fd0; background: #eee7ff; }
+.cabinet-overview__slot.is-requested .cabinet-overview__status { color: #6b2ac2; }
+.cabinet-detail__grid .slot-cell--selected { border-color: #7540c2; background: #f0eaff; }
+
+.hardware-modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 22px; background: rgba(5,28,48,.68); }
+.hardware-modal { width: min(860px,100%); max-height: calc(100dvh - 44px); display: grid; grid-template-rows: auto auto minmax(0,1fr) auto; gap: 16px; padding: 24px; overflow: hidden; border: 3px solid #89bee0; border-radius: 20px; background: #fff; box-shadow: 0 24px 70px rgba(0,0,0,.35); }
+.hardware-modal > header { display: flex; align-items: center; gap: 16px; }
+.hardware-modal > header > span { display: grid; place-items: center; flex: 0 0 62px; height: 62px; border-radius: 50%; background: #0870c1; color: #fff; font-size: 34px; }
+.hardware-modal h2 { margin: 0; color: #075baa; font-size: 28px; }
+.hardware-modal p { margin: 4px 0 0; color: #3f6179; font-size: 16px; }
+.hardware-modal dl { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 0; }
+.hardware-modal dl div { padding: 10px; border-radius: 8px; background: #edf7fd; }
+.hardware-modal dt { color: #577184; font-size: 13px; }
+.hardware-modal dd { margin: 3px 0 0; color: #153f60; font-size: 16px; font-weight: 800; }
+.hardware-items { min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.hardware-items > div { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 11px; border: 1px solid #acd0e5; border-radius: 9px; }
+.hardware-items > div > span { grid-row: 1/3; font-size: 25px; }
+.hardware-items small { grid-column: 2/4; color: #4c6b80; }
+.hardware-modal__lock { padding: 12px; border-radius: 9px; background: #fff3d9; color: #734800; font-weight: 800; text-align: center; }
+.hardware-modal > button { justify-self: end; }
+
+.medication-cart-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(5, 28, 48, .7);
+  backdrop-filter: blur(3px);
+}
+
+.medication-cart {
+  width: min(940px, 100%);
+  max-height: calc(100dvh - 44px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 14px;
+  padding: 22px;
+  overflow: hidden;
+  border: 3px solid #78b9dc;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 26px 80px rgba(0, 18, 38, .38);
+}
+
+.medication-cart > header {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 14px;
+}
+
+.medication-cart > header > span {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #15955a, #0870c1);
+  color: #fff;
+  font: 900 25px/1 var(--font-family);
+  box-shadow: 0 7px 18px rgba(7, 104, 184, .2);
+}
+
+.medication-cart > header small {
+  color: #0870c1;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.medication-cart h2 { margin: 2px 0 0; color: #123f63; font-size: 27px; }
+.medication-cart > header p { margin: 4px 0 0; color: #547186; font-size: 14px; }
+.medication-cart > header button {
+  width: 48px;
+  min-height: 48px;
+  border: 1px solid #a9c5d7;
+  border-radius: 12px;
+  background: #f5f9fb;
+  color: #345b75;
+  cursor: pointer;
+  font: 700 28px/1 var(--font-family);
+}
+
+.medication-cart__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #eef8fd;
+  color: #244f6b;
+}
+
+.medication-cart__summary strong { font-size: 17px; }
+.medication-cart__summary span { padding: 5px 10px; border-radius: 999px; font-size: 13px; font-weight: 900; }
+.medication-cart__summary .is-ready { background: #def5e8; color: #17683b; }
+.medication-cart__summary .has-shortage { background: #fff0d5; color: #914d00; }
+
+.medication-cart__items {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.medication-cart__items article {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(180px, .9fr) minmax(130px, .55fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 2px solid #a9cde3;
+  border-left: 7px solid #15955a;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.medication-cart__items article.has-shortage {
+  border-color: #dda04a;
+  border-left-color: #c66c00;
+  background: #fff9eb;
+}
+
+.medication-cart__drug,
+.medication-cart__location,
+.medication-cart__quantity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.medication-cart__drug strong { color: #153f61; font-size: 17px; overflow-wrap: anywhere; }
+.medication-cart__drug span { color: #527184; font: 700 12px var(--font-mono); }
+.medication-cart__location small,
+.medication-cart__quantity small { color: #6b8393; font-size: 11px; font-weight: 700; }
+.medication-cart__location strong { color: #075da9; font-size: 16px; }
+.medication-cart__location span,
+.medication-cart__quantity span { color: #4d6d80; font-size: 12px; }
+.medication-cart__quantity strong { color: #173f60; font-size: 24px; }
+.medication-cart__items article > b { min-width: 92px; padding: 7px 10px; border-radius: 999px; background: #def5e8; color: #17683b; font-size: 13px; text-align: center; }
+.medication-cart__items article.has-shortage > b { background: #ffe8bd; color: #8b4800; }
+
+.medication-cart__hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #7dc29d;
+  border-radius: 11px;
+  background: #effaf4;
+  color: #17683b;
+}
+
+.medication-cart__hint strong { white-space: nowrap; }
+.medication-cart__hint.has-shortage { border-color: #dda04a; background: #fff6e4; color: #844700; }
+
+.medication-cart > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.medication-cart > footer button {
+  min-height: 54px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #15955a, #0870c1);
+  color: #fff;
+  cursor: pointer;
+  font: 800 16px var(--font-family);
+}
+
+.medication-cart > footer button.secondary {
+  border: 2px solid #a6c3d5;
+  background: #fff;
+  color: #365f7a;
+}
+
+@media (max-width: 899px) {
+  .medication-cart { padding: 16px; }
+  .medication-cart__items article { grid-template-columns: minmax(0, 1fr) minmax(130px, .7fr) auto; }
+  .medication-cart__quantity { grid-column: 2; }
+  .medication-cart__items article > b { grid-column: 3; grid-row: 1 / 3; }
+}
+
+@media (orientation: portrait) {
+  .withdraw-workflow { grid-template-rows: 92px 128px minmax(0,1fr) 150px; }
+  .withdraw-main { grid-template-columns: 1fr; grid-template-rows: minmax(320px,.8fr) minmax(0,1.2fr); }
+  .withdraw-steps { grid-template-columns: repeat(5,1fr); }
+  .withdraw-steps li { flex-direction: column; justify-content: center; padding: 6px; text-align: center; }
+  .withdraw-steps li span { font-size: 13px; }
+  .withdraw-actionbar { align-items: stretch; flex-direction: column; justify-content: center; }
+  .withdraw-actionbar > button { width: 100%; }
+  .identity-form { width: 100%; }
+  .identity-form input { max-width: none; }
+}
+@media (orientation: portrait) and (max-width: 820px) {
+  .withdraw-workflow { grid-template-rows: 82px 104px minmax(0,1fr) 164px; gap: 6px; padding: 6px; }
+  .withdraw-system-header { grid-template-columns: 1fr auto; padding: 7px 10px; }
+  .withdraw-system-header > div strong { font-size: 32px; }
+  .withdraw-system-header > div span,.withdraw-system-header .status-badge { display: none; }
+  .withdraw-steps li span { font-size: 11px; }
+  .withdraw-steps li b { flex-basis: 30px; height: 30px; }
+  .withdraw-main { grid-template-rows: minmax(290px,.75fr) minmax(0,1.25fr); gap: 6px; }
+  .identity-form { display: grid; grid-template-columns: 1fr 1fr; }
+  .identity-form input { grid-column: 1/-1; }
+  .hardware-modal { padding: 15px; }
+  .hardware-modal dl { grid-template-columns: 1fr 1fr; }
+}
+
+/* Keep cabinet-first sizing after the legacy withdrawal rules above. */
+.withdraw-workflow.withdraw-workflow--cabinet { grid-template-rows: 92px minmax(0,1fr) 300px; gap: 10px; padding: 10px; background: linear-gradient(155deg,#f4fbff,#e7f5fc 58%,#edf8f2); }
+.withdraw-workflow--cabinet .withdraw-system-header { grid-template-columns: minmax(260px,1fr) auto auto auto; }
+@media (orientation: portrait) {
+  .withdraw-workflow.withdraw-workflow--cabinet { grid-template-rows: 150px minmax(0,1fr) 410px; }
+  .withdraw-workflow--cabinet .withdraw-system-header { grid-template-columns: minmax(0,1fr) auto auto; }
+}
+@media (orientation: portrait) and (max-width: 820px) {
+  .withdraw-workflow.withdraw-workflow--cabinet { grid-template-rows: 92px minmax(0,1fr) 480px; gap: 6px; padding: 6px; }
+}
+
+/* Portrait kiosk layout: content owns its space instead of floating above it. */
+@media (orientation: portrait) {
+  .withdraw-workflow.withdraw-workflow--cabinet {
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    grid-template-rows: auto minmax(920px, 1fr) auto;
+    gap: 12px;
+    padding: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .medical-header {
+    min-height: 132px;
+  }
+
+  .medical-header__card,
+  .cabinet-stage,
+  .withdraw-dock .withdraw-context,
+  .withdraw-dock .dock-steps,
+  .withdraw-dock .withdraw-actionbar {
+    box-shadow: 0 8px 24px rgba(16, 76, 122, .09);
+  }
+
+  .medical-header__icon,
+  .step-number,
+  .identity-visual {
+    filter: drop-shadow(0 3px 5px rgba(10, 83, 132, .16));
+  }
+
+  .medical-header__icon {
+    border: 1px solid rgba(255, 255, 255, .9);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+  }
+
+  .cabinet-stage {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: visible;
+  }
+
+  .cabinet-stage > header {
+    min-height: 56px;
+  }
+
+  .cabinet-stage .cabinet-browser {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .request-location-banner {
+    position: static;
+    z-index: auto;
+    grid-column: 1;
+    width: auto;
+    max-width: none;
+    margin: 0 8px 8px;
+    justify-content: space-between;
+    box-shadow: none;
+  }
+
+  .withdraw-dock {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+    grid-template-rows: minmax(300px, auto) auto;
+    gap: 10px;
+  }
+
+  .withdraw-dock .withdraw-context {
+    grid-column: 1;
+    grid-row: 1;
+    overflow: auto;
+  }
+
+  .withdraw-dock .dock-steps {
+    grid-column: 2;
+    grid-row: 1;
+    overflow: visible;
+  }
+
+  .withdraw-dock .withdraw-actionbar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 132px;
+  }
+
+  .withdraw-dock .sticker-scanner {
+    align-content: start;
+    overflow: visible;
+  }
+
+  .dock-steps .withdraw-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    flex: 0 0 auto;
+  }
+
+  .dock-steps .withdraw-steps li {
+    min-height: 76px;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .dock-steps .queue-indicator {
+    margin-top: auto;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 820px) {
+  .withdraw-workflow.withdraw-workflow--cabinet {
+    grid-template-rows: auto minmax(760px, 1fr) auto;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .withdraw-dock {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .withdraw-dock .withdraw-context,
+  .withdraw-dock .dock-steps,
+  .withdraw-dock .withdraw-actionbar {
+    grid-column: 1;
+  }
+
+  .withdraw-dock .withdraw-context { grid-row: 1; }
+  .withdraw-dock .dock-steps { grid-row: 2; }
+  .withdraw-dock .withdraw-actionbar { grid-row: 3; }
+}
+
+/* Canonical Withdraw layout. Keep this final block after legacy kiosk rules. */
+body:has(.withdraw-workflow--cabinet) {
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.withdraw-workflow.withdraw-workflow--cabinet {
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  user-select: auto;
+}
+
+.withdraw-workflow--cabinet > *,
+.medical-header > *,
+.cabinet-stage > *,
+.withdraw-dock > *,
+.request-review > *,
+.requested-medications article > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+.medical-header__card strong,
+.medical-header__brand > b,
+.requested-medications article strong,
+.request-location-banner span,
+.queue-card > * {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.status-icon-svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+}
+
+.medical-header__icon,
+.network-icon,
+.identity-visual,
+.step-number {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 4px 10px rgba(15,76,116,.16);
+}
+
+.network-icon {
+  display: grid;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 13px;
+  background: color-mix(in srgb, currentColor 10%, white);
+}
+
+.cabinet-stage {
+  position: static;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.cabinet-stage > header {
+  min-height: 52px;
+  flex-wrap: wrap;
+}
+
+.cabinet-stage > header > div {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.cabinet-stage__ready,
+.cabinet-stage__attention {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.cabinet-stage__ready .status-icon-svg,
+.cabinet-stage__attention .status-icon-svg,
+.queue-toast .status-icon-svg {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.queue-toast,
+.request-location-banner {
+  position: static;
+  width: auto;
+  max-width: none;
+  transform: none;
+  z-index: auto;
+  margin: 8px 12px 0;
+  overflow-wrap: anywhere;
+}
+
+.queue-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.request-location-banner {
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  box-shadow: none;
+}
+
+.cabinet-stage .cabinet-browser {
+  grid-row: 3;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cabinet-stage > .queue-toast { grid-row: 2; }
+.cabinet-stage > .request-location-banner { grid-row: 4; }
+
+.withdraw-dock {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  grid-template-rows: auto auto;
+  align-items: stretch;
+}
+
+.withdraw-dock .withdraw-context,
+.withdraw-dock .dock-steps,
+.withdraw-dock .withdraw-footer,
+.withdraw-dock .withdraw-actionbar,
+.withdraw-dock .sticker-scanner,
+.withdraw-dock .request-review {
+  height: auto;
+  overflow: visible;
+}
+
+.withdraw-dock .withdraw-context { grid-column: 1; grid-row: 1; }
+.withdraw-dock .dock-steps { grid-column: 2; grid-row: 1; }
+.withdraw-dock .withdraw-footer { grid-column: 1 / -1; grid-row: 2; }
+
+.withdraw-footer {
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.withdraw-footer > .hardware-readiness-card,
+.withdraw-footer > .withdraw-actionbar {
+  min-width: 0;
+  min-height: 120px;
+  flex: 1 1 50%;
+}
+
+.queue-safety-card {
+  grid-template-columns: 52px minmax(0, 1fr) auto minmax(190px, auto);
+  gap: 12px 18px;
+  padding: 14px 18px;
+  border-color: #8ac7ad;
+  background: linear-gradient(135deg, #f4fcf8, #eef8fe);
+}
+
+.queue-safety-card__icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 1px solid #64b58c;
+  border-radius: 16px;
+  background: #fff;
+  color: #16834a;
+  box-shadow: 0 5px 14px rgba(20,112,68,.14);
+}
+
+.queue-safety-card__icon .status-icon-svg { width: 30px; height: 30px; }
+.queue-safety-card > span:nth-child(2) { display: flex; flex-direction: column; }
+.queue-safety-card > span b { color: #17683b; font-size: 17px; }
+.queue-safety-card > span small { color: #4e7183; font-size: 13px; }
+.queue-safety-card > strong { line-height: 1.45; }
+
+.hardware-readiness-card {
+  cursor: default;
+}
+
+.hardware-readiness-card > strong {
+  color: #17683b;
+}
+
+.cart-ready-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 2px solid #8fc4df;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5fbff, #edf8f3);
+}
+
+.cart-ready-summary > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cart-ready-summary strong { color: #075ca7; font-size: 19px; }
+.cart-ready-summary span { color: #496b80; font-size: 13px; }
+.cart-ready-summary button {
+  min-height: 48px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #0870c1;
+  color: #fff;
+  cursor: pointer;
+  font: 800 15px var(--font-family);
+  white-space: nowrap;
+}
+
+.identity-visual {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid #79c39c;
+  border-radius: 14px;
+  background: #effaf4;
+}
+
+.identity-visual svg {
+  width: 30px;
+  height: 30px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.requested-medications article {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* Slot cards share one content rhythm in every viewport. The stock meter is
+   a real grid row, never a floating line over the position label. */
+.cabinet-detail__grid .slot-cell {
+  grid-template-rows: 30px 42px minmax(70px, 1fr) 26px 24px 8px 30px;
+}
+
+.cabinet-detail__grid .slot-cell__fill-track {
+  position: static;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  align-self: center;
+  width: calc(100% - 20px);
+  height: 4px;
+  margin: 0;
+}
+
+.cabinet-detail__grid .slot-cell--empty .slot-cell__drug-code,
+.cabinet-detail__grid .slot-cell--empty .slot-cell__stock,
+.cabinet-detail__grid .slot-cell--empty .slot-cell__fill-track {
+  visibility: hidden;
+}
+
+.withdraw-alert,
+.identity-request-state,
+.immediate-warning,
+.withdraw-actionbar span {
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.withdraw-workflow button,
+.withdraw-workflow input {
+  min-height: 48px;
+}
+
+.withdraw-workflow :is(button, input):focus-visible {
+  outline: 4px solid #f2a900;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+@media (orientation: portrait) and (min-width: 900px) {
+  .withdraw-workflow.withdraw-workflow--cabinet {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .medical-header { min-height: 150px; }
+  .medical-header__card { padding: 14px; }
+  .cabinet-stage .cabinet-browser { min-height: 0; }
+  .withdraw-dock { gap: 14px; }
+  .withdraw-dock .withdraw-context,
+  .withdraw-dock .dock-steps,
+  .withdraw-dock .withdraw-actionbar { padding: 18px; }
+
+  /* Four readable, consistently sized columns. The final pair is centered
+     instead of being stretched to a different card size. */
+  .cabinet-detail__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: minmax(132px, auto);
+    align-content: start;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .cabinet-detail__grid > .slot-cell:nth-last-child(2) { grid-column: 2; }
+  .cabinet-detail__grid > .slot-cell:last-child { grid-column: 3; }
+
+  .cabinet-detail__grid .slot-cell {
+    min-height: 132px;
+    grid-template-rows: 20px 30px minmax(30px, 1fr) 17px 17px 8px 23px;
+    align-content: stretch;
+    overflow: hidden;
+  }
+
+  .cabinet-detail__grid .slot-cell__row { font-size: 15px; }
+  .cabinet-detail__grid .slot-cell__drug-name {
+    width: calc(100% - 12px);
+    font-size: 13px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  .cabinet-detail__grid .slot-cell__drug-visual { max-height: 42px; }
+  .cabinet-detail__grid .slot-cell__drug-code,
+  .cabinet-detail__grid .slot-cell__stock { font-size: 11px; }
+  .cabinet-detail__grid .slot-cell__position { font-size: 13px; }
+
+  .cabinet-detail__grid .slot-cell__fill-track {
+    position: static;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    align-self: center;
+    width: calc(100% - 20px);
+    height: 4px;
+    margin: 0;
+  }
+
+  .cabinet-detail__grid .slot-cell--empty .slot-cell__drug-code,
+  .cabinet-detail__grid .slot-cell--empty .slot-cell__stock,
+  .cabinet-detail__grid .slot-cell--empty .slot-cell__fill-track {
+    visibility: hidden;
+  }
+
+  .withdraw-dock .withdraw-context,
+  .withdraw-dock .dock-steps {
+    min-height: 270px;
+  }
+}
+
+@media (max-width: 899px) {
+  .medical-header {
+    grid-template-columns: minmax(0, 1fr) minmax(190px, .8fr);
+  }
+
+  .medical-header .connection-card { grid-column: 1 / -1; }
+  .connection-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .withdraw-dock { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+  .withdraw-dock .withdraw-context,
+  .withdraw-dock .dock-steps,
+  .withdraw-dock .queue-safety-card,
+  .withdraw-dock .withdraw-actionbar { grid-column: 1; }
+  .withdraw-dock .withdraw-context { grid-row: 1; }
+  .withdraw-dock .dock-steps { grid-row: 2; }
+  .withdraw-dock .queue-safety-card { grid-row: 3; }
+  .withdraw-dock .withdraw-actionbar { grid-row: 4; }
+  .cabinet-stage .cabinet-browser { min-height: 0; }
+  .request-review > header { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 560px) {
+  .medical-header { grid-template-columns: 1fr; }
+  .medical-header .connection-card { grid-column: 1; }
+  .medical-header__brand { grid-row: 1; }
+  .requested-medications article { grid-template-columns: 1fr; }
+  .requested-medications article > b { grid-column: 1; }
+  .action-group,
+  .withdraw-dock .action-group,
+  .withdraw-dock .identity-form { grid-template-columns: 1fr; }
+  .identity-form input { grid-column: 1; }
+  .queue-safety-card { grid-template-columns: 48px minmax(0, 1fr); }
+  .queue-safety-card > strong,
+  .queue-safety-card > small { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .withdraw-workflow *,
+  .withdraw-workflow *::before,
+  .withdraw-workflow *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Shared SlotCell theme — canonical physical-position card. */
+.cabinet-detail__grid .slot-cell {
+  --slot-border: #b9d3e2;
+  --slot-surface: #fff;
+  --slot-muted-surface: #f2f7fa;
+  --slot-address: #0870c2;
+  min-height: 160px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 28px minmax(90px, 1fr) 28px 8px 28px;
+  justify-items: stretch;
+  align-items: center;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--slot-border);
+  border-radius: 14px;
+  background: var(--slot-surface);
+  box-shadow: 0 2px 8px rgba(20, 76, 111, .06);
+}
+
+.cabinet-detail__grid .slot-cell__header {
+  position: relative;
+  align-self: stretch;
+  display: grid;
+  width: 100%;
+  place-items: center;
+  background: #edf8f1;
+}
+
+.cabinet-detail__grid .slot-cell--empty {
+  --slot-border: #bed7e6;
+  --slot-surface: linear-gradient(180deg, #f8fbfd, #eff6f9);
+  --slot-address: #527f9d;
+  border-style: solid;
+}
+
+.cabinet-detail__grid .slot-cell__row {
+  align-self: center;
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: #14713a;
+  font: 900 15px/1 var(--font-family);
+}
+
+.cabinet-detail__grid .slot-cell__body {
+  align-self: stretch;
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.cabinet-detail__grid .slot-cell__drug-name {
+  align-self: center;
+  width: calc(100% - 18px);
+  margin-inline: auto;
+  color: #31465a;
+  font-size: 13px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.cabinet-detail__grid .slot-cell--empty .slot-cell__drug-name {
+  color: #526b7c;
+  font-size: 14px;
+}
+
+.cabinet-detail__grid .slot-cell__drug-visual {
+  width: 100%;
+  height: 100%;
+  max-height: 48px;
+}
+
+.cabinet-detail__grid .slot-cell__drug-visual > svg { height: 42px; }
+
+.cabinet-detail__grid .slot-cell__empty-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid #b4cedd;
+  border-radius: 12px;
+  background: #fff;
+  color: #7090a3;
+}
+
+.cabinet-detail__grid .slot-cell__empty-icon svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+}
+
+.cabinet-detail__grid .slot-cell__drug-code,
+.cabinet-detail__grid .slot-cell__stock {
+  align-self: center;
+  width: calc(100% - 16px);
+  margin-inline: auto;
+  overflow: hidden;
+  color: #4d6678;
+  font: 600 11px/1.2 var(--font-family);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cabinet-detail__grid .slot-cell__meta {
+  align-self: stretch;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 9px;
+  background: #f5f9fb;
+}
+
+.cabinet-detail__grid .slot-cell__meta .slot-cell__drug-code,
+.cabinet-detail__grid .slot-cell__meta .slot-cell__stock {
+  width: auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.cabinet-detail__grid .slot-cell__meta .slot-cell__stock {
+  display: inline;
+  padding-left: 8px;
+  border-left: 1px solid #c8d9e3;
+  color: #285f46;
+}
+
+.cabinet-detail__grid .slot-cell--empty .slot-cell__drug-code {
+  visibility: visible;
+  color: #78909f;
+}
+
+.cabinet-detail__grid .slot-cell--empty .slot-cell__meta {
+  background: #eaf3f7;
+}
+
+.cabinet-detail__grid .slot-cell--empty .slot-cell__fill-track {
+  visibility: hidden;
+}
+
+.cabinet-detail__grid .slot-cell__fill-track {
+  position: static;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  align-self: center;
+  width: calc(100% - 28px);
+  height: 4px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: #dfe8ee;
+}
+
+.cabinet-detail__grid .slot-cell__position {
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  min-width: 0;
+  padding: 0 8px;
+  border-radius: 0 0 11px 11px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--slot-address) 84%, white), var(--slot-address));
+  color: #fff;
+  font: 800 13px/1 var(--font-mono);
+  box-shadow: inset 0 1px rgba(255,255,255,.22);
+}
+
+.cabinet-detail__grid .slot-cell--selected {
+  --slot-border: #7540c2;
+  box-shadow: 0 0 0 2px rgba(117,64,194,.14), 0 5px 14px rgba(64,35,108,.12);
+}
+
+/* /withdraw is a single-screen kiosk surface. The cabinet track may shrink to
+   the available viewport space; all 22 slots stay inside that track. */
+html:has(.withdraw-workflow--cabinet),
+body:has(.withdraw-workflow--cabinet),
+#root:has(.withdraw-workflow--cabinet) {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.withdraw-workflow.withdraw-workflow--cabinet {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  width: auto;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.withdraw-workflow--cabinet .cabinet-stage,
+.withdraw-workflow--cabinet .cabinet-stage .cabinet-browser,
+.withdraw-workflow--cabinet .cabinet-browser--shelf,
+.withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid {
+  min-height: 0;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  align-content: stretch;
+  gap: 6px;
+  overflow: hidden;
+  contain: size;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid .slot-cell {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: 20px minmax(0, 1fr) 18px 4px 21px;
+  border-radius: 8px;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__header {
+  min-height: 0;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__row {
+  font-size: 11px;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__body {
+  gap: 2px;
+  padding: 2px 4px;
+  overflow: hidden;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__drug-name,
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell--empty .slot-cell__drug-name {
+  width: calc(100% - 6px);
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__drug-visual {
+  max-height: 28px;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__drug-visual > svg {
+  height: 26px;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__empty-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__empty-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__meta {
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__drug-code,
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__stock {
+  font-size: 9px;
+}
+
+.withdraw-workflow--cabinet .cabinet-browser--shelf .slot-cell__position {
+  padding: 0 3px;
+  border-radius: 0 0 6px 6px;
+  font-size: 10px;
+}
+
+.withdraw-workflow--cabinet .sticker-scanner > .withdraw-alert {
+  grid-column: 1 / -1;
+}
+
+@media (orientation: landscape) {
+  .withdraw-workflow--cabinet .withdraw-dock {
+    height: clamp(240px, 30dvh, 320px);
+    grid-template-columns:
+      minmax(0, 1.15fr)
+      minmax(0, .85fr)
+      minmax(0, .75fr)
+      minmax(0, 1.1fr);
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-context,
+  .withdraw-workflow--cabinet .withdraw-dock .dock-steps,
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-footer {
+    grid-row: 1;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-context { grid-column: 1; }
+  .withdraw-workflow--cabinet .withdraw-dock .dock-steps { grid-column: 2; }
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-footer { grid-column: 3 / 5; }
+
+  .withdraw-workflow--cabinet .withdraw-footer .queue-safety-card {
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-content: center;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer .queue-safety-card > strong,
+  .withdraw-workflow--cabinet .withdraw-footer .queue-safety-card > small {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (orientation: portrait) {
+  .withdraw-workflow.withdraw-workflow--cabinet {
+    grid-template-rows: 150px minmax(0, 1fr) clamp(480px, 36dvh, 640px);
+  }
+
+  .withdraw-workflow--cabinet .medical-header,
+  .withdraw-workflow--cabinet .withdraw-dock {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock {
+    height: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr) minmax(120px, .42fr);
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-context,
+  .withdraw-workflow--cabinet .withdraw-dock .dock-steps,
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-footer {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-context {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .dock-steps {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-footer {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-context {
+    display: flex;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-context > .sticker-scanner,
+  .withdraw-workflow--cabinet .withdraw-context > .request-review {
+    width: 100%;
+    height: 100%;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-context > .sticker-scanner {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-auto-rows: unset;
+    align-content: stretch;
+  }
+
+  .withdraw-workflow--cabinet .sticker-scanner__frame {
+    min-height: 0;
+    height: 100%;
+    align-self: stretch;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps {
+    min-height: 0;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li {
+    min-height: 0;
+    height: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer > .hardware-readiness-card,
+  .withdraw-workflow--cabinet .withdraw-footer > .withdraw-actionbar {
+    width: 0;
+    flex: 1 1 0;
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid > .slot-cell {
+    grid-column: span 2;
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid > .slot-cell:nth-last-child(2) {
+    grid-column: 4 / span 2;
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid > .slot-cell:last-child {
+    grid-column: 6 / span 2;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 899px) {
+  .withdraw-workflow.withdraw-workflow--cabinet {
+    grid-template-rows: 150px minmax(0, 1fr) clamp(360px, 46dvh, 480px);
+  }
+
+  .withdraw-workflow--cabinet .environment-card {
+    grid-template-columns: 32px minmax(0, 1fr) 32px minmax(0, 1fr);
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .withdraw-workflow--cabinet .medical-header__brand {
+    overflow: hidden;
+    padding: 2px 6px;
+  }
+
+  .withdraw-workflow--cabinet .medical-header__brand > strong {
+    font-size: 32px;
+  }
+
+  .withdraw-workflow--cabinet .medical-header__brand > span {
+    display: none;
+  }
+
+  .withdraw-workflow--cabinet .medical-header__brand > b {
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 1.1;
+  }
+
+  .withdraw-workflow--cabinet .medical-header__brand > small {
+    font-size: 11px;
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser__nav {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser__nav button {
+    min-height: 44px;
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid > .slot-cell {
+    grid-column: span 2;
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid > .slot-cell:nth-last-child(2) {
+    grid-column: 4 / span 2;
+  }
+
+  .withdraw-workflow--cabinet .cabinet-browser--shelf .cabinet-detail__grid > .slot-cell:last-child {
+    grid-column: 6 / span 2;
+  }
+}
+
+/* Unified portrait withdrawal dock: scanner, progress, and machine state live
+   in one continuous card, matching the physical-kiosk reference layout. */
+.scanner-ready-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px solid #55aa7c;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .86);
+  color: #267044;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.scanner-ready-pill .status-icon-svg {
+  width: 19px;
+  height: 19px;
+}
+
+.footer-system-status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-system-status > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.footer-system-status b {
+  color: #17683b;
+  font-size: 16px;
+}
+
+.footer-system-status small {
+  color: #55768a;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.footer-hardware-meta {
+  color: #477087;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (orientation: portrait) {
+  .withdraw-workflow.withdraw-workflow--cabinet {
+    grid-template-rows: 150px minmax(0, 1fr) clamp(360px, 32dvh, 480px);
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock {
+    height: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid #9fcbe2;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 5px 18px rgba(24, 94, 150, .09);
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-context,
+  .withdraw-workflow--cabinet .withdraw-dock .dock-steps {
+    height: 100%;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-context {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 14px 22px 12px;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .dock-steps {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 12px;
+    padding: 14px 24px 12px;
+    border-left: 1px solid #d7e5ed;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-context > .sticker-scanner {
+    height: 100%;
+    grid-template-columns: 46px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px 13px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .withdraw-workflow--cabinet .sticker-scanner h1 {
+    font-size: 21px;
+  }
+
+  .withdraw-workflow--cabinet .sticker-scanner h1 span {
+    margin-bottom: 2px;
+    font-size: 11px;
+  }
+
+  .withdraw-workflow--cabinet .sticker-scanner p {
+    margin-top: 3px;
+    font-size: 13px;
+  }
+
+  .withdraw-workflow--cabinet .sticker-scanner__frame {
+    grid-column: 1 / -1;
+    min-height: 0;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 12px;
+    border: 2px solid #58aa7c;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #f7fcf9, #edf8f3);
+  }
+
+  .withdraw-workflow--cabinet .sticker-scanner__frame strong {
+    margin-top: 5px;
+    color: #163f2b;
+    font-size: 17px;
+  }
+
+  .withdraw-workflow--cabinet .sticker-scanner__frame small {
+    color: #628071;
+    font-size: 11px;
+  }
+
+  .withdraw-workflow--cabinet .decorative-qr {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    flex: 0 0 72px;
+    margin: 10px 0 2px;
+    border-color: #28779b;
+  }
+
+  .withdraw-workflow--cabinet .decorative-qr::before {
+    position: absolute;
+    inset: -14px;
+    content: "";
+    pointer-events: none;
+    background:
+      linear-gradient(#07838d, #07838d) left top / 24px 4px no-repeat,
+      linear-gradient(#07838d, #07838d) left top / 4px 24px no-repeat,
+      linear-gradient(#07838d, #07838d) right top / 24px 4px no-repeat,
+      linear-gradient(#07838d, #07838d) right top / 4px 24px no-repeat,
+      linear-gradient(#07838d, #07838d) left bottom / 24px 4px no-repeat,
+      linear-gradient(#07838d, #07838d) left bottom / 4px 24px no-repeat,
+      linear-gradient(#07838d, #07838d) right bottom / 24px 4px no-repeat,
+      linear-gradient(#07838d, #07838d) right bottom / 4px 24px no-repeat;
+  }
+
+  .withdraw-workflow--cabinet .identity-step-heading {
+    min-height: 46px;
+  }
+
+  .withdraw-workflow--cabinet .identity-step-heading strong {
+    font-size: 19px;
+  }
+
+  .withdraw-workflow--cabinet .identity-step-heading span {
+    font-size: 12px;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps {
+    position: relative;
+    display: grid;
+    min-height: 0;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps::before {
+    position: absolute;
+    z-index: 0;
+    top: 16%;
+    bottom: 16%;
+    left: 20px;
+    width: 2px;
+    content: "";
+    background: #a9bfd0;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-height: 0;
+    height: 100%;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li::after {
+    position: absolute;
+    z-index: -1;
+    top: 50%;
+    left: 41px;
+    width: 18px;
+    height: 2px;
+    content: "";
+    background: #a9bfd0;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li b {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    border: 1px solid #9eb5c6;
+    background: #f8fbfd;
+    color: #657e91;
+    font-size: 19px;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li span {
+    display: flex;
+    min-height: 54px;
+    align-items: center;
+    padding: 9px 14px;
+    border: 1px solid #bdcfdd;
+    border-radius: 9px;
+    background: #fff;
+    color: #637b8e;
+    font-size: 14px;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li.is-current b {
+    border-color: #0870c1;
+    background: #0870c1;
+    color: #fff;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li.is-current span {
+    border-color: #0870c1;
+    background: #edf7ff;
+    color: #075ba7;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li.is-done b {
+    border-color: #1a934b;
+    background: #1a934b;
+    color: #fff;
+  }
+
+  .withdraw-workflow--cabinet .dock-steps .withdraw-steps li.is-done span {
+    border-color: #65b688;
+    color: #17683a;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-footer {
+    display: grid;
+    min-height: 68px;
+    height: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: minmax(190px, auto) minmax(0, 1fr) minmax(190px, auto);
+    align-items: center;
+    gap: 18px;
+    padding: 10px 22px;
+    overflow: visible;
+    border-top: 1px solid #d5e3eb;
+    background: linear-gradient(90deg, #f8fcfa, #fff 48%, #f8fcfa);
+  }
+
+  .withdraw-workflow--cabinet .footer-system-status .queue-safety-card__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+  }
+
+  .withdraw-workflow--cabinet .footer-system-status .status-icon-svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer .withdraw-actionbar {
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    display: flex;
+    flex: initial;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-align: right;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer .withdraw-actionbar--ready::before {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+    border-radius: 50%;
+    background: #31a341;
+    box-shadow: 0 0 0 4px #eaf7ed;
+    content: "";
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer .withdraw-actionbar--ready strong {
+    color: #267243;
+    font-size: 15px;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer .withdraw-actionbar--ready span {
+    font-size: 11px;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer .withdraw-actionbar > button {
+    min-width: 0;
+    min-height: 40px;
+    padding: 8px 13px;
+    font-size: 14px;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer:has(.withdraw-actionbar:not(.withdraw-actionbar--ready)) {
+    grid-template-columns: minmax(190px, auto) minmax(0, 1fr);
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer:has(.withdraw-actionbar:not(.withdraw-actionbar--ready)) .footer-hardware-meta {
+    display: none;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-footer:has(.withdraw-actionbar:not(.withdraw-actionbar--ready)) .withdraw-actionbar {
+    grid-column: 2;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 899px) {
+  .withdraw-workflow.withdraw-workflow--cabinet {
+    grid-template-rows: 150px minmax(0, 1fr) clamp(360px, 32dvh, 440px);
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-context,
+  .withdraw-workflow--cabinet .withdraw-dock .dock-steps {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .withdraw-workflow--cabinet .withdraw-dock .withdraw-footer {
+    grid-template-columns: minmax(160px, auto) minmax(0, 1fr) minmax(165px, auto);
+    gap: 10px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+.withdraw-workflow--cabinet .footer-hardware-meta {
+    font-size: 11px;
+  }
 }
 
 /* ── Slot detail modal (FEFO channel view) ─────────────────── */
@@ -1424,6 +3665,21 @@ body {
   font: 700 1.2rem / 1 var(--font-family);
 }
 
+.slot-related__head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slot-related__head h3 {
+  margin: 0;
+}
+
+.slot-related__head div > span {
+  color: var(--neutral-text-muted);
+  font: 600 0.9rem / 1.25 var(--font-family);
+}
+
 .slot-related__row {
   display: flex;
   align-items: stretch;
@@ -1473,6 +3729,22 @@ body {
 
 .slot-related__card:hover {
   border-color: var(--primary);
+}
+
+.slot-related__card--active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.slot-related__card--active::after {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  content: "กำลังดู";
+  font: 800 0.75rem / 1 var(--font-family);
+  white-space: nowrap;
 }
 
 .slot-related__card-visual {
@@ -1542,380 +3814,3 @@ body {
     border-left: 0;
   }
 }
-
-/* ── Drug barcode scanner dialog ───────────────────────────── */
-.barcode-dialog {
-  width: min(calc(100% - 2rem), var(--kiosk-max-width));
-  max-height: calc(100dvh - 2rem);
-  padding: 0;
-  overflow: auto;
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--neutral-surface);
-  color: var(--neutral-text);
-  box-shadow: var(--shadow-panel);
-}
-
-.barcode-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.barcode-dialog__panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xl);
-  padding: var(--space-3xl);
-}
-
-.barcode-dialog__title {
-  color: var(--neutral-deep);
-  font: var(--type-kiosk-title);
-  text-align: center;
-  text-wrap: balance;
-}
-
-.barcode-dialog__glyph {
-  width: 64px;
-  height: 48px;
-  color: var(--neutral-text-muted);
-}
-
-.barcode-dialog__matched {
-  display: flex;
-  min-height: 220px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-lg);
-  text-align: center;
-}
-
-.barcode-dialog__mono {
-  color: inherit;
-  font: 600 1.25rem / 1.4 var(--font-mono);
-  overflow-wrap: anywhere;
-}
-
-.barcode-dialog__drug-code {
-  color: var(--neutral-text-muted);
-  font: 400 1rem / 1.4 var(--font-mono);
-}
-
-.barcode-dialog__error {
-  display: flex;
-  min-height: 120px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  padding: var(--space-lg);
-  border-radius: var(--radius-md);
-  background: var(--semantic-error);
-  color: var(--text-on-error);
-  font: 600 1.25rem / 1.4 var(--font-family);
-  text-align: center;
-}
-
-.barcode-dialog__manual {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.barcode-dialog__manual-row,
-.barcode-dialog__actions {
-  display: flex;
-  align-items: stretch;
-  gap: var(--space-md);
-}
-
-.barcode-dialog__manual-input {
-  min-width: 0;
-  font-family: var(--font-mono);
-}
-
-.barcode-dialog__manual-row .kiosk-btn {
-  min-width: 160px;
-}
-
-.barcode-dialog__actions .kiosk-btn {
-  flex: 1;
-}
-
-.barcode-dialog__dismiss {
-  align-self: center;
-}
-
-@media (max-width: 600px) {
-  .barcode-dialog__panel {
-    padding: var(--space-xl);
-  }
-
-  .barcode-dialog__manual-row,
-  .barcode-dialog__actions,
-  .shelf-grid__detail-heading {
-    flex-direction: column;
-  }
-
-  .barcode-dialog__manual-row .kiosk-btn,
-  .barcode-dialog__actions .kiosk-btn {
-    width: 100%;
-  }
-
-  .shelf-grid__hint {
-    display: none;
-  }
-}
-
-/* ── Spinner ───────────────────────────────────────────────── */
-.spinner-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  gap: 0.75rem;
-}
-
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--neutral-border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.spinner-label {
-  color: var(--neutral-text-muted);
-  font-size: 0.875rem;
-}
-
-/* ── Empty State ──────────────────────────────────────────── */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1rem;
-  gap: 1rem;
-  text-align: center;
-}
-
-.empty-state-icon {
-  font-size: 3rem;
-  opacity: 0.5;
-}
-
-.empty-state-message {
-  color: var(--neutral-text-muted);
-  font-size: 1rem;
-  max-width: 280px;
-}
-
-/* ── Language Toggle ──────────────────────────────────────── */
-.lang-toggle {
-  background: var(--nav-button);
-  color: var(--nav-text);
-  border: 1px solid var(--neutral-border);
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 0.8125rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.lang-toggle:hover {
-  background: var(--primary);
-  color: #fff;
-}
-
-/* ── Fade-in transition ──────────────────────────────────── */
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Error variant: offline (warning tone — network problem). */
-.kiosk-error--offline {
-  background: var(--semantic-warning);
-  color: var(--text-on-warning);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Error variant: warning (hardware busy, transient). */
-.kiosk-error--warning {
-  background: var(--semantic-warning);
-  color: var(--text-on-warning);
-}
-
-/* ── Reduced motion ────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ── Withdraw Redesign: Modern Card-Based Layout ─────────────── */
-
-/* Header */
-.withdraw-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 24px;
-  background: var(--nav-bg);
-  color: var(--nav-text);
-}
-.withdraw-header__left { display: flex; align-items: center; gap: 12px; }
-.withdraw-header__logo { font-size: 1.5rem; }
-.withdraw-header__title { font-size: 1.125rem; font-weight: 700; color: #fff; margin: 0; }
-.withdraw-header__subtitle { font-size: 0.75rem; color: var(--nav-text); opacity: 0.7; margin: 0; }
-.withdraw-header__right { display: flex; align-items: center; gap: 12px; }
-.withdraw-header__kiosk { font-size: 0.875rem; opacity: 0.8; }
-.withdraw-header__logout { background: transparent; border: 1px solid var(--nav-text); color: var(--nav-text); border-radius: 6px; padding: 4px 12px; font-size: 0.8125rem; cursor: pointer; }
-
-/* Layout: Patient Card (left) + Drug List (right) */
-.withdraw-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 24px;
-  padding: 24px;
-  height: calc(100vh - 60px);
-  overflow: hidden;
-}
-
-/* Patient Card */
-.patient-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  height: fit-content;
-}
-.patient-card__photo { position: relative; }
-.patient-card__avatar {
-  width: 64px; height: 64px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.5rem; font-weight: 700;
-}
-.patient-card__verified {
-  position: absolute; bottom: 0; right: 0;
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: var(--semantic-success);
-  color: var(--text-on-success);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.75rem; font-weight: 700;
-}
-.patient-card__name { font-size: 1.125rem; font-weight: 700; color: var(--neutral-deep); margin: 0; }
-.patient-card__hn, .patient-card__ward { font-size: 0.8125rem; color: var(--neutral-text-muted); margin: 0; }
-.patient-card__stats { display: flex; gap: 24px; margin-top: 8px; }
-.patient-card__stat { text-align: center; }
-.patient-card__stat-num { display: block; font-size: 1.5rem; font-weight: 700; color: var(--primary); }
-.patient-card__stat-label { font-size: 0.75rem; color: var(--neutral-text-muted); }
-.patient-card__status { margin-top: 8px; }
-
-/* Drug List Panel */
-.drug-list-panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.drug-list-panel__title {
-  font-size: 1.125rem; font-weight: 700; color: var(--neutral-deep);
-  margin: 0 0 16px;
-}
-.drug-list {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-right: 4px;
-}
-
-/* Drug Card */
-.drug-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: #fff;
-  border: 1px solid var(--neutral-border);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: box-shadow 0.2s, border-color 0.2s;
-}
-.drug-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(30,102,245,0.12); }
-.drug-card__checkbox input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
-.drug-card__info { flex: 1; min-width: 0; }
-.drug-card__name { font-size: 1rem; font-weight: 600; color: var(--neutral-deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.drug-card__dosage { font-size: 0.8125rem; color: var(--neutral-text-muted); margin-top: 2px; }
-.drug-card__meta { font-size: 0.75rem; color: var(--neutral-text-muted); margin-top: 4px; }
-.drug-card__qty { display: flex; align-items: center; gap: 4px; }
-.drug-card__qty-btn {
-  width: 36px; height: 36px;
-  border: 1px solid var(--neutral-border);
-  border-radius: 8px;
-  background: var(--neutral-subtle);
-  font-size: 1rem; font-weight: 600;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s;
-}
-.drug-card__qty-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
-.drug-card__qty-val { width: 36px; text-align: center; font-size: 1rem; font-weight: 600; color: var(--neutral-deep); }
-.drug-card__status { flex-shrink: 0; }
-
-/* Confirm Footer */
-.withdraw-footer {
-  padding: 20px 0 0;
-  text-align: center;
-  border-top: 1px solid var(--neutral-border);
-  margin-top: 16px;
-}
-.withdraw-confirm-btn {
-  width: 100%;
-  max-width: 360px;
-  min-height: 56px;
-  background: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 56px;
-  font-size: 1.125rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(40,167,69,0.3);
-  transition: background 0.2s, transform 0.1s;
-}
-.withdraw-confirm-btn:hover { background: #218838; }
-.withdraw-confirm-btn:active { transform: scale(0.98); }
-.withdraw-footer__hint { font-size: 0.8125rem; color: var(--neutral-text-muted); margin: 8px 0 0; }
-
-@media (max-width: 800px) {
-  .withdraw-layout { grid-template-columns: 1fr; }
-  .patient-card { flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 16px; }
-}
-
-/* Shared monospace utility (used by RefillFlow). */
-.mono { font-family: monospace; }

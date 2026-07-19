@@ -121,6 +121,10 @@ export default function SlotDetailModal({
   const activeExpiryState = activeLot
     ? getExpiryState(activeLot.expiryDate, expiryWarningDays, now)
     : "none";
+  const channelSlots = useMemo(
+    () => [slot, ...relatedSlots.filter((related) => related.id !== slot.id)],
+    [relatedSlots, slot],
+  );
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -367,11 +371,13 @@ export default function SlotDetailModal({
           </div>
         </section>
 
-        {relatedSlots.length > 0 && (
-          <section className="slot-related" aria-label="ยาชนิดเดียวกันในช่องอื่น">
+        <section className="slot-related" aria-label="ช่องทั้งหมดของยาชนิดเดียวกัน">
             <div className="slot-related__head">
               <span aria-hidden="true">🗂</span>
-              <h3>ยาชนิดเดียวกันในช่องอื่น</h3>
+              <div>
+                <h3>ช่องทั้งหมดของยาชนิดนี้</h3>
+                <span>{channelSlots.length} ช่อง · เลือกเพื่อดูรายละเอียดแต่ละช่อง</span>
+              </div>
             </div>
             <div className="slot-related__row">
               <button
@@ -383,7 +389,7 @@ export default function SlotDetailModal({
                 ‹
               </button>
               <div className="slot-related__cards" ref={carouselRef}>
-                {relatedSlots.map((related) => {
+                {channelSlots.map((related) => {
                   const expLabel = formatThaiDate(related.expiryDate);
                   const expState = getExpiryState(
                     related.expiryDate,
@@ -394,8 +400,16 @@ export default function SlotDetailModal({
                     <button
                       type="button"
                       key={related.id}
-                      className="slot-related__card"
-                      onClick={() => onSelectRelated?.(related)}
+                      className={`slot-related__card${
+                        related.id === slot.id ? " slot-related__card--active" : ""
+                      }`}
+                      aria-current={related.id === slot.id ? "true" : undefined}
+                      aria-label={`${related.code} คงเหลือ ${related.quantity} ชิ้น${
+                        related.id === slot.id ? " ช่องที่กำลังแสดง" : ""
+                      }`}
+                      onClick={() => {
+                        if (related.id !== slot.id) onSelectRelated?.(related);
+                      }}
                     >
                       <span className="slot-related__card-visual" aria-hidden="true">
                         <CapsuleGlyph className="slot-related__capsule" />
@@ -426,7 +440,6 @@ export default function SlotDetailModal({
               </button>
             </div>
           </section>
-        )}
       </div>
     </div>
   );

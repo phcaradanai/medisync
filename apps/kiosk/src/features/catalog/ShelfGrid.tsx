@@ -9,6 +9,7 @@ import SlotCell, {
   getSlotCellState,
   type SlotCellData,
 } from "./SlotCell";
+import SlotDetailModal from "./SlotDetailModal";
 
 export interface ShelfGridProps {
   slots: readonly SlotCellData[];
@@ -80,6 +81,21 @@ function clampShelf(shelf: number): number {
   return Math.max(1, Math.min(SHELF_COUNT, Math.round(shelf)));
 }
 
+function normalizeDrugIdentity(value?: string): string {
+  return value?.trim().toLocaleLowerCase("th-TH") ?? "";
+}
+
+/** Keep every physical channel assigned to the same medication together. */
+export function isSameDrug(a: SlotCellData, b: SlotCellData): boolean {
+  const aCode = normalizeDrugIdentity(a.drugCode);
+  const bCode = normalizeDrugIdentity(b.drugCode);
+  if (aCode && bCode) return aCode === bCode;
+
+  const aName = normalizeDrugIdentity(a.drugName || a.displayName);
+  const bName = normalizeDrugIdentity(b.drugName || b.displayName);
+  return Boolean(aName && bName && aName === bName);
+}
+
 export default function ShelfGrid({
   slots,
   selectedSlotId,
@@ -92,6 +108,7 @@ export default function ShelfGrid({
   const [activeShelf, setActiveShelf] = useState(clampShelf(initialShelf));
   const [cabinetView, setCabinetView] = useState<"overview" | "shelf">("overview");
   const [focusedSlotId, setFocusedSlotId] = useState<string | null>(null);
+  const [detailSlotId, setDetailSlotId] = useState<string | null>(null);
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(
     null,
   );
@@ -179,6 +196,13 @@ export default function ShelfGrid({
   );
 
   if (variant === "overview") {
+    const detailSlot = slots.find((slot) => slot.id === detailSlotId) ?? null;
+    const relatedSlots = detailSlot
+      ? slots.filter(
+          (candidate) =>
+            candidate.id !== detailSlot.id && isSameDrug(detailSlot, candidate),
+        )
+      : [];
     const openShelf = (shelf: number, slot?: SlotCellData) => {
       setActiveShelf(shelf);
       setFocusedSlotId(slot?.id ?? null);
@@ -228,7 +252,10 @@ export default function ShelfGrid({
                         type="button"
                         key={`${shelf}:${row}`}
                         className={`cabinet-overview__slot is-${state}`}
-                        onClick={() => openShelf(shelf, slot)}
+                        onClick={() => {
+                          openShelf(shelf, slot);
+                          if (slot) setDetailSlotId(slot.id);
+                        }}
                         aria-label={`ชั้น ${shelf} ช่อง ${physicalNumber} ${slot?.drugName || "ว่าง"}`}
                         title={slot ? `${slot.drugName || slot.displayName} · ${slot.code}` : `ชั้น ${shelf} ช่อง ${physicalNumber} · ว่าง`}
                       >
@@ -251,7 +278,7 @@ export default function ShelfGrid({
             <div className="cabinet-detail__grid">
               {Array.from({ length: ROW_COUNT }, (_, index) => index + 1).map((row) => {
                 const slot = slotsByPosition.get(`${activeShelf}:${row}`);
-                return <SlotCell key={`${activeShelf}:${row}`} slot={slot} shelfNumber={activeShelf} rowNumber={(activeShelf - 1) * ROW_COUNT + row} selected={Boolean(slot && requestedSlotIds.includes(slot.id))} expiryWarningDays={expiryWarningDays} readOnly />;
+                return <SlotCell key={`${activeShelf}:${row}`} slot={slot} shelfNumber={activeShelf} rowNumber={(activeShelf - 1) * ROW_COUNT + row} selected={Boolean(slot && requestedSlotIds.includes(slot.id))} expiryWarningDays={expiryWarningDays} readOnly onSelect={(selected) => setDetailSlotId(selected.id)} />;
               })}
             </div>
             {focusedSlotId && (() => {
@@ -261,6 +288,7 @@ export default function ShelfGrid({
             })()}
           </div>
         )}
+        {detailSlot && <SlotDetailModal slot={detailSlot} relatedSlots={relatedSlots} expiryWarningDays={expiryWarningDays} onClose={() => setDetailSlotId(null)} onSelectRelated={(related) => setDetailSlotId(related.id)} />}
       </section>
     );
   }

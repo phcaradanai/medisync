@@ -204,7 +204,7 @@ export function SlotCell({
   const state = getSlotCellState(slot, expiryWarningDays, now);
   const glyph = getStateGlyph(state);
   const address = `S${resolvedShelfNumber}-R${resolvedRowNumber}`;
-  const disabled = !slot || state === "expired" || readOnly;
+  const disabled = !slot || (!readOnly && state === "expired");
   const fillPercent = slot?.capacity
     ? Math.max(0, Math.min(100, (slot.quantity / slot.capacity) * 100))
     : 0;

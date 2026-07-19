@@ -82,7 +82,10 @@ describe("sticker-driven withdrawal", () => {
     await user.click(screen.getByRole("button", { name: "กลับไปตรวจสอบ" }));
     expect(screen.getByRole("button", { name: /ชั้น 1 ช่อง 1 Paracetamol/ }).className).toContain("is-requested");
     await user.click(screen.getByRole("button", { name: /ชั้น 1 ช่อง 1 Paracetamol/ }));
-    expect(screen.getByRole("button", { name: /S1-R1 · Paracetamol/ })).toHaveProperty("disabled", true);
+    const detailSlot = screen.getByRole("button", { name: /S1-R1 · Paracetamol/ });
+    expect(detailSlot).toHaveProperty("disabled", false);
+    expect(detailSlot.getAttribute("aria-pressed")).toBeNull();
+    expect(screen.getByRole("dialog", { name: /รายละเอียดช่องยา S01/ })).toBeDefined();
     expect(screen.queryByText(/รายการตำแหน่งที่เลือก/)).toBeNull();
   });
 
