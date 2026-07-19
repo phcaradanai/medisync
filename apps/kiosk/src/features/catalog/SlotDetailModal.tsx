@@ -49,8 +49,9 @@ function classify(slot: SlotCellData): {
   icon: string;
   label: string;
 } {
-  if (slot.highAlert) return { tone: "danger", icon: "🛡", label: "ความเสี่ยงสูง" };
-  if (slot.lasa) return { tone: "lasa", icon: "⚠", label: "LASA" };
+  const safety = slot.safetyClassification?.toUpperCase();
+  if (safety === "HIGH_ALERT" || slot.highAlert) return { tone: "danger", icon: "🛡", label: "ยาอันตราย / High Alert" };
+  if (safety === "LASA" || slot.lasa) return { tone: "lasa", icon: "⚠", label: "LASA" };
   return { tone: "normal", icon: "✓", label: slot.category || "ยาสามัญ" };
 }
 

@@ -15,7 +15,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { Icon } from "../masterdata/icons";
 import {
   MasterHeader, ListHeading, SearchInput, StatusBadge, MasterTable,
-  MasterDrawer, DrawerSection, Field, formatThaiDateTime, type Column, type Step,
+  MasterDrawer, DrawerSection, Field, SaveNotice, formatThaiDateTime, type Column, type Step,
 } from "../masterdata/kit";
 
 type Tab = "cabinets" | "kiosks";
@@ -54,6 +54,7 @@ export function DevicesPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [editedAt, setEditedAt] = useState<Date>(new Date());
   const [pinResult, setPinResult] = useState<string | null>(null);
   const cabRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
@@ -127,6 +128,8 @@ export function DevicesPage() {
         }));
       }
       setDrawerKind(null); await load();
+      setSaveNotice(editingId ? "บันทึกข้อมูลตู้ยาเรียบร้อยแล้ว" : "เพิ่มตู้ยาเรียบร้อยแล้ว");
+      window.setTimeout(() => setSaveNotice(null), 4000);
     } catch (err: unknown) { setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ"); }
     finally { setSaving(false); }
   }
@@ -155,6 +158,8 @@ export function DevicesPage() {
         if (res.kiosk?.pin) { setPinResult(res.kiosk.pin); setEditingId(res.kiosk.id); setSaving(false); await load(); return; }
       }
       setDrawerKind(null); await load();
+      setSaveNotice(editingId ? "บันทึกข้อมูล Kiosk เรียบร้อยแล้ว" : "เพิ่ม Kiosk เรียบร้อยแล้ว");
+      window.setTimeout(() => setSaveNotice(null), 4000);
     } catch (err: unknown) { setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ"); }
     finally { setSaving(false); }
   }
@@ -197,6 +202,7 @@ export function DevicesPage() {
           ? <button className="md-btn md-btn-primary" onClick={openCabCreate}><Icon.plus size={18} /> เพิ่มตู้ยา</button>
           : <button className="md-btn md-btn-primary" onClick={openKioCreate}><Icon.plus size={18} /> เพิ่ม Kiosk</button>}
       </MasterHeader>
+      <SaveNotice message={saveNotice} onDismiss={() => setSaveNotice(null)} />
 
       {error && <div className="md-err">{error}</div>}
 

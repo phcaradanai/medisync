@@ -13,7 +13,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { Icon } from "../masterdata/icons";
 import {
   MasterHeader, ListHeading, SearchInput, Select, StatusBadge, MasterTable,
-  MasterDrawer, DrawerSection, Field, formatThaiDateTime, type Column, type Step,
+  MasterDrawer, DrawerSection, Field, SaveNotice, formatThaiDateTime, type Column, type Step,
 } from "../masterdata/kit";
 
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
@@ -55,6 +55,7 @@ export function UsersPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [editedAt, setEditedAt] = useState<Date>(new Date());
   const sectionRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
 
@@ -115,6 +116,8 @@ export function UsersPage() {
         }));
       }
       setDrawerOpen(false); await load();
+      setSaveNotice(editingId ? "บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้ว" : "เพิ่มผู้ใช้งานเรียบร้อยแล้ว");
+      window.setTimeout(() => setSaveNotice(null), 4000);
     } catch (err: unknown) { setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ"); }
     finally { setSaving(false); }
   }
@@ -138,6 +141,7 @@ export function UsersPage() {
       <MasterHeader icon={Icon.users} title="ผู้ใช้งาน" subtitle="จัดการบัญชีและสิทธิ์ผู้ใช้ (Master Data)">
         <button className="md-btn md-btn-primary" onClick={openCreate}><Icon.plus size={18} /> เพิ่มผู้ใช้</button>
       </MasterHeader>
+      <SaveNotice message={saveNotice} onDismiss={() => setSaveNotice(null)} />
 
       {error && <div className="md-err">{error}</div>}
 

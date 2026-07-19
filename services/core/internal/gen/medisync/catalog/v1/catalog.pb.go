@@ -44,9 +44,16 @@ type Drug struct {
 	// Project this drug belongs to (multi-tenant).
 	ProjectId string `protobuf:"bytes,13,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	// Barcode for scanning during refill/withdraw.
-	Barcode       string `protobuf:"bytes,14,opt,name=barcode,proto3" json:"barcode,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Barcode string `protobuf:"bytes,14,opt,name=barcode,proto3" json:"barcode,omitempty"`
+	// Recommended maximum number of this drug stored in one cabinet slot.
+	DefaultSlotCapacity int32 `protobuf:"varint,15,opt,name=default_slot_capacity,json=defaultSlotCapacity,proto3" json:"default_slot_capacity,omitempty"`
+	// Medication category, e.g. analgesic or antibiotic.
+	Category     string `protobuf:"bytes,16,opt,name=category,proto3" json:"category,omitempty"`
+	Manufacturer string `protobuf:"bytes,17,opt,name=manufacturer,proto3" json:"manufacturer,omitempty"`
+	// NORMAL, LASA, or HIGH_ALERT.
+	SafetyClassification string `protobuf:"bytes,18,opt,name=safety_classification,json=safetyClassification,proto3" json:"safety_classification,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *Drug) Reset() {
@@ -177,6 +184,34 @@ func (x *Drug) GetBarcode() string {
 	return ""
 }
 
+func (x *Drug) GetDefaultSlotCapacity() int32 {
+	if x != nil {
+		return x.DefaultSlotCapacity
+	}
+	return 0
+}
+
+func (x *Drug) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *Drug) GetManufacturer() string {
+	if x != nil {
+		return x.Manufacturer
+	}
+	return ""
+}
+
+func (x *Drug) GetSafetyClassification() string {
+	if x != nil {
+		return x.SafetyClassification
+	}
+	return ""
+}
+
 type CreateDrugRequest struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Code        string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
@@ -190,9 +225,15 @@ type CreateDrugRequest struct {
 	// Required for SYSADMIN; project-scoped users inherit from JWT.
 	ProjectId string `protobuf:"bytes,9,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	// Barcode for scanning.
-	Barcode       string `protobuf:"bytes,10,opt,name=barcode,proto3" json:"barcode,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Barcode string `protobuf:"bytes,10,opt,name=barcode,proto3" json:"barcode,omitempty"`
+	// Recommended maximum number stored in one cabinet slot.
+	DefaultSlotCapacity int32  `protobuf:"varint,11,opt,name=default_slot_capacity,json=defaultSlotCapacity,proto3" json:"default_slot_capacity,omitempty"`
+	Category            string `protobuf:"bytes,12,opt,name=category,proto3" json:"category,omitempty"`
+	Manufacturer        string `protobuf:"bytes,13,opt,name=manufacturer,proto3" json:"manufacturer,omitempty"`
+	// NORMAL, LASA, or HIGH_ALERT.
+	SafetyClassification string `protobuf:"bytes,14,opt,name=safety_classification,json=safetyClassification,proto3" json:"safety_classification,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateDrugRequest) Reset() {
@@ -291,6 +332,34 @@ func (x *CreateDrugRequest) GetProjectId() string {
 func (x *CreateDrugRequest) GetBarcode() string {
 	if x != nil {
 		return x.Barcode
+	}
+	return ""
+}
+
+func (x *CreateDrugRequest) GetDefaultSlotCapacity() int32 {
+	if x != nil {
+		return x.DefaultSlotCapacity
+	}
+	return 0
+}
+
+func (x *CreateDrugRequest) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *CreateDrugRequest) GetManufacturer() string {
+	if x != nil {
+		return x.Manufacturer
+	}
+	return ""
+}
+
+func (x *CreateDrugRequest) GetSafetyClassification() string {
+	if x != nil {
+		return x.SafetyClassification
 	}
 	return ""
 }
@@ -824,7 +893,7 @@ var File_medisync_catalog_v1_catalog_proto protoreflect.FileDescriptor
 
 const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
-	"!medisync/catalog/v1/catalog.proto\x12\x13medisync.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb2\x03\n" +
+	"!medisync/catalog/v1/catalog.proto\x12\x13medisync.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdb\x04\n" +
 	"\x04Drug\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -843,7 +912,11 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\fdisplay_name\x18\f \x01(\tR\vdisplayName\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\r \x01(\tR\tprojectId\x12\x18\n" +
-	"\abarcode\x18\x0e \x01(\tR\abarcode\"\xa1\x02\n" +
+	"\abarcode\x18\x0e \x01(\tR\abarcode\x122\n" +
+	"\x15default_slot_capacity\x18\x0f \x01(\x05R\x13defaultSlotCapacity\x12\x1a\n" +
+	"\bcategory\x18\x10 \x01(\tR\bcategory\x12\"\n" +
+	"\fmanufacturer\x18\x11 \x01(\tR\fmanufacturer\x123\n" +
+	"\x15safety_classification\x18\x12 \x01(\tR\x14safetyClassification\"\xca\x03\n" +
 	"\x11CreateDrugRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -856,7 +929,11 @@ const file_medisync_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\t \x01(\tR\tprojectId\x12\x18\n" +
 	"\abarcode\x18\n" +
-	" \x01(\tR\abarcode\"C\n" +
+	" \x01(\tR\abarcode\x122\n" +
+	"\x15default_slot_capacity\x18\v \x01(\x05R\x13defaultSlotCapacity\x12\x1a\n" +
+	"\bcategory\x18\f \x01(\tR\bcategory\x12\"\n" +
+	"\fmanufacturer\x18\r \x01(\tR\fmanufacturer\x123\n" +
+	"\x15safety_classification\x18\x0e \x01(\tR\x14safetyClassification\"C\n" +
 	"\x12CreateDrugResponse\x12-\n" +
 	"\x04drug\x18\x01 \x01(\v2\x19.medisync.catalog.v1.DrugR\x04drug\" \n" +
 	"\x0eGetDrugRequest\x12\x0e\n" +

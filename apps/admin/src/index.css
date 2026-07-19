@@ -6,16 +6,16 @@
    so existing feature pages inherit the new look without JSX changes. */
 :root {
   /* Palette (aligned with the MediSync logo / Master Data mockups) */
-  --primary: #4263eb;
-  --primary-dark: #3b5bdb;
-  --neutral-deep: #1a1a2e;
-  --neutral-page: #f5f5fb;
+  --primary: #1e66f5;
+  --primary-dark: #1554d1;
+  --neutral-deep: #12315f;
+  --neutral-page: #f2f8ff;
   --neutral-surface: #ffffff;
-  --neutral-subtle: #f3f3fa;
-  --neutral-border: #e7e7f2;
-  --neutral-border-strong: #d7d7e6;
-  --neutral-text: #2b2b40;
-  --neutral-text-muted: #8a8aa3;
+  --neutral-subtle: #edf5ff;
+  --neutral-border: #dceafb;
+  --neutral-border-strong: #bdd5f1;
+  --neutral-text: #24415f;
+  --neutral-text-muted: #607b98;
   --neutral-inverse: #111827;
 
   --semantic-success: #12b76a;
@@ -28,7 +28,7 @@
   --semantic-error: #ef4444;
   --semantic-error-bg: #fdecef;
   --semantic-error-ink: #c0304f;
-  --semantic-info: #4263eb;
+  --semantic-info: #1e66f5;
   --semantic-neutral: #8a8aa3;
   --semantic-muted: #8a8aa3;
   --semantic-border: #e7e7f2;
@@ -246,7 +246,7 @@ tbody td {
   vertical-align: middle;
 }
 tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: #faf9ff; }
+tbody tr:hover { background: #f4f9ff; }
 
 .mono, .text-mono {
   font-family: var(--font-mono);
@@ -269,7 +269,7 @@ tbody tr:hover { background: #faf9ff; }
   font-weight: 700;
   line-height: 1.4;
   background: #efeaff;
-  color: #6d5efc;
+  color: #1e66f5;
 }
 .badge-active   { background: var(--semantic-success); color: #fff; }
 .badge-inactive { background: #ececef; color: #6b6b80; }
@@ -333,7 +333,7 @@ tbody tr:hover { background: #faf9ff; }
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(1200px 500px at 50% -10%, rgba(109, 94, 252, 0.18), transparent 60%),
+    radial-gradient(1200px 500px at 50% -10%, rgba(30, 102, 245, 0.18), transparent 60%),
     var(--neutral-page);
 }
 .login-panel {

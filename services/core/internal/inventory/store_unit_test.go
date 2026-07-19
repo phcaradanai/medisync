@@ -105,12 +105,12 @@ func (r *fakeRow) Scan(dest ...any) error {
 }
 
 // rowWithSlot returns a fakeRow that fills dest with a sample slot.
-// Matches the 16-column scan used by inventory queries.
+// Matches the 19-column scan used by inventory queries.
 func rowWithSlot(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 16 {
-				return fmt.Errorf("expected 16 dests, got %d", len(dest))
+			if len(dest) != 19 {
+				return fmt.Errorf("expected 19 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
@@ -134,6 +134,9 @@ func rowWithSlot(sl Slot) *fakeRow {
 			if dt, ok := dest[15].(*time.Time); ok {
 				*dt = sl.UpdatedAt
 			}
+			*(dest[16].(*string)) = sl.Category
+			*(dest[17].(*string)) = sl.Manufacturer
+			*(dest[18].(*string)) = sl.SafetyClassification
 			return nil
 		},
 	}
@@ -179,8 +182,8 @@ func (r *fakeRows) Scan(dest ...any) error {
 		return errors.New("no row to scan")
 	}
 	sl := r.slots[r.current-1]
-	if len(dest) != 16 {
-		return fmt.Errorf("expected 16 dests, got %d", len(dest))
+	if len(dest) != 19 {
+		return fmt.Errorf("expected 19 dests, got %d", len(dest))
 	}
 	*(dest[0].(*string)) = sl.ID
 	*(dest[1].(*string)) = sl.CabinetID
@@ -204,6 +207,9 @@ func (r *fakeRows) Scan(dest ...any) error {
 	if dt, ok := dest[15].(*time.Time); ok {
 		*dt = sl.UpdatedAt
 	}
+	*(dest[16].(*string)) = sl.Category
+	*(dest[17].(*string)) = sl.Manufacturer
+	*(dest[18].(*string)) = sl.SafetyClassification
 	return nil
 }
 
@@ -219,8 +225,8 @@ func (r *fakeRows) Conn() *pgx.Conn                              { return nil }
 func rowWithSlot11(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 16 {
-				return fmt.Errorf("expected 16 dests, got %d", len(dest))
+			if len(dest) != 19 {
+				return fmt.Errorf("expected 19 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
@@ -236,12 +242,17 @@ func rowWithSlot11(sl Slot) *fakeRow {
 			if dt, ok := dest[11].(**time.Time); ok {
 				*dt = sl.ExpiryDate
 			}
-			if dt, ok := dest[12].(*time.Time); ok {
+			*(dest[12].(*int32)) = sl.Shelf
+			*(dest[13].(*int32)) = sl.RowNum
+			if dt, ok := dest[14].(*time.Time); ok {
 				*dt = sl.CreatedAt
 			}
-			if dt, ok := dest[13].(*time.Time); ok {
+			if dt, ok := dest[15].(*time.Time); ok {
 				*dt = sl.UpdatedAt
 			}
+			*(dest[16].(*string)) = sl.Category
+			*(dest[17].(*string)) = sl.Manufacturer
+			*(dest[18].(*string)) = sl.SafetyClassification
 			return nil
 		},
 	}
@@ -268,8 +279,8 @@ func TestScanSlotSuccess(t *testing.T) {
 
 	row := &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 16 {
-				return fmt.Errorf("expected 16 dests, got %d", len(dest))
+			if len(dest) != 19 {
+				return fmt.Errorf("expected 19 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = expected.ID
 			*(dest[1].(*string)) = expected.CabinetID
@@ -285,12 +296,17 @@ func TestScanSlotSuccess(t *testing.T) {
 			if dt, ok := dest[11].(**time.Time); ok {
 				*dt = expected.ExpiryDate
 			}
-			if dt, ok := dest[12].(*time.Time); ok {
+			*(dest[12].(*int32)) = expected.Shelf
+			*(dest[13].(*int32)) = expected.RowNum
+			if dt, ok := dest[14].(*time.Time); ok {
 				*dt = expected.CreatedAt
 			}
-			if dt, ok := dest[13].(*time.Time); ok {
+			if dt, ok := dest[15].(*time.Time); ok {
 				*dt = expected.UpdatedAt
 			}
+			*(dest[16].(*string)) = expected.Category
+			*(dest[17].(*string)) = expected.Manufacturer
+			*(dest[18].(*string)) = expected.SafetyClassification
 			return nil
 		},
 	}
@@ -443,7 +459,7 @@ func TestListSlotsLowOnly(t *testing.T) {
 	}
 
 	call := db.lastQuery()
-	if !strings.Contains(call.sql, "quantity <= low_threshold") {
+	if !strings.Contains(call.sql, "s.quantity <= s.low_threshold") {
 		t.Error("SQL should filter by low threshold")
 	}
 }

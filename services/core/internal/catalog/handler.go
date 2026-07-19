@@ -17,13 +17,15 @@ import (
 
 // Common catalog errors returned to callers.
 var (
-	ErrDrugCodeRequired = errors.New("drug code is required")
-	ErrDrugNameRequired = errors.New("drug name is required")
-	ErrDrugIDRequired   = errors.New("drug id is required")
-	ErrBarcodeRequired  = errors.New("barcode is required")
-	ErrDrugNotFound     = errors.New("drug not found")
-	ErrNotAuthenticated = errors.New("authentication required")
-	ErrNotAdmin         = errors.New("admin role required")
+	ErrDrugCodeRequired     = errors.New("drug code is required")
+	ErrDrugNameRequired     = errors.New("drug name is required")
+	ErrDrugIDRequired       = errors.New("drug id is required")
+	ErrSlotCapacityRequired = errors.New("default slot capacity must be greater than zero")
+	ErrSafetyClassification = errors.New("safety classification must be NORMAL, LASA, or HIGH_ALERT")
+	ErrBarcodeRequired      = errors.New("barcode is required")
+	ErrDrugNotFound         = errors.New("drug not found")
+	ErrNotAuthenticated     = errors.New("authentication required")
+	ErrNotAdmin             = errors.New("admin role required")
 )
 
 // TokenClaimser is the narrow JWT claims interface consumed by catalog.
@@ -39,6 +41,19 @@ type Claims struct {
 	Subject   string
 	Role      string
 	ProjectID string
+}
+
+func normalizeSafetyClassification(value string) (string, bool) {
+	value = strings.ToUpper(strings.TrimSpace(value))
+	if value == "" {
+		return "NORMAL", true
+	}
+	switch value {
+	case "NORMAL", "LASA", "HIGH_ALERT":
+		return value, true
+	default:
+		return "", false
+	}
 }
 
 func (c Claims) GetSubject() string   { return c.Subject }
@@ -116,6 +131,17 @@ func (s *CatalogServer) CreateDrug(ctx context.Context, req *connect.Request[cat
 	if msg.Name == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrDrugNameRequired)
 	}
+	if msg.DefaultSlotCapacity < 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrSlotCapacityRequired)
+	}
+	defaultSlotCapacity := msg.DefaultSlotCapacity
+	if defaultSlotCapacity == 0 {
+		defaultSlotCapacity = 100
+	}
+	safetyClassification, validSafety := normalizeSafetyClassification(msg.SafetyClassification)
+	if !validSafety {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrSafetyClassification)
+	}
 
 	projectID := claims.GetProjectID()
 	if projectID == "" {
@@ -126,15 +152,20 @@ func (s *CatalogServer) CreateDrug(ctx context.Context, req *connect.Request[cat
 	}
 
 	drug, err := s.store.Create(ctx, Drug{
-		Code:        msg.Code,
-		Name:        msg.Name,
-		DisplayName: msg.DisplayName,
-		GenericName: msg.GenericName,
-		Form:        msg.Form,
-		Strength:    msg.Strength,
-		Unit:        msg.Unit,
-		StickerNote: msg.StickerNote,
-		ProjectID:   projectID,
+		Code:                 msg.Code,
+		Name:                 msg.Name,
+		DisplayName:          msg.DisplayName,
+		GenericName:          msg.GenericName,
+		Form:                 msg.Form,
+		Strength:             msg.Strength,
+		Unit:                 msg.Unit,
+		StickerNote:          msg.StickerNote,
+		ProjectID:            projectID,
+		Barcode:              msg.Barcode,
+		DefaultSlotCapacity:  defaultSlotCapacity,
+		Category:             strings.TrimSpace(msg.Category),
+		Manufacturer:         strings.TrimSpace(msg.Manufacturer),
+		SafetyClassification: safetyClassification,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create drug: %w", err))
@@ -239,16 +270,33 @@ func (s *CatalogServer) UpdateDrug(ctx context.Context, req *connect.Request[cat
 	}
 
 	pb := msg.Drug
+	if pb.DefaultSlotCapacity < 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrSlotCapacityRequired)
+	}
+	defaultSlotCapacity := pb.DefaultSlotCapacity
+	if defaultSlotCapacity == 0 {
+		defaultSlotCapacity = 100
+	}
+	safetyClassification, validSafety := normalizeSafetyClassification(pb.SafetyClassification)
+	if !validSafety {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrSafetyClassification)
+	}
 	drug, err := s.store.Update(ctx, Drug{
-		ID:          pb.Id,
-		Code:        pb.Code,
-		Name:        pb.Name,
-		GenericName: pb.GenericName,
-		Form:        pb.Form,
-		Strength:    pb.Strength,
-		Unit:        pb.Unit,
-		StickerNote: pb.StickerNote,
-		Active:      pb.Active,
+		ID:                   pb.Id,
+		Code:                 pb.Code,
+		Name:                 pb.Name,
+		GenericName:          pb.GenericName,
+		Form:                 pb.Form,
+		Strength:             pb.Strength,
+		Unit:                 pb.Unit,
+		StickerNote:          pb.StickerNote,
+		DisplayName:          pb.DisplayName,
+		Barcode:              pb.Barcode,
+		DefaultSlotCapacity:  defaultSlotCapacity,
+		Category:             strings.TrimSpace(pb.Category),
+		Manufacturer:         strings.TrimSpace(pb.Manufacturer),
+		SafetyClassification: safetyClassification,
+		Active:               pb.Active,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update drug: %w", err))
@@ -318,19 +366,23 @@ func toProtoDrug(d *Drug) *catalogv1.Drug {
 		updatedAt = timestamppb.New(d.UpdatedAt)
 	}
 	return &catalogv1.Drug{
-		Id:          d.ID,
-		Code:        d.Code,
-		Name:        d.Name,
-		DisplayName: d.DisplayName,
-		GenericName: d.GenericName,
-		Form:        d.Form,
-		Strength:    d.Strength,
-		Unit:        d.Unit,
-		StickerNote: d.StickerNote,
-		Active:      d.Active,
-		ProjectId:   d.ProjectID,
-		Barcode:     d.Barcode,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		Id:                   d.ID,
+		Code:                 d.Code,
+		Name:                 d.Name,
+		DisplayName:          d.DisplayName,
+		GenericName:          d.GenericName,
+		Form:                 d.Form,
+		Strength:             d.Strength,
+		Unit:                 d.Unit,
+		StickerNote:          d.StickerNote,
+		Active:               d.Active,
+		ProjectId:            d.ProjectID,
+		Barcode:              d.Barcode,
+		DefaultSlotCapacity:  d.DefaultSlotCapacity,
+		Category:             d.Category,
+		Manufacturer:         d.Manufacturer,
+		SafetyClassification: d.SafetyClassification,
+		CreatedAt:            createdAt,
+		UpdatedAt:            updatedAt,
 	}
 }

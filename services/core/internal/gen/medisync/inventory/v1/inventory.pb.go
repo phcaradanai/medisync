@@ -45,9 +45,13 @@ type Slot struct {
 	// Physical shelf position (1-5).
 	Shelf int32 `protobuf:"varint,14,opt,name=shelf,proto3" json:"shelf,omitempty"`
 	// Physical row position within shelf (1-22).
-	RowNum        int32 `protobuf:"varint,15,opt,name=row_num,json=rowNum,proto3" json:"row_num,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	RowNum int32 `protobuf:"varint,15,opt,name=row_num,json=rowNum,proto3" json:"row_num,omitempty"`
+	// Read-only metadata resolved from the assigned catalog drug.
+	Category             string `protobuf:"bytes,16,opt,name=category,proto3" json:"category,omitempty"`
+	Manufacturer         string `protobuf:"bytes,17,opt,name=manufacturer,proto3" json:"manufacturer,omitempty"`
+	SafetyClassification string `protobuf:"bytes,18,opt,name=safety_classification,json=safetyClassification,proto3" json:"safety_classification,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *Slot) Reset() {
@@ -183,6 +187,27 @@ func (x *Slot) GetRowNum() int32 {
 		return x.RowNum
 	}
 	return 0
+}
+
+func (x *Slot) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *Slot) GetManufacturer() string {
+	if x != nil {
+		return x.Manufacturer
+	}
+	return ""
+}
+
+func (x *Slot) GetSafetyClassification() string {
+	if x != nil {
+		return x.SafetyClassification
+	}
+	return ""
 }
 
 type ListSlotsRequest struct {
@@ -802,7 +827,7 @@ var File_medisync_inventory_v1_inventory_proto protoreflect.FileDescriptor
 
 const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
-	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#medisync/common/v1/pagination.proto\"\xe2\x03\n" +
+	"%medisync/inventory/v1/inventory.proto\x12\x15medisync.inventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#medisync/common/v1/pagination.proto\"\xd7\x04\n" +
 	"\x04Slot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -823,7 +848,10 @@ const file_medisync_inventory_v1_inventory_proto_rawDesc = "" +
 	"\vexpiry_date\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"expiryDate\x12\x14\n" +
 	"\x05shelf\x18\x0e \x01(\x05R\x05shelf\x12\x17\n" +
-	"\arow_num\x18\x0f \x01(\x05R\x06rowNum\"\x92\x01\n" +
+	"\arow_num\x18\x0f \x01(\x05R\x06rowNum\x12\x1a\n" +
+	"\bcategory\x18\x10 \x01(\tR\bcategory\x12\"\n" +
+	"\fmanufacturer\x18\x11 \x01(\tR\fmanufacturer\x123\n" +
+	"\x15safety_classification\x18\x12 \x01(\tR\x14safetyClassification\"\x92\x01\n" +
 	"\x10ListSlotsRequest\x12\x1d\n" +
 	"\n" +
 	"cabinet_id\x18\x01 \x01(\tR\tcabinetId\x12\x19\n" +

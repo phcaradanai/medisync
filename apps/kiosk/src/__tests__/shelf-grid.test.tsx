@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import ShelfGrid, { getSlotPosition } from "../features/catalog/ShelfGrid";
 
 const slots = [
-  { id: "slot-1", code: "S01", drugCode: "PARA", drugName: "Paracetamol 500 mg", quantity: 20, capacity: 30, lowThreshold: 5 },
+  { id: "slot-1", code: "S01", drugCode: "PARA", drugName: "Paracetamol 500 mg", quantity: 20, capacity: 30, lowThreshold: 5, category: "ยาแก้ปวด", manufacturer: "Demo Pharma", safetyClassification: "LASA" },
   { id: "slot-2", code: "S02", drugCode: " para ", drugName: "Paracetamol 500 mg", quantity: 12, capacity: 30, lowThreshold: 5 },
   { id: "slot-31", code: "S31", drugCode: "AMOX", drugName: "Amoxicillin 500 mg", quantity: 2, capacity: 30, lowThreshold: 5 },
 ];
@@ -47,6 +47,8 @@ describe("hybrid cabinet navigation", () => {
     render(<ShelfGrid slots={slots} variant="overview" />);
 
     await user.click(screen.getByRole("button", { name: /ชั้น 1 ช่อง 1 Paracetamol/ }));
+    expect(screen.getByText("LASA")).toBeDefined();
+    expect(screen.getByText("Demo Pharma")).toBeDefined();
     expect(screen.getByText("2 ช่อง · เลือกเพื่อดูรายละเอียดแต่ละช่อง")).toBeDefined();
     expect(screen.getByRole("button", { name: /S01 คงเหลือ 20 ชิ้น ช่องที่กำลังแสดง/ })).toBeDefined();
 

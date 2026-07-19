@@ -209,9 +209,14 @@ export function MasterTable<T>({
 // ── Drawer editor ────────────────────────────────────────────────────
 export interface Step { num: string; label: string; icon: IconCmp; }
 
+export function SaveNotice({ message, onDismiss }: { message: string | null; onDismiss?: () => void }) {
+  if (!message) return null;
+  return <div className="md-save-notice" role="status"><Icon.checkCircle size={20} /><span>{message}</span>{onDismiss && <button type="button" onClick={onDismiss} aria-label="ปิดข้อความแจ้งเตือน"><Icon.x size={17} /></button>}</div>;
+}
+
 export function MasterDrawer({
   open, icon: I, title, entityLabel, code, dirty, steps, activeStep, onStep,
-  onClose, onSubmit, onRestore, saving, timeLabel, saveLabel = "บันทึกการแก้ไข", children,
+  onClose, onSubmit, onRestore, saving, timeLabel, saveLabel = "บันทึกข้อมูล", children,
 }: {
   open: boolean;
   icon: IconCmp;
@@ -233,7 +238,7 @@ export function MasterDrawer({
   if (!open) return null;
   return (
     <div className="md-drawer-scrim" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <form className="md-drawer" onSubmit={onSubmit}>
+      <form className="md-drawer" onSubmit={onSubmit} role="dialog" aria-modal="true" aria-label={title}>
         <div className="md-drawer-head">
           <div className="md-drawer-head-ico"><I size={24} /></div>
           <div className="md-drawer-head-title">{title}</div>
@@ -252,11 +257,11 @@ export function MasterDrawer({
             {steps.map((s, i) => {
               const cls = i === activeStep ? "active" : i < activeStep ? "done" : "";
               return (
-                <div key={s.num} className={`md-step ${cls}`} onClick={() => onStep(i)}>
+                <button type="button" key={s.num} className={`md-step ${cls}`} onClick={() => onStep(i)} aria-current={i === activeStep ? "step" : undefined}>
                   <div className="md-step-num">{s.num}</div>
                   <div className="md-step-ico"><s.icon size={22} /></div>
                   <div className="md-step-label">{s.label}</div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -268,7 +273,7 @@ export function MasterDrawer({
           <div className="md-foot-actions">
             <button type="button" className="md-btn md-btn-ghost" onClick={onRestore}><Icon.undo size={18} /> คืนค่า</button>
             <button type="button" className="md-btn md-btn-ghost" onClick={onClose}><Icon.x size={18} /> ยกเลิก</button>
-            <button type="submit" className="md-btn md-btn-primary" disabled={saving}><Icon.check size={18} /> {saving ? "กำลังบันทึก…" : saveLabel}</button>
+            <button type="submit" className="md-btn md-btn-primary md-save-button" disabled={saving} aria-busy={saving}><Icon.check size={20} /> {saving ? "กำลังบันทึก…" : saveLabel}</button>
           </div>
         </div>
       </form>
@@ -291,8 +296,9 @@ export function DrawerSection({ num, icon: I, title, green, refEl, children }: {
   );
 }
 
-export function Field({ label, required, lead, trailingChevron, highlight, children }: {
-  label: string; required?: boolean; lead?: ReactNode; trailingChevron?: boolean; highlight?: boolean; children: ReactNode;
+export function Field({ label, required, lead, trailingChevron, highlight, help, helpId, children }: {
+  label: string; required?: boolean; lead?: ReactNode; trailingChevron?: boolean; highlight?: boolean;
+  help?: ReactNode; helpId?: string; children: ReactNode;
 }) {
   return (
     <div className={`md-field${lead ? "" : " no-icon"}${highlight ? " highlight" : ""}`}>
@@ -302,6 +308,7 @@ export function Field({ label, required, lead, trailingChevron, highlight, child
         {children}
         {trailingChevron && <Icon.chevronDown className="md-trail" size={18} />}
       </div>
+      {help != null && <small id={helpId} className="md-field-help">{help}</small>}
     </div>
   );
 }

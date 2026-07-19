@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { create } from "@bufbuild/protobuf";
 import {
   ListSlotsRequestSchema,
@@ -47,6 +48,9 @@ const emptySlotForm: CreateSlotForm = {
 // ── Component ──────────────────────────────────────────────────────
 
 export function InventoryPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedDrugId = searchParams.get("drugId") ?? "";
+  const linkedDrugCode = searchParams.get("drugCode") ?? "";
   const [slots, setSlots] = useState<Slot[]>([]);
   const [drugs, setDrugs] = useState<Drug[]>([]);
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
@@ -133,7 +137,11 @@ export function InventoryPage() {
 
   function openAssign(slot: Slot) {
     setSelectedSlot(slot);
-    setAssignForm(slot.drugId ? {
+    const linkedDrug = linkedDrugId ? drugs.find((drug) => drug.id === linkedDrugId) : undefined;
+    setAssignForm(linkedDrug ? {
+      drugId: linkedDrug.id, drugCode: linkedDrug.code, drugName: linkedDrug.name,
+      capacity: linkedDrug.defaultSlotCapacity || slot.capacity || 50, lowThreshold: slot.lowThreshold,
+    } : slot.drugId ? {
       drugId: slot.drugId, drugCode: slot.drugCode, drugName: slot.drugName,
       capacity: slot.capacity, lowThreshold: slot.lowThreshold,
     } : emptyAssign);
@@ -200,7 +208,13 @@ export function InventoryPage() {
   // ── Drug selector ─────────────────────────────────────────────
 
   function selectDrug(drug: Drug) {
-    setAssignForm({ drugId: drug.id, drugCode: drug.code, drugName: drug.name, capacity: assignForm.capacity, lowThreshold: assignForm.lowThreshold });
+    setAssignForm({
+      drugId: drug.id,
+      drugCode: drug.code,
+      drugName: drug.name,
+      capacity: drug.defaultSlotCapacity || assignForm.capacity,
+      lowThreshold: assignForm.lowThreshold,
+    });
     setDrugFilter("");
   }
 
@@ -228,6 +242,8 @@ export function InventoryPage() {
         </div>
       </div>
 
+      {linkedDrugId && <div className="md-link-context" role="status"><div><strong>กำลังจัดการการเชื่อมโยงยา {linkedDrugCode || linkedDrugId}</strong><span>เลือก “Assign” หรือ “Reassign” ที่ช่องจริง ระบบจะเตรียมยานี้ให้โดยอัตโนมัติ</span></div><button type="button" className="md-btn md-btn-ghost" onClick={() => setSearchParams({})}>ล้างบริบท</button></div>}
+
       {error && <div className="login-error mb-md" style={{ marginBottom: "var(--sp-lg)" }}>{error}<button className="btn-ghost btn-sm" style={{ marginLeft: "var(--sp-md)" }} onClick={() => setError(null)}>Dismiss</button></div>}
 
       <div className="table-wrap">
@@ -251,7 +267,7 @@ export function InventoryPage() {
             </thead>
             <tbody>
               {slots.map((s) => (
-                <tr key={s.id}>
+                <tr key={s.id} className={linkedDrugId && s.drugId === linkedDrugId ? "md-linked-slot" : ""}>
                   <td className="text-muted">{cabinetCode(s.cabinetId)}</td>
                   <td className="mono">{s.code}</td>
                   <td>{s.shelf || 1}-{s.rowNum || 1}</td>

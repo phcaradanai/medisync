@@ -36,6 +36,7 @@ export interface SlotCellData {
   form?: string;
   category?: string;
   manufacturer?: string;
+  safetyClassification?: string;
   lasa?: { code?: string; conflicts?: readonly string[] };
   highAlert?: boolean;
   // Per-batch breakdown of the channel contents; when absent the detail view

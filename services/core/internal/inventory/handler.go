@@ -343,7 +343,7 @@ func toProtoSlot(slot *Slot) *inventoryv1.Slot {
 	if slot.ExpiryDate != nil {
 		expiryDate = timestamppb.New(*slot.ExpiryDate)
 	}
-	return &inventoryv1.Slot{Id: slot.ID, CabinetId: slot.CabinetID, Code: slot.Code, DisplayName: slot.DisplayName, DrugId: slot.DrugID, DrugCode: slot.DrugCode, DrugName: slot.DrugName, Capacity: slot.Capacity, Quantity: slot.Quantity, LowThreshold: slot.LowThreshold, ProjectId: slot.ProjectID, UpdatedAt: ua, ExpiryDate: expiryDate}
+	return &inventoryv1.Slot{Id: slot.ID, CabinetId: slot.CabinetID, Code: slot.Code, DisplayName: slot.DisplayName, DrugId: slot.DrugID, DrugCode: slot.DrugCode, DrugName: slot.DrugName, Capacity: slot.Capacity, Quantity: slot.Quantity, LowThreshold: slot.LowThreshold, ProjectId: slot.ProjectID, UpdatedAt: ua, ExpiryDate: expiryDate, Category: slot.Category, Manufacturer: slot.Manufacturer, SafetyClassification: slot.SafetyClassification}
 }
 
 func fromProtoTimestamp(ts *timestamppb.Timestamp) *time.Time {

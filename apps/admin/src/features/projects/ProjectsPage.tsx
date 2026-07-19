@@ -11,7 +11,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { Icon } from "../masterdata/icons";
 import {
   MasterHeader, ListHeading, SearchInput, StatusBadge, MasterTable,
-  MasterDrawer, DrawerSection, Field, formatThaiDateTime, type Column, type Step,
+  MasterDrawer, DrawerSection, Field, SaveNotice, formatThaiDateTime, type Column, type Step,
 } from "../masterdata/kit";
 
 const STEPS: Step[] = [
@@ -40,6 +40,7 @@ export function ProjectsPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [editedAt, setEditedAt] = useState<Date>(new Date());
   const sectionRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
 
@@ -92,6 +93,8 @@ export function ProjectsPage() {
         }));
       }
       setDrawerOpen(false); await load();
+      setSaveNotice(editingId ? "บันทึกข้อมูลโครงการเรียบร้อยแล้ว" : "เพิ่มโครงการเรียบร้อยแล้ว");
+      window.setTimeout(() => setSaveNotice(null), 4000);
     } catch (err: unknown) { setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ"); }
     finally { setSaving(false); }
   }
@@ -114,6 +117,7 @@ export function ProjectsPage() {
       <MasterHeader icon={Icon.folder} title="โครงการ" subtitle="จัดการโครงการ/หน่วยงานในระบบ (Master Data)">
         <button className="md-btn md-btn-primary" onClick={openCreate}><Icon.plus size={18} /> เพิ่มโครงการ</button>
       </MasterHeader>
+      <SaveNotice message={saveNotice} onDismiss={() => setSaveNotice(null)} />
 
       {error && <div className="md-err">{error}</div>}
 

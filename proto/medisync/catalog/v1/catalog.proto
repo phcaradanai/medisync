@@ -28,6 +28,13 @@ message Drug {
   string project_id = 13;
   // Barcode for scanning during refill/withdraw.
   string barcode = 14;
+  // Recommended maximum number of this drug stored in one cabinet slot.
+  int32 default_slot_capacity = 15;
+  // Medication category, e.g. analgesic or antibiotic.
+  string category = 16;
+  string manufacturer = 17;
+  // NORMAL, LASA, or HIGH_ALERT.
+  string safety_classification = 18;
 }
 
 message CreateDrugRequest {
@@ -43,6 +50,12 @@ message CreateDrugRequest {
   string project_id = 9;
   // Barcode for scanning.
   string barcode = 10;
+  // Recommended maximum number stored in one cabinet slot.
+  int32 default_slot_capacity = 11;
+  string category = 12;
+  string manufacturer = 13;
+  // NORMAL, LASA, or HIGH_ALERT.
+  string safety_classification = 14;
 }
 
 message CreateDrugResponse {

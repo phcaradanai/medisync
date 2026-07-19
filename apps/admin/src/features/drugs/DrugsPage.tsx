@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { create } from "@bufbuild/protobuf";
 import {
   DrugSchema,
@@ -15,11 +16,16 @@ import { useAuth } from "../../auth/AuthContext";
 import { Icon } from "../masterdata/icons";
 import {
   MasterHeader, ListHeading, SearchInput, Select, StatusBadge, MasterTable,
-  MasterDrawer, DrawerSection, Field, formatThaiDateTime, type Column, type Step,
+  MasterDrawer, DrawerSection, Field, SaveNotice, formatThaiDateTime, type Column, type Step,
 } from "../masterdata/kit";
 
 const FORM_OPTIONS = ["Tablet", "Capsule", "Syrup", "Injection", "Cream", "Drops"];
 const UNIT_OPTIONS = ["เม็ด", "แคปซูล", "ขวด", "หลอด", "หน่วย", "ampoule"];
+const SAFETY_OPTIONS = [
+  { value: "NORMAL", label: "ปกติ" },
+  { value: "LASA", label: "LASA" },
+  { value: "HIGH_ALERT", label: "ยาอันตราย / High Alert" },
+] as const;
 
 const STEPS: Step[] = [
   { num: "01", label: "ข้อมูลยา", icon: Icon.pill },
@@ -32,21 +38,30 @@ interface DrugFormData {
   code: string; name: string; displayName: string; genericName: string;
   form: string; strength: string; unit: string; barcode: string;
   stickerNote: string; projectId: string; active: boolean;
+  defaultSlotCapacity: number;
+  category: string; manufacturer: string;
+  safetyClassification: "NORMAL" | "LASA" | "HIGH_ALERT";
 }
 const emptyForm: DrugFormData = {
   code: "", name: "", displayName: "", genericName: "",
   form: "Tablet", strength: "", unit: "เม็ด", barcode: "",
   stickerNote: "", projectId: "", active: true,
+  defaultSlotCapacity: 100,
+  category: "", manufacturer: "", safetyClassification: "NORMAL",
 };
 function drugToForm(d: Drug): DrugFormData {
   return {
     code: d.code, name: d.name, displayName: d.displayName, genericName: d.genericName,
     form: d.form, strength: d.strength, unit: d.unit, barcode: d.barcode,
     stickerNote: d.stickerNote, projectId: d.projectId, active: d.active,
+    defaultSlotCapacity: d.defaultSlotCapacity || 100,
+    category: d.category, manufacturer: d.manufacturer,
+    safetyClassification: (d.safetyClassification || "NORMAL") as DrugFormData["safetyClassification"],
   };
 }
 
 export function DrugsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [drugs, setDrugs] = useState<Drug[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -64,6 +79,7 @@ export function DrugsPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [editedAt, setEditedAt] = useState<Date>(new Date());
   const sectionRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
 
@@ -126,6 +142,9 @@ export function DrugsPage() {
     if (!form.code.trim()) { setFormError("กรุณากรอกรหัสยา"); return; }
     if (!form.name.trim()) { setFormError("กรุณากรอกชื่อยา"); return; }
     if (!form.displayName.trim()) { setFormError("กรุณากรอกชื่อที่แสดงบน Kiosk"); return; }
+    if (!Number.isInteger(form.defaultSlotCapacity) || form.defaultSlotCapacity <= 0) {
+      setFormError("ความจุมาตรฐานต่อช่องต้องเป็นจำนวนเต็มมากกว่า 0"); return;
+    }
     setSaving(true);
     try {
       if (editingId) {
@@ -134,6 +153,9 @@ export function DrugsPage() {
             id: editingId, code: form.code.trim(), name: form.name.trim(), displayName: form.displayName.trim(),
             genericName: form.genericName.trim(), form: form.form.trim(), strength: form.strength.trim(),
             unit: form.unit.trim(), barcode: form.barcode.trim(), stickerNote: form.stickerNote.trim(), active: form.active,
+            defaultSlotCapacity: form.defaultSlotCapacity,
+            category: form.category.trim(), manufacturer: form.manufacturer.trim(),
+            safetyClassification: form.safetyClassification,
           }),
         }));
       } else {
@@ -142,9 +164,14 @@ export function DrugsPage() {
           genericName: form.genericName.trim(), form: form.form.trim(), strength: form.strength.trim(),
           unit: form.unit.trim(), barcode: form.barcode.trim(), stickerNote: form.stickerNote.trim(),
           projectId: form.projectId.trim() || undefined,
+          defaultSlotCapacity: form.defaultSlotCapacity,
+          category: form.category.trim(), manufacturer: form.manufacturer.trim(),
+          safetyClassification: form.safetyClassification,
         }));
       }
       setDrawerOpen(false); await fetchDrugs();
+      setSaveNotice(editingId ? "บันทึกข้อมูลยาเรียบร้อยแล้ว" : "เพิ่มยาใหม่เรียบร้อยแล้ว");
+      window.setTimeout(() => setSaveNotice(null), 4000);
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
     } finally { setSaving(false); }
@@ -162,6 +189,12 @@ export function DrugsPage() {
     { key: "form", header: "รูปแบบ", render: (d) => d.form || "—" },
     { key: "strength", header: "ความแรง", render: (d) => d.strength || "—" },
     { key: "unit", header: "หน่วย", render: (d) => d.unit || "—" },
+    { key: "capacity", header: "ความจุ/ช่อง", render: (d) => <strong>{d.defaultSlotCapacity || "—"}</strong> },
+    { key: "safety", header: "ประเภทความเสี่ยง", render: (d) => {
+      const safety = d.safetyClassification || "NORMAL";
+      const label = safety === "LASA" ? "LASA" : safety === "HIGH_ALERT" ? "High Alert" : "ปกติ";
+      return <span className={`md-safety-badge md-safety-badge--${safety.toLowerCase().replace("_", "-")}`}>{label}</span>;
+    } },
     { key: "project", header: "โครงการ", render: (d) => <span className="md-cell-muted">{projectName(d.projectId)}</span> },
     { key: "status", header: "สถานะ", render: (d) => <StatusBadge active={d.active} /> },
   ];
@@ -172,10 +205,11 @@ export function DrugsPage() {
   return (
     <>
       <MasterHeader icon={Icon.pill} title="ยา" subtitle="จัดการรายการยาในระบบ (Master Data)">
-        <button className="md-btn md-btn-outline"><Icon.upload size={18} /> นำเข้า</button>
-        <button className="md-btn md-btn-outline"><Icon.download size={18} /> ส่งออก</button>
+        <button className="md-btn md-btn-outline" disabled title="ฟังก์ชันนำเข้ายังไม่เปิดใช้งาน"><Icon.upload size={18} /> นำเข้า</button>
+        <button className="md-btn md-btn-outline" disabled title="ฟังก์ชันส่งออกยังไม่เปิดใช้งาน"><Icon.download size={18} /> ส่งออก</button>
         <button className="md-btn md-btn-primary" onClick={openCreate}><Icon.plus size={18} /> เพิ่มยา</button>
       </MasterHeader>
+      <SaveNotice message={saveNotice} onDismiss={() => setSaveNotice(null)} />
 
       {error && <div className="md-err">{error}</div>}
 
@@ -231,6 +265,37 @@ export function DrugsPage() {
                 {(UNIT_OPTIONS.includes(form.unit) ? UNIT_OPTIONS : [form.unit, ...UNIT_OPTIONS]).map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </Field>
+            <Field
+              label="ความจุมาตรฐานต่อช่อง"
+              required
+              lead={<Icon.inventory size={18} />}
+              helpId="default-slot-capacity-help"
+              help="ใช้เป็นค่าเริ่มต้นเมื่อผูกยานี้กับช่องใหม่ ไม่เปลี่ยนช่องที่มีอยู่แล้ว"
+            >
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={form.defaultSlotCapacity}
+                onChange={(e) => setField("defaultSlotCapacity", Number.parseInt(e.target.value, 10) || 0)}
+                aria-describedby="default-slot-capacity-help"
+              />
+            </Field>
+            <Field label="หมวดหมู่ยา" lead={<Icon.folder size={18} />}>
+              <input value={form.category} onChange={(e) => setField("category", e.target.value)} placeholder="เช่น ยาแก้ปวด, ยาปฏิชีวนะ" />
+            </Field>
+            <Field label="ผู้ผลิต" lead={<Icon.box size={18} />}>
+              <input value={form.manufacturer} onChange={(e) => setField("manufacturer", e.target.value)} placeholder="ชื่อบริษัทผู้ผลิต" />
+            </Field>
+            <Field label="ประเภทความเสี่ยง" required lead={<Icon.gauge size={18} />} trailingChevron>
+              <select
+                aria-label="ประเภทความเสี่ยง"
+                value={form.safetyClassification}
+                onChange={(e) => setField("safetyClassification", e.target.value as DrugFormData["safetyClassification"])}
+              >
+                {SAFETY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </Field>
           </div>
         </DrawerSection>
 
@@ -248,7 +313,7 @@ export function DrugsPage() {
                     <span className="md-lead"><Icon.barcode size={18} /></span>
                     <input value={form.barcode} onChange={(e) => setField("barcode", e.target.value)} placeholder="8850000123456" />
                   </div>
-                  <button type="button" className="md-btn md-btn-ghost"><Icon.scan size={18} /> สแกน</button>
+                  <button type="button" className="md-btn md-btn-ghost" disabled title="ยังไม่ได้เชื่อมต่อเครื่องสแกนในหน้า Admin"><Icon.scan size={18} /> สแกน</button>
                 </div>
               </div>
               <div className="md-field no-icon">
@@ -276,10 +341,17 @@ export function DrugsPage() {
               </select>
             </Field>
             <div className="md-field no-icon">
-              <label>ตู้ยา</label>
-              <div className="md-cabinet-box"><span className="md-cab-ico"><Icon.cabinet size={18} /></span> CAB-A01 · ชั้น A</div>
+              <label>การผูกช่องยา</label>
+              <div className="md-cabinet-box"><span className="md-cab-ico"><Icon.cabinet size={18} /></span> จัดการจากคลังยาและช่องจริง</div>
             </div>
-            <button type="button" className="md-btn md-btn-ghost" style={{ height: 48 }}><Icon.link size={18} /> จัดการการเชื่อมโยง</button>
+            <button
+              type="button"
+              className="md-btn md-btn-primary"
+              style={{ minHeight: 48 }}
+              disabled={!editingId || !form.active}
+              title={!editingId ? "กรุณาบันทึกยาก่อนจัดการการเชื่อมโยง" : !form.active ? "ต้องเปิดใช้งานยาก่อนจึงจะผูกกับช่องได้" : "ไปยังคลังยาเพื่อผูกยากับช่อง"}
+              onClick={() => editingId && form.active && navigate(`/inventory?drugId=${encodeURIComponent(editingId)}&drugCode=${encodeURIComponent(form.code)}`)}
+            ><Icon.link size={18} /> จัดการการเชื่อมโยง</button>
           </div>
         </DrawerSection>
 

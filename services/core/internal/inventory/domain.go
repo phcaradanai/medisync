@@ -9,22 +9,25 @@ import (
 // medisync.inventory.v1.Slot fields and decouples the store from
 // proto types.
 type Slot struct {
-	ID           string
-	CabinetID    string
-	Code         string
-	DisplayName  string
-	DrugID       string
-	DrugCode     string
-	DrugName     string
-	Capacity     int32
-	Quantity     int32
-	LowThreshold int32
-	ProjectID    string
-	ExpiryDate   *time.Time
-	Shelf        int32
-	RowNum       int32
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID                   string
+	CabinetID            string
+	Code                 string
+	DisplayName          string
+	DrugID               string
+	DrugCode             string
+	DrugName             string
+	Capacity             int32
+	Quantity             int32
+	LowThreshold         int32
+	ProjectID            string
+	ExpiryDate           *time.Time
+	Shelf                int32
+	RowNum               int32
+	Category             string
+	Manufacturer         string
+	SafetyClassification string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // SlotBatch represents a single refill batch within a slot.
@@ -55,19 +58,31 @@ type FIFOAllocation struct {
 func AllocateFIFO(batches []SlotBatch, requested int32) ([]FIFOAllocation, int32) {
 	sort.Slice(batches, func(i, j int) bool {
 		ei, ej := batches[i].ExpiryDate, batches[j].ExpiryDate
-		if ei == nil && ej == nil { return false }
-		if ei == nil { return false }
-		if ej == nil { return true }
+		if ei == nil && ej == nil {
+			return false
+		}
+		if ei == nil {
+			return false
+		}
+		if ej == nil {
+			return true
+		}
 		return ei.Before(*ej)
 	})
 
 	var allocs []FIFOAllocation
 	remaining := requested
 	for i := range batches {
-		if remaining <= 0 { break }
-		if batches[i].Quantity <= 0 { continue }
+		if remaining <= 0 {
+			break
+		}
+		if batches[i].Quantity <= 0 {
+			continue
+		}
 		take := batches[i].Quantity
-		if take > remaining { take = remaining }
+		if take > remaining {
+			take = remaining
+		}
 		allocs = append(allocs, FIFOAllocation{
 			SlotCode:   batches[i].SlotCode,
 			BatchID:    batches[i].ID,
@@ -100,7 +115,9 @@ func CalculateSlotCapacity(in SlotCapacityInput) int32 {
 	w := int32(in.SlotWidth / in.DrugWidth)
 	d := int32(in.SlotDepth / in.DrugDepth)
 	h := int32(in.SlotHeight / in.DrugHeight)
-	if w <= 0 || d <= 0 || h <= 0 { return 0 }
+	if w <= 0 || d <= 0 || h <= 0 {
+		return 0
+	}
 	return w * d * h
 }
 

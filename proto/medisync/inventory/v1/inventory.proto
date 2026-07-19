@@ -29,6 +29,10 @@ message Slot {
   int32 shelf = 14;
   // Physical row position within shelf (1-22).
   int32 row_num = 15;
+  // Read-only metadata resolved from the assigned catalog drug.
+  string category = 16;
+  string manufacturer = 17;
+  string safety_classification = 18;
 }
 
 message ListSlotsRequest {

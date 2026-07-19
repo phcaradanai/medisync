@@ -8,18 +8,22 @@ import "time"
 // It mirrors the proto medisync.catalog.v1.Drug fields and decouples
 // the store from proto types.
 type Drug struct {
-	ID          string
-	Code        string
-	Name        string
-	DisplayName string
-	GenericName string
-	Form        string
-	Strength    string
-	Unit        string
-	StickerNote string
-	Active      bool
-	ProjectID   string
-	Barcode     string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                   string
+	Code                 string
+	Name                 string
+	DisplayName          string
+	GenericName          string
+	Form                 string
+	Strength             string
+	Unit                 string
+	StickerNote          string
+	Active               bool
+	ProjectID            string
+	Barcode              string
+	DefaultSlotCapacity  int32
+	Category             string
+	Manufacturer         string
+	SafetyClassification string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
