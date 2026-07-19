@@ -1,4 +1,5 @@
-// SlotDetailPopup — detailed drug info popup when clicking a slot in ShelfGrid.
+// SlotDetailPopup — modern drug detail popup matching pharmacy kiosk design.
+// Features: hero card, status banner, inline alerts, mini detail cards, carousel.
 import { useEffect, useState } from "react";
 import { createClient } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
@@ -17,139 +18,116 @@ interface Props {
 
 export default function SlotDetailPopup({ slot, onClose, onDispense, onRefill }: Props) {
   const [sameDrugSlots, setSameDrugSlots] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
-  // Load same drug in other slots
   useEffect(() => {
     if (!slot.drugCode) { setLoading(false); return; }
-    const req = create(ListSlotsRequestSchema, { pageSize: 100 } as any);
-    inventoryClient.listSlots(req).then((res) => {
-      const others = (res.slots || []).filter(
-        (s) => s.drugCode === slot.drugCode && s.code !== slot.code
-      );
-      setSameDrugSlots(others);
-    }).catch(() => {}).finally(() => setLoading(false));
+    create(ListSlotsRequestSchema, { pageSize: 100 } as any);
+    inventoryClient.listSlots(create(ListSlotsRequestSchema, { pageSize: 100 } as any))
+      .then((res) => setSameDrugSlots((res.slots || []).filter((s: any) => s.drugCode === slot.drugCode && s.code !== slot.code)))
+      .catch(() => {}).finally(() => setLoading(false));
   }, [slot.drugCode, slot.code]);
 
   const expirySec = (slot.expiryDate as any)?.seconds;
   const hasExpiry = !!expirySec;
-  const daysLeft = hasExpiry
-    ? Math.ceil((Number(expirySec) * 1000 - Date.now()) / 86400000)
-    : null;
-
+  const daysLeft: number | null = hasExpiry ? Math.ceil((Number(expirySec) * 1000 - Date.now()) / 86400000) : null;
   const stockPct = slot.capacity > 0 ? Math.round((slot.quantity / slot.capacity) * 100) : 0;
+  const isLow = slot.quantity <= slot.lowThreshold && slot.quantity > 0;
+  const isExpired = daysLeft !== null && daysLeft <= 0;
+  const isExpiring = daysLeft !== null && daysLeft > 0 && daysLeft <= 30;
 
   return (
-    <div className="popup-overlay" onClick={onClose}>
-      <div className="popup" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="popup-header">
-          <div>
-            <h2>🔬 รายละเอียดช่องยา</h2>
-            <span className="popup-header__addr">{slot.code} · ตู้ {slot.cabinetId?.slice(0, 8)}</span>
+    <div className="sdp-overlay" onClick={onClose}>
+      <div className="sdp" onClick={(e) => e.stopPropagation()}>
+        
+        {/* ── Hero Card ── */}
+        <div className="sdp-hero">
+          <button className="sdp-close" onClick={onClose}>✕</button>
+          <div className="sdp-hero__img">
+            {slot.imageUrl ? <img src={slot.imageUrl} alt={slot.drugName} /> : "💊"}
           </div>
-          <button className="popup-close" onClick={onClose}>✕</button>
-        </div>
-
-        {/* Body */}
-        <div className="popup-body">
-          {/* Drug Image */}
-          <div className="drug-image-area">
-            <div className="drug-image">
-              {slot.imageUrl ? <img src={slot.imageUrl} alt={slot.drugName} /> : "💊"}
-            </div>
-            <div className="drug-stock-bar">
-              <div className="drug-stock-num">{slot.quantity}</div>
-              <div className="drug-stock-label">{slot.unit || "หน่วย"} / {slot.capacity}</div>
-              <div className="stock-bar-track">
-                <div className="stock-bar-fill" style={{ width: `${stockPct}%`, background: stockPct < 20 ? "#dc3545" : "#28a745" }} />
-              </div>
+          <div className="sdp-hero__info">
+            <div className="sdp-hero__name">{slot.drugName || "ช่องว่าง"}</div>
+            <div className="sdp-hero__code">{slot.drugCode || "—"}</div>
+            <div className="sdp-hero__tags">
+              {slot.drugType && <span className="sdp-tag sdp-tag--type">{slot.drugType}</span>}
+              {slot.lotNumber && <span className="sdp-tag sdp-tag--lot">Lot: {slot.lotNumber}</span>}
             </div>
           </div>
-
-          {/* Drug Info */}
-          <div className="drug-info">
-            <div className="drug-name">{slot.drugName || "ช่องว่าง"}</div>
-            <div className="drug-type-row">
-              <span className="tag tag-code">{slot.drugCode}</span>
-              {slot.drugType && <span className="tag tag-form">💊 {slot.drugType}</span>}
-              {slot.lotNumber && <span className="tag tag-manufacturer">🏷️ Lot: {slot.lotNumber}</span>}
-            </div>
-
-            {/* LASA Warning */}
-            {slot.lasaGroup && (
-              <div className="alert-box alert-lasa">
-                ⚠️ <b>LASA:</b> {slot.lasaGroup} — ตรวจสอบชื่อยาก่อนจ่าย
-              </div>
-            )}
-
-            {/* High Alert */}
-            {slot.highAlert && (
-              <div className="alert-box alert-danger">
-                🔴 <b>HIGH ALERT:</b> ยาที่มีความเสี่ยงสูง — ต้องตรวจสอบซ้ำก่อนจ่าย
-              </div>
-            )}
+          <div className="sdp-hero__stock">
+            <div className="sdp-hero__qty">{slot.quantity}<span>/{slot.capacity}</span></div>
+            <div className="sdp-hero__stockbar"><div className="sdp-hero__stockfill" style={{width: `${stockPct}%`, background: stockPct < 20 ? "#dc3545" : stockPct < 50 ? "#ffc107" : "#28a745"}} /></div>
           </div>
         </div>
 
-        {/* Detail Grid */}
-        <div className="popup-detail-grid">
-          <div className="detail-item">
-            <span className="detail-label">📅 วันหมดอายุ</span>
-            <span className={`detail-value ${daysLeft !== null && daysLeft < 30 ? "expiry-warning" : "expiry-safe"}`}>
-              {hasExpiry
-                ? `${new Date(Number(expirySec) * 1000).toLocaleDateString("th-TH")} (${daysLeft! > 0 ? `อีก ${daysLeft} วัน` : "หมดอายุแล้ว"})`
-                : "—"}
-            </span>
+        {/* ── Status Banner ── */}
+        {isExpired && <div className="sdp-banner sdp-banner--expired">⛔ ยาหมดอายุแล้ว — ห้ามจ่าย</div>}
+        {isExpiring && !isExpired && <div className="sdp-banner sdp-banner--expiring">⚠️ ยาใกล้หมดอายุ — อีก {daysLeft} วัน</div>}
+        {isLow && !isExpired && <div className="sdp-banner sdp-banner--low">📉 สต็อกเหลือน้อย ({slot.quantity} / {slot.capacity})</div>}
+        {!isLow && !isExpired && !isExpiring && slot.quantity > 0 && <div className="sdp-banner sdp-banner--ok">✅ สต็อกปกติ พร้อมจ่าย</div>}
+
+        {/* ── Alerts ── */}
+        {slot.lasaGroup && (
+          <div className="sdp-alert sdp-alert--lasa">
+            <span className="sdp-alert__icon">⚠️</span>
+            <div><b>LASA Warning</b><br/>{slot.lasaGroup} — ตรวจสอบชื่อยาก่อนจ่าย</div>
           </div>
-          <div className="detail-item">
-            <span className="detail-label">🏷️ Lot Number</span>
-            <span className="detail-value">{slot.lotNumber || "—"}</span>
+        )}
+        {slot.highAlert && (
+          <div className="sdp-alert sdp-alert--danger">
+            <span className="sdp-alert__icon">🔴</span>
+            <div><b>HIGH ALERT</b><br/>ยาที่มีความเสี่ยงสูง ต้องตรวจสอบซ้ำก่อนจ่าย</div>
           </div>
-          <div className="detail-item">
-            <span className="detail-label">📍 ตำแหน่ง</span>
-            <span className="detail-value">ชั้น {slot.shelf || 1} · แถว {slot.rowNum || 1}</span>
-          </div>
-          <div className="detail-item">
-            <span className="detail-label">📦 คงเหลือ</span>
-            <span className="detail-value">{slot.quantity} / {slot.capacity} ({stockPct}%)</span>
-          </div>
-          {(slot as any).widthCm > 0 && (
-            <div className="detail-item">
-              <span className="detail-label">📐 ขนาดช่อง (cm)</span>
-              <span className="detail-value">{slot.widthCm} × {slot.depthCm} × {slot.heightCm}</span>
+        )}
+
+        {/* ── Detail Cards ── */}
+        <div className="sdp-details">
+          <div className="sdp-detail">
+            <div className="sdp-detail__icon">📅</div>
+            <div className="sdp-detail__label">วันหมดอายุ</div>
+            <div className={`sdp-detail__val ${isExpiring ? "text-red" : isExpired ? "text-red" : ""}`}>
+              {hasExpiry ? new Date(Number(expirySec) * 1000).toLocaleDateString("th-TH") : "—"}
             </div>
-          )}
-          {slot.drugType && (
-            <div className="detail-item">
-              <span className="detail-label">💊 ประเภทยา</span>
-              <span className="detail-value">{slot.drugType}</span>
-            </div>
-          )}
+          </div>
+          <div className="sdp-detail">
+            <div className="sdp-detail__icon">🏷️</div>
+            <div className="sdp-detail__label">Lot</div>
+            <div className="sdp-detail__val mono">{slot.lotNumber || "—"}</div>
+          </div>
+          <div className="sdp-detail">
+            <div className="sdp-detail__icon">📍</div>
+            <div className="sdp-detail__label">ตำแหน่ง</div>
+            <div className="sdp-detail__val">ชั้น {slot.shelf || 1} · แถว {slot.rowNum || 1}</div>
+          </div>
+          <div className="sdp-detail">
+            <div className="sdp-detail__icon">📐</div>
+            <div className="sdp-detail__label">ขนาด (cm)</div>
+            <div className="sdp-detail__val">{(slot as any).widthCm > 0 ? `${slot.widthCm}×${slot.depthCm}×${slot.heightCm}` : "—"}</div>
+          </div>
         </div>
 
-        {/* Carousel: Same drug in other slots */}
+        {/* ── Carousel ── */}
         {sameDrugSlots.length > 0 && (
-          <div className="popup-carousel-section">
-            <div className="carousel-title">📍 ตำแหน่งยาตัวเดียวกันในตู้นี้ ({sameDrugSlots.length})</div>
-            <div className="carousel">
-              {!loading && sameDrugSlots.map((s) => (
-                <div key={s.id} className="carousel-card">
-                  <div className="carousel-card-addr">{s.code}</div>
-                  <div className="carousel-card-qty">{s.quantity}</div>
-                  <div className="carousel-card-label">{s.unit || "หน่วย"}</div>
+          <div className="sdp-carousel-sec">
+            <div className="sdp-carousel-sec__title">ยาตัวเดียวกันในตู้อื่น ({sameDrugSlots.length})</div>
+            <div className="sdp-carousel">
+              {sameDrugSlots.map((s: any) => (
+                <div key={s.id} className="sdp-carousel-card">
+                  <div className="sdp-carousel-card__code">{s.code}</div>
+                  <div className="sdp-carousel-card__qty">{s.quantity}</div>
+                  <div className="sdp-carousel-card__unit">{s.unit || "หน่วย"}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Footer */}
-        <div className="popup-footer">
-          <button className="btn btn-outline" onClick={onClose}>ปิด</button>
-          {onRefill && <button className="btn btn-outline" onClick={() => onRefill(slot)}>📦 เติมยา</button>}
-          {onDispense && slot.quantity > 0 && (
-            <button className="btn btn-primary" onClick={() => onDispense(slot)}>💊 เบิกยาจากช่องนี้</button>
+        {/* ── Footer ── */}
+        <div className="sdp-footer">
+          <button className="sdp-btn sdp-btn--ghost" onClick={onClose}>ปิด</button>
+          {onRefill && <button className="sdp-btn sdp-btn--outline" onClick={() => onRefill(slot)}>📦 เติมยา</button>}
+          {onDispense && slot.quantity > 0 && !isExpired && (
+            <button className="sdp-btn sdp-btn--primary" onClick={() => onDispense(slot)}>💊 เบิกยา</button>
           )}
         </div>
       </div>

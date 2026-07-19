@@ -1244,57 +1244,67 @@ body {
   .patient-card { flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 16px; }
 }
 
-/* ── Slot Detail Popup ─────────────────────────────────────── */
-.popup-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000;
-  display: flex; align-items: center; justify-content: center;
-  animation: fadeIn 0.2s ease-out;
-}
-.popup {
-  background: #fff; border-radius: 16px; width: min(720px, 90vw); max-height: 90vh;
-  overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.2);
-}
-.popup-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 24px; border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(135deg, #1e1e2e, #313244); color: #fff;
-  border-radius: 16px 16px 0 0; position: sticky; top: 0; z-index: 1;
-}
-.popup-header h2 { font-size: 1.25rem; font-weight: 700; }
-.popup-header__addr { font-size: 0.75rem; opacity: 0.7; font-family: monospace; }
-.popup-close { width: 36px; height: 36px; border: none; background: rgba(255,255,255,0.15); color: #fff; border-radius: 50%; font-size: 1.2rem; cursor: pointer; }
-.popup-body { display: flex; gap: 20px; padding: 24px; }
-.drug-image-area { width: 180px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.drug-image { width: 160px; height: 160px; border-radius: 12px; background: linear-gradient(135deg, #e8f0fe, #d2e3fc); display: flex; align-items: center; justify-content: center; font-size: 4rem; border: 2px solid #1e66f5; overflow: hidden; }
-.drug-image img { width: 100%; height: 100%; object-fit: cover; }
-.drug-stock-num { font-size: 2rem; font-weight: 800; color: #1e66f5; }
-.drug-stock-label { font-size: 0.75rem; color: #6b7280; }
-.stock-bar-track { width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; margin-top: 4px; }
-.stock-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
-.drug-info { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-.drug-name { font-size: 1.25rem; font-weight: 700; color: #1e1e2e; }
-.drug-type-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.tag { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.tag-code { background: #e8f0fe; color: #1e66f5; font-family: monospace; }
-.tag-form { background: #e6f7e6; color: #1e7e1e; }
-.tag-manufacturer { background: #f5f5f5; color: #374151; }
-.alert-box { padding: 10px 14px; border-radius: 8px; font-size: 0.8125rem; display: flex; align-items: flex-start; gap: 8px; }
-.alert-lasa { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
-.alert-danger { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
-.popup-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px 24px; border-top: 1px solid #e5e7eb; }
-.detail-item { display: flex; flex-direction: column; gap: 2px; }
-.detail-label { font-size: 0.6875rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
-.detail-value { font-size: 0.9375rem; font-weight: 600; color: #1e1e2e; }
-.expiry-warning { color: #dc3545; }
-.expiry-safe { color: #28a745; }
-.popup-carousel-section { padding: 0 24px 24px; }
-.carousel-title { font-size: 0.8125rem; font-weight: 700; color: #6b7280; margin-bottom: 12px; text-transform: uppercase; }
-.carousel { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
-.carousel-card { min-width: 100px; padding: 12px; border-radius: 10px; border: 1px solid #e5e7eb; text-align: center; flex-shrink: 0; }
-.carousel-card-addr { font: 700 0.875rem monospace; color: #1e1e2e; }
-.carousel-card-qty { font-size: 1.25rem; font-weight: 700; color: #1e66f5; margin-top: 4px; }
-.carousel-card-label { font-size: 0.6875rem; color: #9ca3af; }
-.popup-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end; }
-.btn { padding: 10px 24px; border-radius: 8px; font-size: 0.9375rem; font-weight: 600; cursor: pointer; border: none; }
-.btn-primary { background: #1e66f5; color: #fff; }
-.btn-outline { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+/* ── Slot Detail Popup (v2 — modern pharmacy design) ────── */
+.sdp-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; display:flex; align-items:center; justify-content:center; animation:fadeIn .2s; }
+.sdp { background:#fff; border-radius:20px; width:min(680px,92vw); max-height:92vh; overflow-y:auto; box-shadow:0 12px 48px rgba(0,0,0,0.18); }
+
+/* Hero */
+.sdp-hero { display:flex; gap:20px; padding:28px 24px 20px; position:relative; background:linear-gradient(135deg,#f8faff,#eef3ff); border-radius:20px 20px 0 0; }
+.sdp-close { position:absolute; top:12px; right:12px; width:32px; height:32px; border:none; background:rgba(0,0,0,0.08); border-radius:50%; font-size:1rem; cursor:pointer; color:#555; }
+.sdp-hero__img { width:100px; height:100px; border-radius:16px; background:#fff; border:2px solid #1e66f5; display:flex; align-items:center; justify-content:center; font-size:3rem; flex-shrink:0; overflow:hidden; }
+.sdp-hero__img img { width:100%; height:100%; object-fit:cover; }
+.sdp-hero__info { flex:1; display:flex; flex-direction:column; gap:6px; }
+.sdp-hero__name { font-size:1.3rem; font-weight:700; color:#1e1e2e; }
+.sdp-hero__code { font:600 .95rem monospace; color:#6b7280; }
+.sdp-hero__tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+.sdp-tag { padding:3px 10px; border-radius:14px; font-size:.7rem; font-weight:600; }
+.sdp-tag--type { background:#e8f0fe; color:#1e66f5; }
+.sdp-tag--lot { background:#f3f4f6; color:#374151; font-family:monospace; }
+.sdp-hero__stock { text-align:center; min-width:60px; }
+.sdp-hero__qty { font-size:2rem; font-weight:800; color:#1e66f5; }
+.sdp-hero__qty span { font-size:.9rem; font-weight:400; color:#9ca3af; }
+.sdp-hero__stockbar { width:60px; height:6px; background:#e5e7eb; border-radius:3px; margin:8px auto 0; }
+.sdp-hero__stockfill { height:100%; border-radius:3px; transition:width .4s; }
+
+/* Status banner */
+.sdp-banner { padding:10px 24px; font-size:.875rem; font-weight:600; text-align:center; }
+.sdp-banner--ok { background:#e6f7e6; color:#1e7e1e; }
+.sdp-banner--low { background:#fff3cd; color:#856404; }
+.sdp-banner--expiring { background:#ffe0b2; color:#e65100; }
+.sdp-banner--expired { background:#f8d7da; color:#721c24; }
+
+/* Alerts */
+.sdp-alert { margin:0 24px 8px; padding:12px 16px; border-radius:10px; display:flex; gap:10px; font-size:.8125rem; }
+.sdp-alert--lasa { background:#fff8e1; color:#856404; border-left:4px solid #ffc107; }
+.sdp-alert--danger { background:#fff0f0; color:#721c24; border-left:4px solid #dc3545; }
+.sdp-alert__icon { font-size:1.2rem; flex-shrink:0; margin-top:1px; }
+
+/* Detail cards */
+.sdp-details { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:20px 24px; }
+.sdp-detail { background:#f8f9fa; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:4px; }
+.sdp-detail__icon { font-size:1.1rem; }
+.sdp-detail__label { font-size:.65rem; text-transform:uppercase; letter-spacing:.5px; color:#9ca3af; }
+.sdp-detail__val { font-size:.9rem; font-weight:600; color:#1e1e2e; }
+.text-red { color:#dc3545; }
+.mono { font-family:monospace; }
+
+/* Carousel */
+.sdp-carousel-sec { padding:0 24px 20px; }
+.sdp-carousel-sec__title { font-size:.75rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+.sdp-carousel { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; }
+.sdp-carousel-card { min-width:90px; padding:12px; border-radius:10px; border:1px solid #e5e7eb; text-align:center; cursor:pointer; transition:border-color .15s; background:#fff; }
+.sdp-carousel-card:hover { border-color:#1e66f5; }
+.sdp-carousel-card__code { font:700 .85rem monospace; color:#1e1e2e; }
+.sdp-carousel-card__qty { font-size:1.15rem; font-weight:700; color:#1e66f5; margin-top:4px; }
+.sdp-carousel-card__unit { font-size:.65rem; color:#9ca3af; }
+
+/* Footer */
+.sdp-footer { padding:16px 24px; border-top:1px solid #e5e7eb; display:flex; gap:10px; justify-content:flex-end; position:sticky; bottom:0; background:#fff; border-radius:0 0 20px 20px; }
+.sdp-btn { padding:10px 20px; border-radius:10px; font-size:.9rem; font-weight:600; cursor:pointer; border:none; transition:all .15s; }
+.sdp-btn--primary { background:#1e66f5; color:#fff; box-shadow:0 2px 8px rgba(30,102,245,.3); }
+.sdp-btn--primary:hover { background:#1554d0; transform:translateY(-1px); }
+.sdp-btn--outline { background:#fff; color:#374151; border:1px solid #d1d5db; }
+.sdp-btn--ghost { background:transparent; color:#6b7280; }
+.sdp-btn--ghost:hover { background:#f3f4f6; }
+
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
