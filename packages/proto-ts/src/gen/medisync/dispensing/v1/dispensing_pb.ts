@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/dispensing/v1/dispensing.proto.
  */
 export const file_medisync_dispensing_v1_dispensing: GenFile = /*@__PURE__*/
-  fileDesc("CidtZWRpc3luYy9kaXNwZW5zaW5nL3YxL2Rpc3BlbnNpbmcucHJvdG8SFm1lZGlzeW5jLmRpc3BlbnNpbmcudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIpcDCgxQcmVzY3JpcHRpb24SCgoCaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhUKDXNvdXJjZV9zeXN0ZW0YAyABKAkSCgoCaG4YBCABKAkSFAoMcGF0aWVudF9uYW1lGAUgASgJEg8KB3dhcmRfaWQYBiABKAkSNwoFaXRlbXMYByADKAsyKC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvbkl0ZW0SOAoFc3RhdGUYCCABKA4yKS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvblN0YXRlEhYKDmZhaWx1cmVfcmVhc29uGAkgASgJEi0KCWlzc3VlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAijQEKGExpc3RQcmVzY3JpcHRpb25zUmVxdWVzdBIPCgd3YXJkX2lkGAEgASgJEjkKBnN0YXRlcxgCIAMoDjIpLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uU3RhdGUSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkihgEKGUxpc3RQcmVzY3JpcHRpb25zUmVzcG9uc2USOwoNcHJlc2NyaXB0aW9ucxgBIAMoCzIkLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt0b3RhbF9jb3VudBgDIAEoAyIkChZHZXRQcmVzY3JpcHRpb25SZXF1ZXN0EgoKAmlkGAEgASgJIlUKF0dldFByZXNjcmlwdGlvblJlc3BvbnNlEjoKDHByZXNjcmlwdGlvbhgBIAEoCzIkLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uIjwKD0Rpc3BlbnNlUmVxdWVzdBIXCg9wcmVzY3JpcHRpb25faWQYASABKAkSEAoIdHJhY2VfaWQYAiABKAkiTgoQRGlzcGVuc2VSZXNwb25zZRI6CgxwcmVzY3JpcHRpb24YASABKAsyJC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvbiqcAgoRUHJlc2NyaXB0aW9uU3RhdGUSIgoeUFJFU0NSSVBUSU9OX1NUQVRFX1VOU1BFQ0lGSUVEEAASHwobUFJFU0NSSVBUSU9OX1NUQVRFX1JFQ0VJVkVEEAESHAoYUFJFU0NSSVBUSU9OX1NUQVRFX1JFQURZEAISIQodUFJFU0NSSVBUSU9OX1NUQVRFX0RJU1BFTlNJTkcQAxIgChxQUkVTQ1JJUFRJT05fU1RBVEVfRElTUEVOU0VEEAQSHQoZUFJFU0NSSVBUSU9OX1NUQVRFX0ZBSUxFRBAFEiAKHFBSRVNDUklQVElPTl9TVEFURV9DQU5DRUxMRUQQBhIeChpQUkVTQ1JJUFRJT05fU1RBVEVfRVhQSVJFRBAHMuACChFEaXNwZW5zaW5nU2VydmljZRJ4ChFMaXN0UHJlc2NyaXB0aW9ucxIwLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuTGlzdFByZXNjcmlwdGlvbnNSZXF1ZXN0GjEubWVkaXN5bmMuZGlzcGVuc2luZy52MS5MaXN0UHJlc2NyaXB0aW9uc1Jlc3BvbnNlEnIKD0dldFByZXNjcmlwdGlvbhIuLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuR2V0UHJlc2NyaXB0aW9uUmVxdWVzdBovLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuR2V0UHJlc2NyaXB0aW9uUmVzcG9uc2USXQoIRGlzcGVuc2USJy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlUmVxdWVzdBooLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRGlzcGVuc2VSZXNwb25zZUJkWmJnaXRodWIuY29tL2FkbS1jaHVyYTNpbnRlci9tZWRpc3luYy9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi9tZWRpc3luYy9kaXNwZW5zaW5nL3YxO2Rpc3BlbnNpbmd2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("CidtZWRpc3luYy9kaXNwZW5zaW5nL3YxL2Rpc3BlbnNpbmcucHJvdG8SFm1lZGlzeW5jLmRpc3BlbnNpbmcudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIpcDCgxQcmVzY3JpcHRpb24SCgoCaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhUKDXNvdXJjZV9zeXN0ZW0YAyABKAkSCgoCaG4YBCABKAkSFAoMcGF0aWVudF9uYW1lGAUgASgJEg8KB3dhcmRfaWQYBiABKAkSNwoFaXRlbXMYByADKAsyKC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvbkl0ZW0SOAoFc3RhdGUYCCABKA4yKS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvblN0YXRlEhYKDmZhaWx1cmVfcmVhc29uGAkgASgJEi0KCWlzc3VlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAijQEKGExpc3RQcmVzY3JpcHRpb25zUmVxdWVzdBIPCgd3YXJkX2lkGAEgASgJEjkKBnN0YXRlcxgCIAMoDjIpLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uU3RhdGUSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkihgEKGUxpc3RQcmVzY3JpcHRpb25zUmVzcG9uc2USOwoNcHJlc2NyaXB0aW9ucxgBIAMoCzIkLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt0b3RhbF9jb3VudBgDIAEoAyIkChZHZXRQcmVzY3JpcHRpb25SZXF1ZXN0EgoKAmlkGAEgASgJIlUKF0dldFByZXNjcmlwdGlvblJlc3BvbnNlEjoKDHByZXNjcmlwdGlvbhgBIAEoCzIkLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uIjwKD0Rpc3BlbnNlUmVxdWVzdBIXCg9wcmVzY3JpcHRpb25faWQYASABKAkSEAoIdHJhY2VfaWQYAiABKAkiTgoQRGlzcGVuc2VSZXNwb25zZRI6CgxwcmVzY3JpcHRpb24YASABKAsyJC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvbiJUChlMaXN0RW1lcmdlbmN5RHJ1Z3NSZXF1ZXN0EhAKCGtpb3NrX2lkGAEgASgJEhEKCXBhZ2Vfc2l6ZRgCIAEoBRISCgpwYWdlX3Rva2VuGAMgASgJIpQBCg1FbWVyZ2VuY3lEcnVnEg8KB3Nsb3RfaWQYASABKAkSEQoJc2xvdF9jb2RlGAIgASgJEhEKCWRydWdfY29kZRgDIAEoCRIRCglkcnVnX25hbWUYBCABKAkSEQoJZHJ1Z190eXBlGAUgASgJEhAKCHF1YW50aXR5GAYgASgFEhQKDG1heF9kaXNwZW5zZRgHIAEoBSKAAQoaTGlzdEVtZXJnZW5jeURydWdzUmVzcG9uc2USNAoFZHJ1Z3MYASADKAsyJS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkVtZXJnZW5jeURydWcSEwoLdG90YWxfY291bnQYAiABKAMSFwoPbmV4dF9wYWdlX3Rva2VuGAMgASgJIoYBChhFbWVyZ2VuY3lEaXNwZW5zZVJlcXVlc3QSEAoIa2lvc2tfaWQYASABKAkSEgoKY2FyZF90b2tlbhgCIAEoCRIPCgdzbG90X2lkGAMgASgJEhEKCWRydWdfY29kZRgEIAEoCRIQCghxdWFudGl0eRgFIAEoBRIOCgZyZWFzb24YBiABKAkieAoZRW1lcmdlbmN5RGlzcGVuc2VSZXNwb25zZRITCgtkaXNwZW5zZV9pZBgBIAEoCRIRCglzbG90X2NvZGUYAiABKAkSEQoJZHJ1Z19uYW1lGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEg4KBnN0YXR1cxgFIAEoCSqcAgoRUHJlc2NyaXB0aW9uU3RhdGUSIgoeUFJFU0NSSVBUSU9OX1NUQVRFX1VOU1BFQ0lGSUVEEAASHwobUFJFU0NSSVBUSU9OX1NUQVRFX1JFQ0VJVkVEEAESHAoYUFJFU0NSSVBUSU9OX1NUQVRFX1JFQURZEAISIQodUFJFU0NSSVBUSU9OX1NUQVRFX0RJU1BFTlNJTkcQAxIgChxQUkVTQ1JJUFRJT05fU1RBVEVfRElTUEVOU0VEEAQSHQoZUFJFU0NSSVBUSU9OX1NUQVRFX0ZBSUxFRBAFEiAKHFBSRVNDUklQVElPTl9TVEFURV9DQU5DRUxMRUQQBhIeChpQUkVTQ1JJUFRJT05fU1RBVEVfRVhQSVJFRBAHMtcEChFEaXNwZW5zaW5nU2VydmljZRJ4ChFMaXN0UHJlc2NyaXB0aW9ucxIwLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuTGlzdFByZXNjcmlwdGlvbnNSZXF1ZXN0GjEubWVkaXN5bmMuZGlzcGVuc2luZy52MS5MaXN0UHJlc2NyaXB0aW9uc1Jlc3BvbnNlEnIKD0dldFByZXNjcmlwdGlvbhIuLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuR2V0UHJlc2NyaXB0aW9uUmVxdWVzdBovLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuR2V0UHJlc2NyaXB0aW9uUmVzcG9uc2USXQoIRGlzcGVuc2USJy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlUmVxdWVzdBooLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRGlzcGVuc2VSZXNwb25zZRJ7ChJMaXN0RW1lcmdlbmN5RHJ1Z3MSMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkxpc3RFbWVyZ2VuY3lEcnVnc1JlcXVlc3QaMi5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkxpc3RFbWVyZ2VuY3lEcnVnc1Jlc3BvbnNlEngKEUVtZXJnZW5jeURpc3BlbnNlEjAubWVkaXN5bmMuZGlzcGVuc2luZy52MS5FbWVyZ2VuY3lEaXNwZW5zZVJlcXVlc3QaMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkVtZXJnZW5jeURpc3BlbnNlUmVzcG9uc2VCZFpiZ2l0aHViLmNvbS9hZG0tY2h1cmEzaW50ZXIvbWVkaXN5bmMvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vbWVkaXN5bmMvZGlzcGVuc2luZy92MTtkaXNwZW5zaW5ndjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.dispensing.v1.PrescriptionItem
@@ -266,6 +266,192 @@ export const DispenseResponseSchema: GenMessage<DispenseResponse> = /*@__PURE__*
   messageDesc(file_medisync_dispensing_v1_dispensing, 7);
 
 /**
+ * @generated from message medisync.dispensing.v1.ListEmergencyDrugsRequest
+ */
+export type ListEmergencyDrugsRequest = Message<"medisync.dispensing.v1.ListEmergencyDrugsRequest"> & {
+  /**
+   * @generated from field: string kiosk_id = 1;
+   */
+  kioskId: string;
+
+  /**
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 3;
+   */
+  pageToken: string;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.ListEmergencyDrugsRequest.
+ * Use `create(ListEmergencyDrugsRequestSchema)` to create a new message.
+ */
+export const ListEmergencyDrugsRequestSchema: GenMessage<ListEmergencyDrugsRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 8);
+
+/**
+ * @generated from message medisync.dispensing.v1.EmergencyDrug
+ */
+export type EmergencyDrug = Message<"medisync.dispensing.v1.EmergencyDrug"> & {
+  /**
+   * @generated from field: string slot_id = 1;
+   */
+  slotId: string;
+
+  /**
+   * @generated from field: string slot_code = 2;
+   */
+  slotCode: string;
+
+  /**
+   * @generated from field: string drug_code = 3;
+   */
+  drugCode: string;
+
+  /**
+   * @generated from field: string drug_name = 4;
+   */
+  drugName: string;
+
+  /**
+   * @generated from field: string drug_type = 5;
+   */
+  drugType: string;
+
+  /**
+   * @generated from field: int32 quantity = 6;
+   */
+  quantity: number;
+
+  /**
+   * @generated from field: int32 max_dispense = 7;
+   */
+  maxDispense: number;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.EmergencyDrug.
+ * Use `create(EmergencyDrugSchema)` to create a new message.
+ */
+export const EmergencyDrugSchema: GenMessage<EmergencyDrug> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 9);
+
+/**
+ * @generated from message medisync.dispensing.v1.ListEmergencyDrugsResponse
+ */
+export type ListEmergencyDrugsResponse = Message<"medisync.dispensing.v1.ListEmergencyDrugsResponse"> & {
+  /**
+   * @generated from field: repeated medisync.dispensing.v1.EmergencyDrug drugs = 1;
+   */
+  drugs: EmergencyDrug[];
+
+  /**
+   * @generated from field: int64 total_count = 2;
+   */
+  totalCount: bigint;
+
+  /**
+   * @generated from field: string next_page_token = 3;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.ListEmergencyDrugsResponse.
+ * Use `create(ListEmergencyDrugsResponseSchema)` to create a new message.
+ */
+export const ListEmergencyDrugsResponseSchema: GenMessage<ListEmergencyDrugsResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 10);
+
+/**
+ * @generated from message medisync.dispensing.v1.EmergencyDispenseRequest
+ */
+export type EmergencyDispenseRequest = Message<"medisync.dispensing.v1.EmergencyDispenseRequest"> & {
+  /**
+   * @generated from field: string kiosk_id = 1;
+   */
+  kioskId: string;
+
+  /**
+   * scanned user card
+   *
+   * @generated from field: string card_token = 2;
+   */
+  cardToken: string;
+
+  /**
+   * @generated from field: string slot_id = 3;
+   */
+  slotId: string;
+
+  /**
+   * @generated from field: string drug_code = 4;
+   */
+  drugCode: string;
+
+  /**
+   * @generated from field: int32 quantity = 5;
+   */
+  quantity: number;
+
+  /**
+   * optional reason for audit
+   *
+   * @generated from field: string reason = 6;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.EmergencyDispenseRequest.
+ * Use `create(EmergencyDispenseRequestSchema)` to create a new message.
+ */
+export const EmergencyDispenseRequestSchema: GenMessage<EmergencyDispenseRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 11);
+
+/**
+ * @generated from message medisync.dispensing.v1.EmergencyDispenseResponse
+ */
+export type EmergencyDispenseResponse = Message<"medisync.dispensing.v1.EmergencyDispenseResponse"> & {
+  /**
+   * @generated from field: string dispense_id = 1;
+   */
+  dispenseId: string;
+
+  /**
+   * @generated from field: string slot_code = 2;
+   */
+  slotCode: string;
+
+  /**
+   * @generated from field: string drug_name = 3;
+   */
+  drugName: string;
+
+  /**
+   * @generated from field: int32 quantity = 4;
+   */
+  quantity: number;
+
+  /**
+   * "DISPENSED" or "FAILED"
+   *
+   * @generated from field: string status = 5;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.EmergencyDispenseResponse.
+ * Use `create(EmergencyDispenseResponseSchema)` to create a new message.
+ */
+export const EmergencyDispenseResponseSchema: GenMessage<EmergencyDispenseResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 12);
+
+/**
  * Lifecycle: RECEIVED -> READY -> DISPENSING -> DISPENSED | FAILED.
  * CANCELLED and EXPIRED are terminal states reachable from RECEIVED/READY.
  *
@@ -346,6 +532,24 @@ export const DispensingService: GenService<{
     methodKind: "unary";
     input: typeof DispenseRequestSchema;
     output: typeof DispenseResponseSchema;
+  },
+  /**
+   * Emergency dispensing — sticker-less, card-verified.
+   *
+   * @generated from rpc medisync.dispensing.v1.DispensingService.ListEmergencyDrugs
+   */
+  listEmergencyDrugs: {
+    methodKind: "unary";
+    input: typeof ListEmergencyDrugsRequestSchema;
+    output: typeof ListEmergencyDrugsResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.dispensing.v1.DispensingService.EmergencyDispense
+   */
+  emergencyDispense: {
+    methodKind: "unary";
+    input: typeof EmergencyDispenseRequestSchema;
+    output: typeof EmergencyDispenseResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_medisync_dispensing_v1_dispensing, 0);

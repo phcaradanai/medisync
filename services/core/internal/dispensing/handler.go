@@ -338,6 +338,72 @@ func (s *DispensingServer) authorizeWard(claims *TokenClaims, wardID string) boo
 	return false
 }
 
+// ── Emergency Dispensing ───────────────────────────────────────────
+
+// ListEmergencyDrugs returns drugs marked as emergency-accessible.
+func (s *DispensingServer) ListEmergencyDrugs(ctx context.Context, req *connect.Request[dispensingv1.ListEmergencyDrugsRequest]) (*connect.Response[dispensingv1.ListEmergencyDrugsResponse], error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT s.id, s.code, s.drug_code, COALESCE(s.drug_name,''), COALESCE(s.drug_type,''), s.quantity, s.capacity
+		   FROM inventory.slot s WHERE s.emergency_drug = TRUE AND s.quantity > 0 ORDER BY s.code`)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query emergency: %w", err))
+	}
+	defer rows.Close()
+
+	var drugs []*dispensingv1.EmergencyDrug
+	for rows.Next() {
+		d := &dispensingv1.EmergencyDrug{}
+		if err := rows.Scan(&d.SlotId, &d.SlotCode, &d.DrugCode, &d.DrugName, &d.DrugType, &d.Quantity, &d.MaxDispense); err != nil {
+			continue
+		}
+		drugs = append(drugs, d)
+	}
+	return connect.NewResponse(&dispensingv1.ListEmergencyDrugsResponse{Drugs: drugs, TotalCount: int64(len(drugs))}), nil
+}
+
+// EmergencyDispense performs sticker-less dispensing after card verification.
+func (s *DispensingServer) EmergencyDispense(ctx context.Context, req *connect.Request[dispensingv1.EmergencyDispenseRequest]) (*connect.Response[dispensingv1.EmergencyDispenseResponse], error) {
+	msg := req.Msg
+
+	// Verify card token against user
+	var userID string
+	err := s.pool.QueryRow(ctx,
+		`SELECT id FROM identity.users WHERE card_token_hash = crypt($1, card_token_hash) AND emergency_access = TRUE`, msg.CardToken).Scan(&userID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid card or no emergency access"))
+	}
+
+	// Verify slot exists and is emergency-accessible
+	var slotCode, drugName string
+	err = s.pool.QueryRow(ctx,
+		`SELECT code, drug_name FROM inventory.slot WHERE id = $1 AND emergency_drug = TRUE AND quantity >= $2`,
+		msg.SlotId, msg.Quantity).Scan(&slotCode, &drugName)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("slot not available for emergency dispense"))
+	}
+
+	// Decrement stock
+	tag, err := s.pool.Exec(ctx,
+		`UPDATE inventory.slot SET quantity = quantity - $1, updated_at = now() WHERE id = $2 AND quantity >= $1`,
+		msg.Quantity, msg.SlotId)
+	if err != nil || tag.RowsAffected() == 0 {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("stock decrement failed"))
+	}
+
+	// Log emergency
+	s.pool.Exec(ctx,
+		`INSERT INTO dispensing.emergency_log (user_id, slot_id, drug_code, quantity, reason, kiosk_id) VALUES ($1,$2,$3,$4,$5,$6)`,
+		userID, msg.SlotId, msg.DrugCode, msg.Quantity, msg.Reason, msg.KioskId)
+
+	// Audit
+	s.writeAudit(ctx, audit.Entry{Actor: userID, Action: "emergency.dispense", Entity: "slot", EntityID: msg.SlotId})
+
+	return connect.NewResponse(&dispensingv1.EmergencyDispenseResponse{
+		DispenseId: userID[:8], SlotCode: slotCode, DrugName: drugName,
+		Quantity: msg.Quantity, Status: "DISPENSED",
+	}), nil
+}
+
 // writeAudit records an audit entry. Audit failures are logged but do not
 // cause the RPC to fail.
 func (s *DispensingServer) writeAudit(ctx context.Context, e audit.Entry) {

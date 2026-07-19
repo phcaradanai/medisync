@@ -83,4 +83,49 @@ service DispensingService {
   rpc ListPrescriptions(ListPrescriptionsRequest) returns (ListPrescriptionsResponse);
   rpc GetPrescription(GetPrescriptionRequest) returns (GetPrescriptionResponse);
   rpc Dispense(DispenseRequest) returns (DispenseResponse);
+
+  // Emergency dispensing — sticker-less, card-verified.
+  rpc ListEmergencyDrugs(ListEmergencyDrugsRequest) returns (ListEmergencyDrugsResponse);
+  rpc EmergencyDispense(EmergencyDispenseRequest) returns (EmergencyDispenseResponse);
+}
+
+// ── Emergency Dispensing ──────────────────────────────────────────
+
+message ListEmergencyDrugsRequest {
+  string kiosk_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message EmergencyDrug {
+  string slot_id = 1;
+  string slot_code = 2;
+  string drug_code = 3;
+  string drug_name = 4;
+  string drug_type = 5;
+  int32 quantity = 6;
+  int32 max_dispense = 7;
+}
+
+message ListEmergencyDrugsResponse {
+  repeated EmergencyDrug drugs = 1;
+  int64 total_count = 2;
+  string next_page_token = 3;
+}
+
+message EmergencyDispenseRequest {
+  string kiosk_id = 1;
+  string card_token = 2;       // scanned user card
+  string slot_id = 3;
+  string drug_code = 4;
+  int32 quantity = 5;
+  string reason = 6;           // optional reason for audit
+}
+
+message EmergencyDispenseResponse {
+  string dispense_id = 1;
+  string slot_code = 2;
+  string drug_name = 3;
+  int32 quantity = 4;
+  string status = 5;           // "DISPENSED" or "FAILED"
 }
