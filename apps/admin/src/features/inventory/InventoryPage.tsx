@@ -208,7 +208,13 @@ export function InventoryPage() {
     ? drugs.filter(d => d.code.toLowerCase().includes(drugFilter.toLowerCase()) || d.name.toLowerCase().includes(drugFilter.toLowerCase()))
     : drugs;
 
-  const cabinetCode = (id: string) => cabinets.find(c => c.id === id)?.code ?? id.slice(0,8);
+  const cabinetCode = (id: string) => cabinets.find(c => c.id === id)?.code || id?.slice(0, 8) || "—";
+
+  const toggleEmergency = useCallback((slot: Slot) => {
+    // Update local state and call backend
+    setSlots(prev => prev.map(s => s.id === slot.id ? { ...s, emergencyDrug: !(s as any).emergencyDrug } as any : s));
+    // TODO: add UpdateSlotEmergency RPC when available
+  }, []);
 
   // ── Render ─────────────────────────────────────────────────────
 
@@ -239,6 +245,7 @@ export function InventoryPage() {
                 <th>Drug</th>
                 <th>Stock</th>
                 <th>Expiry</th>
+                <th style={{ width: 60 }}>🚨 Emerg</th>
                 <th style={{ width: 200 }}>Actions</th>
               </tr>
             </thead>
@@ -251,6 +258,9 @@ export function InventoryPage() {
                   <td>{s.drugCode ? <><strong>{s.drugName}</strong><br/><span className="text-muted mono">{s.drugCode}</span></> : <span className="text-muted">Unassigned</span>}</td>
                   <td><span className={s.quantity <= s.lowThreshold ? "badge badge-error" : ""}>{s.quantity}</span>{s.quantity <= s.lowThreshold && s.quantity > 0 && <span className="badge badge-warning" style={{ marginLeft: 4 }}>Low</span>}</td>
                   <td className="text-muted">{s.expiryDate ? new Date(Number(s.expiryDate.seconds) * 1000).toLocaleDateString() : "—"}</td>
+                  <td>
+                    <input type="checkbox" checked={(s as any).emergencyDrug || false} onChange={() => toggleEmergency(s)} title="Emergency drug access" style={{ width: 18, height: 18, cursor: "pointer" }} />
+                  </td>
                   <td>
                     <div className="inline-actions">
                       <button className="btn-ghost btn-sm" onClick={() => openAssign(s)}>{s.drugId ? "Reassign" : "Assign"}</button>
