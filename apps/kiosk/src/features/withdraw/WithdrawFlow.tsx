@@ -8,6 +8,7 @@ import { InventoryService, ListSlotsRequestSchema, type Slot } from "@medisync/p
 import { transport } from "../../transport.ts";
 import { useAuth } from "../../auth.tsx";
 import ShelfGrid, { getSlotPosition } from "../catalog/ShelfGrid.tsx";
+import DispensingStatusModal from "../dispensing/DispensingStatusModal.tsx";
 
 export type ScannerState = "awaiting_scan" | "validating_sticker" | "scan_failed" | "request_loaded" | "awaiting_identity" | "verifying_identity" | "submitting_to_hardware" | "submission_uncertain" | "identity_failed" | "unauthorized";
 type QueueState = "queued" | "dispensing" | "completed" | "failed" | "unknown";
@@ -47,6 +48,7 @@ export default function WithdrawFlow() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [queue, setQueue] = useState<QueueTransaction[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState("");
   const [now, setNow] = useState(() => new Date());
@@ -201,7 +203,7 @@ export default function WithdrawFlow() {
       <section className="medical-header__brand" aria-label={`${kiosk.displayName} ${kiosk.code}`}><strong>ADM</strong><span>AUTOMATED DISPENSING MACHINE</span><b title={kiosk.displayName}>{kiosk.displayName}</b><small>{kiosk.code}</small></section>
       <section className="medical-header__card connection-card" aria-label="เครือข่าย วันและเวลา"><div className={`medical-header__network ${online ? "is-online" : "is-offline"}`}><span className="network-icon" aria-hidden="true"><StatusIcon name={online ? "network" : "offline"}/></span><div><strong>{online ? "ONLINE" : "OFFLINE"}</strong><small>{online ? "Connected" : "Disconnected"}</small></div></div><time dateTime={now.toISOString()}><strong>{now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</strong><span>{now.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}</span></time></section>
     </header>
-    <section className="cabinet-stage" aria-label="ผังตู้ยาสำหรับอ้างอิงตำแหน่งจริง"><header><div><strong>ผังตู้ยา</strong><span>อ้างอิงตำแหน่งยาจากตู้จริง · {kiosk.code}</span></div><span className={attentionCount ? "cabinet-stage__attention" : "cabinet-stage__ready"}><StatusIcon name={attentionCount ? "warning" : "check"}/>{attentionCount ? `ต้องตรวจสอบ ${attentionCount} คิว` : "พร้อมใช้งาน"}</span></header>{notice && <div className="queue-toast" role="status"><StatusIcon name="check"/>{notice}</div>}<ShelfGrid slots={slots} variant="overview" requestedSlotIds={requestedSlotIds}/>{prescription && <div className="request-location-banner" role="status"><strong>{prescription.prescriptionId}</strong><span>{prescription.items.length} รายการยา · ตำแหน่งที่ Sticker ร้องขอแสดงด้วยเครื่องหมาย ★</span></div>}</section>
+    <section className="cabinet-stage" aria-label="ผังตู้ยาสำหรับอ้างอิงตำแหน่งจริง"><header><div><strong>ผังตู้ยา</strong><span>อ้างอิงตำแหน่งยาจากตู้จริง · {kiosk.code}</span></div><span className={attentionCount ? "cabinet-stage__attention" : "cabinet-stage__ready"}><StatusIcon name={attentionCount ? "warning" : "check"}/>{attentionCount ? `ต้องตรวจสอบ ${attentionCount} คิว` : "พร้อมใช้งาน"}</span>{queue.length > 0 && <button type="button" className="cabinet-stage__queue-btn" onClick={() => setStatusOpen(true)}>📋 สถานะคิว ({queue.length})</button>}</header>{notice && <div className="queue-toast" role="status"><StatusIcon name="check"/>{notice}</div>}<ShelfGrid slots={slots} variant="overview" requestedSlotIds={requestedSlotIds}/>{prescription && <div className="request-location-banner" role="status"><strong>{prescription.prescriptionId}</strong><span>{prescription.items.length} รายการยา · ตำแหน่งที่ Sticker ร้องขอแสดงด้วยเครื่องหมาย ★</span></div>}</section>
     <section className="withdraw-dock"><section className="withdraw-context">
       {["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) ? <div className="sticker-scanner" aria-live="polite"><span className="step-number">1</span><div><h1><span>SCAN QR LABEL</span>สแกน Sticker เบิกยา</h1><p>นำ Sticker เบิกยาไว้เหนือเครื่องสแกน</p></div><div className="sticker-scanner__frame">{workflow === "validating_sticker" ? <><span className="spinner"/><strong>กำลังตรวจสอบ Sticker กับระบบ...</strong></> : <><DecorativeQr/><strong>วาง Sticker ที่จุดสแกน</strong><small>ระบบจะอ่านข้อมูลอัตโนมัติ</small><span className="scanner-ready-pill"><StatusIcon name="check"/>เครื่องสแกนพร้อมใช้งาน</span></>}</div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}</div>
       : <div className="request-review request-review--compact"><header><div><span>รายการเบิกยาที่ตรวจสอบแล้ว</span><strong>{prescription?.prescriptionId}</strong></div><span className="status-badge status-badge--success">✓ Backend ยืนยันรายการ</span></header><div className="patient-context"><span>ผู้ป่วยที่กำลังทำรายการ</span><strong>{prescription?.patientName}</strong><b>HN {prescription?.hn}</b><small>หอผู้ป่วย {prescription?.wardId}</small></div><div className="cart-ready-summary"><div><strong>{prescription?.items.length || 0} รายการยา</strong><span>เปิดตะกร้าเพื่อตรวจสอบตำแหน่ง จำนวน และความพร้อมก่อนยืนยันตัวตน</span></div><button type="button" onClick={() => setCartOpen(true)}>เปิดตะกร้ารายการยา</button></div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}{workflow === "submission_uncertain" && <button type="button" className="reconcile-button" onClick={() => prescription && void reconcile(prescription.id)}>ตรวจสอบสถานะอีกครั้ง</button>}</div>}
@@ -220,6 +222,13 @@ export default function WithdrawFlow() {
         kioskCode={kiosk.code}
         onClose={() => setCartOpen(false)}
         onConfirm={() => { setCartOpen(false); setWorkflow("awaiting_identity"); }}
+      />
+    )}
+    {statusOpen && (
+      <DispensingStatusModal
+        queue={queue}
+        now={now}
+        onClose={() => setStatusOpen(false)}
       />
     )}
   </main>;
