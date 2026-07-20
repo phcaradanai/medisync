@@ -36,7 +36,11 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
+	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
 )
 
@@ -54,8 +58,9 @@ type config struct {
 	natsURL   string
 	kioskCode string
 	kioskPIN  string
-	admin     string
-	adminPass string
+	staff     string
+	staffPass string
+	staffRole string
 	cabinet   string
 	ward      string
 	hn        string
@@ -75,8 +80,9 @@ func parseFlags() config {
 	flag.StringVar(&c.natsURL, "nats", "nats://localhost:4222", "NATS server URL")
 	flag.StringVar(&c.kioskCode, "kiosk-code", "DEMO-K1", "kiosk code (for ListSlots auth)")
 	flag.StringVar(&c.kioskPIN, "kiosk-pin", "123456", "kiosk PIN")
-	flag.StringVar(&c.admin, "admin", "admin", "staff username for the confirm step")
-	flag.StringVar(&c.adminPass, "admin-pass", "medisync-local-admin-2026", "staff password")
+	flag.StringVar(&c.staff, "staff", "pharmacist", "staff username for the confirm step (pharmacist | nurse | refiller)")
+	flag.StringVar(&c.staffPass, "staff-pass", "", "staff password (default: demo-<role>-2026)")
+	flag.StringVar(&c.staffRole, "role", "auto", "label for the simulated scan: PHARMACIST | NURSE | REFILLER (auto = infer from username)")
 	flag.StringVar(&c.cabinet, "cabinet", "", "cabinet id to draw drugs from (empty = any)")
 	flag.StringVar(&c.ward, "ward", "WARD-3A", "ward id stamped on the prescription")
 	flag.StringVar(&c.hn, "hn", "HN900001", "patient hospital number")
@@ -165,18 +171,27 @@ func createPrescription(ctx context.Context, c config, fixedID string) *result {
 	if id == "" {
 		id = fmt.Sprintf("RX-%s", time.Now().Format("20060102-150405"))
 	}
-	ev := map[string]any{
-		"prescriptionId": id,
-		"sourceSystem":   c.source,
-		"hn":             c.hn,
-		"patientName":    c.patient,
-		"wardId":         c.ward,
-		"items":          items,
-		"issuedAt":       time.Now().UTC().Format(time.RFC3339),
-		"traceId":        "kiosktester-" + id,
+	issuedAt := time.Now().UTC()
+	ev := &eventsv1.PrescriptionCreated{
+		PrescriptionId: id,
+		SourceSystem:   c.source,
+		Hn:             c.hn,
+		PatientName:    c.patient,
+		WardId:         c.ward,
+		IssuedAt:       timestamppb.New(issuedAt),
+		TraceId:        "kiosktester-" + id,
+	}
+	for _, it := range items {
+		qty, _ := it["quantity"].(int)
+		ev.Items = append(ev.Items, &eventsv1.PrescriptionItem{
+			DrugCode:   fmt.Sprintf("%v", it["drugCode"]),
+			DrugName:   fmt.Sprintf("%v", it["drugName"]),
+			Quantity:   int32(qty),
+			DosageText: fmt.Sprintf("%v", it["dosageText"]),
+		})
 	}
 	if err := publishPrescription(ctx, c.natsURL, c.source, id, ev); err != nil {
-		return r.fail(fmt.Errorf("publish to NATS: %w", err))
+		return r.fail(fmt.Errorf("publish to NATS JetStream: %w", err))
 	}
 
 	r.ID = id
@@ -248,6 +263,38 @@ func item(s slot, qty int) map[string]any {
 	}
 }
 
+// staffCredentials resolves the (username, password, role label) for the
+// simulated staff scan. Defaults match demoseed users:
+//   pharmacist / demo-pharmacist-2026  → PHARMACIST (เบิกยา)
+//   nurse      / demo-nurse-2026       → NURSE      (เบิกยา)
+//   refiller   / demo-refiller-2026    → REFILLER   (หน้าจอเติมยา)
+func staffCredentials(c config) (username, password, role string) {
+	username = c.staff
+	if username == "" {
+		username = "pharmacist"
+	}
+	password = c.staffPass
+	if password == "" {
+		password = "demo-" + username + "-2026"
+	}
+	role = strings.ToUpper(strings.TrimSpace(c.staffRole))
+	if role == "" || role == "AUTO" {
+		switch username {
+		case "pharmacist":
+			role = "PHARMACIST"
+		case "nurse":
+			role = "NURSE"
+		case "refiller":
+			role = "REFILLER"
+		case "admin":
+			role = "ADMIN"
+		default:
+			role = "STAFF"
+		}
+	}
+	return username, password, role
+}
+
 // ── confirm ──────────────────────────────────────────────────────────
 
 func confirmPrescription(ctx context.Context, c config, prescriptionID string) *result {
@@ -255,11 +302,13 @@ func confirmPrescription(ctx context.Context, c config, prescriptionID string) *
 	ctx, cancel := context.WithTimeout(ctx, c.timeout+15*time.Second)
 	defer cancel()
 
-	staffTok, err := staffLogin(ctx, c.core, c.admin, c.adminPass)
+	username, password, role := staffCredentials(c)
+	staffTok, err := staffLogin(ctx, c.core, username, password)
 	if err != nil {
-		return r.fail(fmt.Errorf("staff login: %w", err))
+		return r.fail(fmt.Errorf("staff login (%s/%s): %w", username, role, err))
 	}
 
+	r.log("👤 จำลองสแกนบัตรผู้ใช้: %s (role=%s)", username, role)
 	r.log("📤 ยืนยันที่ตู้: Dispense(%s)", prescriptionID)
 	pr, err := dispense(ctx, c.core, staffTok, prescriptionID)
 	if err != nil {
@@ -326,8 +375,8 @@ func serve(c config) error {
 	})
 	mux.HandleFunc("/api/run", func(w http.ResponseWriter, req *http.Request) {
 		var body struct {
-			Mode, Cabinet, Ward, HN, Patient, Source, Drugs, ID string
-			Items                                               int
+			Mode, Cabinet, Ward, HN, Patient, Source, Drugs, ID, Staff, StaffPass, Role string
+			Items                                                                      int
 		}
 		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
@@ -339,6 +388,9 @@ func serve(c config) error {
 		override(&rc.hn, body.HN)
 		override(&rc.patient, body.Patient)
 		override(&rc.source, body.Source)
+		override(&rc.staff, body.Staff)
+		override(&rc.staffPass, body.StaffPass)
+		override(&rc.staffRole, body.Role)
 		rc.drugsFlag = body.Drugs
 		if body.Items > 0 {
 			rc.items = body.Items
@@ -499,11 +551,14 @@ func connectCall(ctx context.Context, core, method, token string, body, out any)
 }
 
 // ── NATS producer (real rx.prescription.created path) ────────────────
+// Uses JetStream publish + protojson.Marshal — the exact same wire format the
+// production hospital feeder uses (see cmd/feeder). Plain NATS publish would
+// bypass the RX stream entirely and the dispensing consumer would never see it.
 
-func publishPrescription(ctx context.Context, url, source, id string, ev map[string]any) error {
-	data, err := json.Marshal(ev)
+func publishPrescription(ctx context.Context, url, source, id string, ev *eventsv1.PrescriptionCreated) error {
+	data, err := protojson.Marshal(ev)
 	if err != nil {
-		return err
+		return fmt.Errorf("protojson marshal: %w", err)
 	}
 	nc, err := nats.Connect(url, nats.Name("medisync-kiosktester"))
 	if err != nil {
@@ -511,13 +566,20 @@ func publishPrescription(ctx context.Context, url, source, id string, ev map[str
 	}
 	defer nc.Drain()
 
+	js, err := jetstream.New(nc)
+	if err != nil {
+		return fmt.Errorf("jetstream: %w", err)
+	}
+
 	msg := nats.NewMsg(natsx.SubjectPrescriptionCreated)
 	msg.Data = data
 	msg.Header.Set("Nats-Msg-Id", source+"/"+id)
-	if err := nc.PublishMsg(msg); err != nil {
-		return err
+	ack, err := js.PublishMsg(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("jetstream publish: %w", err)
 	}
-	return nc.FlushWithContext(ctx)
+	_ = ack
+	return nil
 }
 
 // ── helpers ──────────────────────────────────────────────────────────
