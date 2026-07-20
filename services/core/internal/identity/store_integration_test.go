@@ -94,7 +94,7 @@ func TestStoreGetByUsername_Integration(t *testing.T) {
 	// Seed a user directly via the transaction so we can read it back.
 	username := uniqueUsername(t, "getbyuser")
 	_, err := tx.Exec(context.Background(),
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, active)
 		 VALUES ($1, '$2a$10$hashhashhashhashhashhashhashh', 'Test User', 'NURSE', '{WARD-3A,WARD-5B}', true)`,
 		username)
 	if err != nil {
@@ -148,7 +148,7 @@ func TestStoreGetByID_Integration(t *testing.T) {
 	username := uniqueUsername(t, "getbyid")
 	var userID string
 	err := tx.QueryRow(context.Background(),
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, active)
 		 VALUES ($1, '$2a$10$hash', 'ID User', 'PHARMACIST', '{WARD-ICU}', true)
 		 RETURNING id`, username).Scan(&userID)
 	if err != nil {
@@ -199,7 +199,7 @@ func TestStoreGetByCardToken_Integration(t *testing.T) {
 	}
 
 	_, err = tx.Exec(context.Background(),
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, card_token_hash, active)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, card_token_hash, active)
 		 VALUES ($1, '$2a$10$hash', 'Card User', 'NURSE', '{WARD-3A}', $2, true)`,
 		username, hashedBytes)
 	if err != nil {
@@ -252,7 +252,7 @@ func TestStoreSetCardToken_Integration(t *testing.T) {
 	username := uniqueUsername(t, "setcard")
 	var userID string
 	err := tx.QueryRow(context.Background(),
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, active)
 		 VALUES ($1, '$2a$10$hash', 'Card Enrollee', 'NURSE', '{WARD-3A}', true)
 		 RETURNING id`, username).Scan(&userID)
 	if err != nil {
@@ -333,7 +333,7 @@ func TestCardTokenHashColumnExists_Integration(t *testing.T) {
 func TestSeedAdminEmptyTable_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
-	if _, err := tx.Exec(context.Background(), `DELETE FROM identity.users`); err != nil {
+	if _, err := tx.Exec(context.Background(), `DELETE FROM medisync.users`); err != nil {
 		t.Fatalf("clear users in test transaction: %v", err)
 	}
 
@@ -348,7 +348,7 @@ func TestSeedAdminEmptyTable_Integration(t *testing.T) {
 	// Verify the admin was inserted.
 	var username, role string
 	err = tx.QueryRow(context.Background(),
-		`SELECT username, role FROM identity.users WHERE username = 'admin'`).Scan(&username, &role)
+		`SELECT username, role FROM medisync.users WHERE username = 'admin'`).Scan(&username, &role)
 	if err != nil {
 		t.Fatalf("verify admin: %v", err)
 	}
@@ -363,13 +363,13 @@ func TestSeedAdminEmptyTable_Integration(t *testing.T) {
 func TestSeedAdminNonEmptyTable_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
-	if _, err := tx.Exec(context.Background(), `DELETE FROM identity.users`); err != nil {
+	if _, err := tx.Exec(context.Background(), `DELETE FROM medisync.users`); err != nil {
 		t.Fatalf("clear users in test transaction: %v", err)
 	}
 
 	// Pre-populate with a user.
 	_, err := tx.Exec(context.Background(),
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, active)
 		 VALUES ('existing-user', 'hash', 'Existing', 'NURSE', '{WARD-3A}', true)`)
 	if err != nil {
 		t.Fatalf("seed existing user: %v", err)
@@ -386,7 +386,7 @@ func TestSeedAdminNonEmptyTable_Integration(t *testing.T) {
 	// Verify admin was NOT created.
 	var count int
 	err = tx.QueryRow(context.Background(),
-		`SELECT COUNT(*) FROM identity.users WHERE username = 'admin'`).Scan(&count)
+		`SELECT COUNT(*) FROM medisync.users WHERE username = 'admin'`).Scan(&count)
 	if err != nil {
 		t.Fatalf("count admin: %v", err)
 	}
@@ -421,10 +421,10 @@ func TestIdentityUsersTableExists_Integration(t *testing.T) {
 		`SELECT EXISTS(SELECT 1 FROM information_schema.tables
 		 WHERE table_schema = 'identity' AND table_name = 'users')`).Scan(&exists)
 	if err != nil {
-		t.Fatalf("check identity.users table: %v", err)
+		t.Fatalf("check medisync.users table: %v", err)
 	}
 	if !exists {
-		t.Fatal("identity.users table should exist (created by 0002_identity.sql)")
+		t.Fatal("medisync.users table should exist (created by 0002_identity.sql)")
 	}
 }
 
@@ -434,11 +434,11 @@ func TestIdentityUsersConstraints_Integration(t *testing.T) {
 
 	// Check that role constraint rejects invalid values.
 	_, err := pool.Exec(context.Background(),
-		`INSERT INTO identity.users (username, password_hash, role)
+		`INSERT INTO medisync.users (username, password_hash, role)
 		 VALUES ('constraint-test', 'hash', 'INVALID_ROLE')`)
 	if err == nil {
 		// Clean up in case the constraint doesn't exist.
-		pool.Exec(context.Background(), `DELETE FROM identity.users WHERE username = 'constraint-test'`)
+		pool.Exec(context.Background(), `DELETE FROM medisync.users WHERE username = 'constraint-test'`)
 		t.Fatal("expected constraint violation for invalid role, got nil")
 	}
 }
@@ -449,16 +449,16 @@ func TestIdentityUsersUniqueUsername_Integration(t *testing.T) {
 
 	username := uniqueUsername(t, "uniq")
 	_, err := pool.Exec(context.Background(),
-		`INSERT INTO identity.users (username, password_hash, role)
+		`INSERT INTO medisync.users (username, password_hash, role)
 		 VALUES ($1, 'hash', 'NURSE')`, username)
 	if err != nil {
 		t.Fatalf("first insert: %v", err)
 	}
-	defer pool.Exec(context.Background(), `DELETE FROM identity.users WHERE username = $1`, username)
+	defer pool.Exec(context.Background(), `DELETE FROM medisync.users WHERE username = $1`, username)
 
 	// Second insert with same username should fail.
 	_, err = pool.Exec(context.Background(),
-		`INSERT INTO identity.users (username, password_hash, role)
+		`INSERT INTO medisync.users (username, password_hash, role)
 		 VALUES ($1, 'hash', 'NURSE')`, username)
 	if err == nil {
 		t.Fatal("expected unique constraint violation for duplicate username, got nil")

@@ -130,13 +130,13 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 	var state string
 	var quantity int
 	if err := pool.QueryRow(ctx,
-		`SELECT state FROM dispensing.prescription WHERE prescription_id = $1`,
+		`SELECT state FROM medisync.prescription WHERE prescription_id = $1`,
 		prescriptionID,
 	).Scan(&state); err != nil {
 		t.Fatalf("read prescription state: %v", err)
 	}
 	if err := pool.QueryRow(ctx,
-		`SELECT quantity FROM inventory.slot WHERE cabinet_id = $1 AND code = $2`,
+		`SELECT quantity FROM medisync.slot WHERE cabinet_id = $1 AND code = $2`,
 		cabinetID, slotCode,
 	).Scan(&quantity); err != nil {
 		t.Fatalf("read slot quantity: %v", err)
@@ -172,14 +172,14 @@ func seedPipelinePrescription(
 		t.Fatalf("seed prescription: inserted=%v err=%v", inserted, err)
 	}
 	if _, err := pool.Exec(ctx,
-		`UPDATE dispensing.prescription SET state = 'DISPENSING' WHERE prescription_id = $1`,
+		`UPDATE medisync.prescription SET state = 'DISPENSING' WHERE prescription_id = $1`,
 		prescriptionID,
 	); err != nil {
 		t.Fatalf("set prescription DISPENSING: %v", err)
 	}
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(),
-			`DELETE FROM dispensing.prescription WHERE prescription_id = $1 AND source_system = 'pipeline-test'`,
+			`DELETE FROM medisync.prescription WHERE prescription_id = $1 AND source_system = 'pipeline-test'`,
 			prescriptionID,
 		)
 	})
@@ -195,7 +195,7 @@ func seedPipelineSlot(
 ) {
 	t.Helper()
 	if _, err := pool.Exec(ctx,
-		`INSERT INTO inventory.slot
+		`INSERT INTO medisync.slot
 		   (cabinet_id, code, drug_id, drug_code, drug_name, capacity, quantity, low_threshold, project_id)
 		 VALUES ($1, $2, $3, $3, 'Pipeline Drug', 20, 10, 2, '00000000-0000-0000-0000-000000000001')`,
 		cabinetID, slotCode, drugCode,
@@ -204,7 +204,7 @@ func seedPipelineSlot(
 	}
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(),
-			`DELETE FROM inventory.slot WHERE cabinet_id = $1 AND code = $2`,
+			`DELETE FROM medisync.slot WHERE cabinet_id = $1 AND code = $2`,
 			cabinetID, slotCode,
 		)
 	})

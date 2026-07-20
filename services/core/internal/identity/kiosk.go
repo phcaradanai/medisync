@@ -10,6 +10,7 @@ type Kiosk struct {
 	ID          string
 	Code        string
 	DisplayName string
+	Name        string
 	PinHash     string
 	Active      bool
 	ProjectID   string

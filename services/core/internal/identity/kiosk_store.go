@@ -53,14 +53,14 @@ func (s *KioskPGStore) List(ctx context.Context, projectID string, pageSize int3
 	}
 
 	var totalCount int64
-	countQuery := "SELECT COUNT(*) FROM identity.kiosks " + whereSQL
+	countQuery := "SELECT COUNT(*) FROM medisync.kiosks " + whereSQL
 	if err := s.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
 		return nil, "", 0, fmt.Errorf("count kiosks: %w", err)
 	}
 
 	if pageToken != "" {
 		cursorClause := fmt.Sprintf(
-			"created_at < (SELECT created_at FROM identity.kiosks WHERE id = $%d)",
+			"created_at < (SELECT created_at FROM medisync.kiosks WHERE id = $%d)",
 			argIdx,
 		)
 		if whereSQL == "" {
@@ -72,8 +72,8 @@ func (s *KioskPGStore) List(ctx context.Context, projectID string, pageSize int3
 		argIdx++
 	}
 	query := fmt.Sprintf(
-		`SELECT id, code, display_name, pin_hash, active, project_id, created_at, updated_at
-		   FROM identity.kiosks %s ORDER BY created_at DESC, id DESC LIMIT $%d`,
+		`SELECT id, code, display_name, name, pin_hash, active, project_id, created_at, updated_at
+		   FROM medisync.kiosks %s ORDER BY created_at DESC, id DESC LIMIT $%d`,
 		whereSQL, argIdx,
 	)
 	args = append(args, pageSize+1)
@@ -99,9 +99,9 @@ func (s *KioskPGStore) List(ctx context.Context, projectID string, pageSize int3
 // Create inserts a new kiosk. Returns ErrDuplicateKioskCode on conflict.
 func (s *KioskPGStore) Create(ctx context.Context, k *Kiosk) error {
 	tag, err := s.db.Exec(ctx,
-		`INSERT INTO identity.kiosks (code, display_name, pin_hash, project_id)
-		 VALUES ($1, $2, $3, $4)`,
-		k.Code, k.DisplayName, k.PinHash, k.ProjectID)
+		`INSERT INTO medisync.kiosks (code, display_name, name, pin_hash, project_id)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		k.Code, k.DisplayName, k.Name, k.PinHash, k.ProjectID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -118,25 +118,25 @@ func (s *KioskPGStore) Create(ctx context.Context, k *Kiosk) error {
 // GetByCode returns a kiosk by its unique code, or nil if not found.
 func (s *KioskPGStore) GetByCode(ctx context.Context, code string) (*Kiosk, error) {
 	row := s.db.QueryRow(ctx,
-		`SELECT id, code, display_name, pin_hash, active, project_id, created_at, updated_at
-		   FROM identity.kiosks WHERE code = $1`, code)
+		`SELECT id, code, display_name, name, pin_hash, active, project_id, created_at, updated_at
+		   FROM medisync.kiosks WHERE code = $1`, code)
 	return scanKiosk(row)
 }
 
 // GetByID returns a kiosk by UUID, or nil if not found.
 func (s *KioskPGStore) GetByID(ctx context.Context, id string) (*Kiosk, error) {
 	row := s.db.QueryRow(ctx,
-		`SELECT id, code, display_name, pin_hash, active, project_id, created_at, updated_at
-		   FROM identity.kiosks WHERE id = $1`, id)
+		`SELECT id, code, display_name, name, pin_hash, active, project_id, created_at, updated_at
+		   FROM medisync.kiosks WHERE id = $1`, id)
 	return scanKiosk(row)
 }
 
-// Update modifies display_name and active flag.
+// Update modifies display_name, name, and active flag.
 func (s *KioskPGStore) Update(ctx context.Context, k *Kiosk) error {
 	tag, err := s.db.Exec(ctx,
-		`UPDATE identity.kiosks
-		   SET display_name = $1, active = $2, updated_at = now()
-		 WHERE id = $3`, k.DisplayName, k.Active, k.ID)
+		`UPDATE medisync.kiosks
+		   SET display_name = $1, name = $2, active = $3, updated_at = now()
+		 WHERE id = $4`, k.DisplayName, k.Name, k.Active, k.ID)
 	if err != nil {
 		return fmt.Errorf("update kiosk: %w", err)
 	}
@@ -149,7 +149,7 @@ func (s *KioskPGStore) Update(ctx context.Context, k *Kiosk) error {
 // UpdatePIN replaces the PIN hash for a kiosk.
 func (s *KioskPGStore) UpdatePIN(ctx context.Context, id, pinHash string) error {
 	tag, err := s.db.Exec(ctx,
-		`UPDATE identity.kiosks SET pin_hash = $1, updated_at = now() WHERE id = $2`,
+		`UPDATE medisync.kiosks SET pin_hash = $1, updated_at = now() WHERE id = $2`,
 		pinHash, id)
 	if err != nil {
 		return fmt.Errorf("update kiosk pin: %w", err)
@@ -176,7 +176,7 @@ func scanKiosks(rows pgx.Rows) ([]*Kiosk, error) {
 func scanKiosk(row pgx.Row) (*Kiosk, error) {
 	var k Kiosk
 	var createdAt, updatedAt time.Time
-	err := row.Scan(&k.ID, &k.Code, &k.DisplayName, &k.PinHash,
+	err := row.Scan(&k.ID, &k.Code, &k.DisplayName, &k.Name, &k.PinHash,
 		&k.Active, &k.ProjectID, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

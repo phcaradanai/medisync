@@ -278,8 +278,8 @@ func TestWriteSQLAndArgs(t *testing.T) {
 
 	call := fake.LastCall()
 
-	if !strings.Contains(call.SQL, "INSERT INTO audit.audit_log") {
-		t.Error("SQL missing INSERT INTO audit.audit_log")
+	if !strings.Contains(call.SQL, "INSERT INTO medisync.audit_log") {
+		t.Error("SQL missing INSERT INTO medisync.audit_log")
 	}
 	if !strings.Contains(call.SQL, "trace_id") || !strings.Contains(call.SQL, "actor") {
 		t.Error("SQL missing expected columns")

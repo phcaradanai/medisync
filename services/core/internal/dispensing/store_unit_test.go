@@ -50,8 +50,8 @@ func TestStoreInsertSQLAndArgs(t *testing.T) {
 	call := fake.LastCall()
 
 	// Verify SQL template includes expected clauses.
-	if !strings.Contains(call.SQL, "INSERT INTO dispensing.prescription") {
-		t.Error("SQL missing INSERT INTO dispensing.prescription")
+	if !strings.Contains(call.SQL, "INSERT INTO medisync.prescription") {
+		t.Error("SQL missing INSERT INTO medisync.prescription")
 	}
 	if !strings.Contains(call.SQL, "ON CONFLICT ON CONSTRAINT prescription_external_key DO NOTHING") {
 		t.Error("SQL missing ON CONFLICT clause")

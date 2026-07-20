@@ -377,8 +377,8 @@ func TestGetByIDSuccess(t *testing.T) {
 	}
 
 	call := db.lastQueryRow()
-	if !strings.Contains(call.sql, "FROM inventory.slot") {
-		t.Error("SQL should reference inventory.slot")
+	if !strings.Contains(call.sql, "FROM medisync.slot") {
+		t.Error("SQL should reference medisync.slot")
 	}
 }
 
@@ -473,7 +473,7 @@ func TestListSlotsCursor(t *testing.T) {
 		t.Fatalf("ListSlots: %v", err)
 	}
 	call := db.lastQuery()
-	if !strings.Contains(call.sql, "created_at < (SELECT created_at FROM inventory.slot WHERE id = $1)") {
+	if !strings.Contains(call.sql, "created_at < (SELECT created_at FROM medisync.slot WHERE id = $1)") {
 		t.Errorf("SQL missing created_at cursor: %s", call.sql)
 	}
 	if got := call.args[len(call.args)-1]; got != int32(26) {
@@ -506,8 +506,8 @@ func TestAssignDrugSuccess(t *testing.T) {
 	}
 
 	call := db.lastQueryRow()
-	if !strings.Contains(call.sql, "UPDATE inventory.slot") {
-		t.Error("SQL should be UPDATE inventory.slot")
+	if !strings.Contains(call.sql, "UPDATE medisync.slot") {
+		t.Error("SQL should be UPDATE medisync.slot")
 	}
 }
 
@@ -622,8 +622,8 @@ func TestAdjustStockSuccess(t *testing.T) {
 	}
 
 	call := db.lastQueryRow()
-	if !strings.Contains(call.sql, "UPDATE inventory.slot") {
-		t.Error("SQL should be UPDATE inventory.slot")
+	if !strings.Contains(call.sql, "UPDATE medisync.slot") {
+		t.Error("SQL should be UPDATE medisync.slot")
 	}
 	if !strings.Contains(call.sql, "quantity = $1") {
 		t.Error("SQL should SET quantity directly")

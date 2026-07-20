@@ -78,14 +78,14 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowO
 	}
 
 	var totalCount int64
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM inventory.slot s %s", whereSQL)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM medisync.slot s %s", whereSQL)
 	if err := s.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
 		return nil, "", 0, fmt.Errorf("count slots: %w", err)
 	}
 
 	if pageToken != "" {
 		cursorClause := fmt.Sprintf(
-			"s.created_at < (SELECT created_at FROM inventory.slot WHERE id = $%d)",
+			"s.created_at < (SELECT created_at FROM medisync.slot WHERE id = $%d)",
 			argIdx,
 		)
 		if whereSQL == "" {
@@ -102,7 +102,7 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowO
 		        s.capacity, s.quantity, s.low_threshold,
 		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
 		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL')
-		   FROM inventory.slot s LEFT JOIN catalog.drug d ON d.id::text = s.drug_id %s
+		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id %s
 		  ORDER BY s.created_at DESC, s.id DESC LIMIT $%d`, whereSQL, argIdx)
 	args = append(args, pageSize+1)
 
@@ -139,7 +139,7 @@ func (s *Store) GetByID(ctx context.Context, id string) (*Slot, error) {
 		        s.capacity, s.quantity, s.low_threshold,
 		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
 		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL')
-		   FROM inventory.slot s LEFT JOIN catalog.drug d ON d.id::text = s.drug_id WHERE s.id = $1`, id)
+		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id WHERE s.id = $1`, id)
 	return scanSlot(row)
 }
 
@@ -150,7 +150,7 @@ func (s *Store) GetByCabinetAndCode(ctx context.Context, cabinetID, code string)
 		        s.capacity, s.quantity, s.low_threshold,
 		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
 		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL')
-		   FROM inventory.slot s LEFT JOIN catalog.drug d ON d.id::text = s.drug_id WHERE s.cabinet_id = $1 AND s.code = $2`, cabinetID, code)
+		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id WHERE s.cabinet_id = $1 AND s.code = $2`, cabinetID, code)
 	return scanSlot(row)
 }
 
@@ -158,7 +158,7 @@ func (s *Store) GetByCabinetAndCode(ctx context.Context, cabinetID, code string)
 // updated slot, or nil if the slot does not exist.
 func (s *Store) AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugName string, capacity, lowThreshold int32) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
-		`UPDATE inventory.slot
+		`UPDATE medisync.slot
 		   SET drug_id = $1, drug_code = $2, drug_name = $3,
 		       capacity = $4, low_threshold = $5,
 		       quantity = LEAST(quantity, $4), updated_at = now()
@@ -176,7 +176,7 @@ func (s *Store) AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugNa
 // would be negative, returns ErrInsufficientStock.
 func (s *Store) Refill(ctx context.Context, id string, delta int32, expiryDate *time.Time) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
-		`UPDATE inventory.slot
+		`UPDATE medisync.slot
 		   SET quantity = quantity + $1, expiry_date = COALESCE($2, expiry_date), updated_at = now()
 		 WHERE id = $3 AND quantity + $1 >= 0
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
@@ -190,7 +190,7 @@ func (s *Store) Refill(ctx context.Context, id string, delta int32, expiryDate *
 	if slot == nil {
 		// Could be because the slot doesn't exist, or because the
 		// resulting quantity would be negative. Check existence.
-		existsRow := s.db.QueryRow(ctx, `SELECT id FROM inventory.slot WHERE id = $1`, id)
+		existsRow := s.db.QueryRow(ctx, `SELECT id FROM medisync.slot WHERE id = $1`, id)
 		var existingID string
 		if err := existsRow.Scan(&existingID); errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil // slot not found
@@ -206,7 +206,7 @@ func (s *Store) Refill(ctx context.Context, id string, delta int32, expiryDate *
 // CreateSlot inserts a new empty slot into a cabinet.
 func (s *Store) CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32, expiryDate *time.Time) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO inventory.slot (cabinet_id, code, display_name, capacity, quantity, low_threshold, project_id, expiry_date)
+		`INSERT INTO medisync.slot (cabinet_id, code, display_name, capacity, quantity, low_threshold, project_id, expiry_date)
 		 VALUES ($1, $2, $3, $4, 0, $5, $6, $7)
 		 ON CONFLICT (cabinet_id, code) DO NOTHING
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
@@ -228,7 +228,7 @@ func (s *Store) CreateSlot(ctx context.Context, cabinetID, code, displayName, pr
 // in the audit log. Returns the updated slot, or nil if not found.
 func (s *Store) AdjustStock(ctx context.Context, id string, newQuantity int32) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
-		`UPDATE inventory.slot
+		`UPDATE medisync.slot
 		   SET quantity = $1, updated_at = now()
 		 WHERE id = $2
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,

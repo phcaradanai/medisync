@@ -12,10 +12,10 @@ import type { Slot } from "@medisync/proto/medisync/inventory/v1/inventory_pb";
 import type { Drug } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
 import { ListProjectsRequestSchema } from "@medisync/proto/medisync/identity/v1/identity_pb";
 import type { Project } from "@medisync/proto/medisync/identity/v1/identity_pb";
-import { inventoryClient, catalogClient, cabinetClient, projectClient } from "../../api/client";
+import { inventoryClient, catalogClient, kioskClient, projectClient } from "../../api/client";
 import { ListDrugsRequestSchema } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
-import { ListCabinetsRequestSchema } from "@medisync/proto/medisync/cabinet/v1/cabinet_pb";
-import type { Cabinet } from "@medisync/proto/medisync/cabinet/v1/cabinet_pb";
+import { ListKiosksRequestSchema } from "@medisync/proto/medisync/kiosk/v1/kiosk_pb";
+import type { Kiosk } from "@medisync/proto/medisync/kiosk/v1/kiosk_pb";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ export function InventoryPage() {
   const linkedDrugCode = searchParams.get("drugCode") ?? "";
   const [slots, setSlots] = useState<Slot[]>([]);
   const [drugs, setDrugs] = useState<Drug[]>([]);
-  const [cabinets, setCabinets] = useState<Cabinet[]>([]);
+  const [kiosks, setKiosks] = useState<Kiosk[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,15 +79,15 @@ export function InventoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const [slotsRes, drugsRes, cabsRes, projRes] = await Promise.all([
+      const [slotsRes, drugsRes, kioRes, projRes] = await Promise.all([
         inventoryClient.listSlots(create(ListSlotsRequestSchema, {})),
         catalogClient.listDrugs(create(ListDrugsRequestSchema, { query: "", includeInactive: false, pageSize: 200 })),
-        cabinetClient.listCabinets(create(ListCabinetsRequestSchema, {})),
+        kioskClient.listKiosks(create(ListKiosksRequestSchema, {})),
         projectClient.listProjects(create(ListProjectsRequestSchema, {})),
       ]);
       setSlots(slotsRes.slots);
       setDrugs(drugsRes.drugs);
-      setCabinets(cabsRes.cabinets);
+      setKiosks(kioRes.kiosks);
       setProjects(projRes.projects.filter(p => p.active));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load data");
@@ -104,7 +104,7 @@ export function InventoryPage() {
     setSlotForm({
       ...emptySlotForm,
       projectId: projects[0]?.id ?? "",
-      cabinetId: cabinets[0]?.id ?? "",
+      cabinetId: kiosks[0]?.id ?? "",
     });
     setFormError(null);
     setShowCreate(true);
@@ -222,7 +222,7 @@ export function InventoryPage() {
     ? drugs.filter(d => d.code.toLowerCase().includes(drugFilter.toLowerCase()) || d.name.toLowerCase().includes(drugFilter.toLowerCase()))
     : drugs;
 
-  const cabinetCode = (id: string) => cabinets.find(c => c.id === id)?.code || id?.slice(0, 8) || "—";
+  const cabinetCode = (id: string) => kiosks.find(k => k.id === id)?.code || id?.slice(0, 8) || "—";
 
   const toggleEmergency = useCallback((slot: Slot) => {
     // Update local state and call backend
@@ -301,7 +301,7 @@ export function InventoryPage() {
               <label>Cabinet *</label>
               <select value={slotForm.cabinetId} onChange={(e) => setSlotForm(f => ({ ...f, cabinetId: e.target.value }))} required>
                 <option value="">-- Select Cabinet --</option>
-                {cabinets.filter(c => c.active).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+                {kiosks.filter(k => k.active).map(k => <option key={k.id} value={k.id}>{k.code} — {k.displayName}</option>)}
               </select>
             </div>
 

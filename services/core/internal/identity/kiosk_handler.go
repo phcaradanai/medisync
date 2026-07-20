@@ -145,6 +145,7 @@ func (s *KioskServer) CreateKiosk(
 	k := &Kiosk{
 		Code:        msg.Code,
 		DisplayName: msg.DisplayName,
+		Name:        msg.Name,
 		PinHash:     pinHash,
 		ProjectID:   projectID,
 	}
@@ -201,6 +202,9 @@ func (s *KioskServer) UpdateKiosk(
 
 	if msg.DisplayName != nil {
 		existing.DisplayName = *msg.DisplayName
+	}
+	if msg.Name != nil {
+		existing.Name = *msg.Name
 	}
 	if msg.Active != nil {
 		existing.Active = *msg.Active
@@ -459,6 +463,7 @@ func toProtoKiosk(k *Kiosk, includePin bool) *kioskv1.Kiosk {
 		Id:          k.ID,
 		Code:        k.Code,
 		DisplayName: k.DisplayName,
+		Name:        k.Name,
 		Active:      k.Active,
 		CreatedAt:   createdAt,
 	}

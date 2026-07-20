@@ -60,7 +60,7 @@ func (s *Store) GetByUsername(ctx context.Context, username string) (*User, erro
 	row := s.db.QueryRow(ctx,
 		`SELECT id, username, password_hash, display_name, role, ward_ids,
 		        project_id, active, created_at, updated_at
-		   FROM identity.users WHERE username = $1`, username)
+		   FROM medisync.users WHERE username = $1`, username)
 	return scanUser(row)
 }
 
@@ -70,7 +70,7 @@ func (s *Store) GetByID(ctx context.Context, id string) (*User, error) {
 	row := s.db.QueryRow(ctx,
 		`SELECT id, username, password_hash, display_name, role, ward_ids,
 		        project_id, active, created_at, updated_at
-		   FROM identity.users WHERE id = $1`, id)
+		   FROM medisync.users WHERE id = $1`, id)
 	return scanUser(row)
 }
 
@@ -89,7 +89,7 @@ func (s *Store) GetByCardToken(ctx context.Context, token string) (*User, error)
 	row := s.db.QueryRow(ctx,
 		`SELECT id, username, password_hash, display_name, role, ward_ids,
 		        project_id, active, created_at, updated_at
-		   FROM identity.users WHERE card_token_hash = $1`, hash)
+		   FROM medisync.users WHERE card_token_hash = $1`, hash)
 	return scanUser(row)
 }
 
@@ -109,7 +109,7 @@ func (s *Store) SetCardToken(ctx context.Context, userID, rawToken string) error
 		return fmt.Errorf("set card token: hash: %w", err)
 	}
 	tag, err := s.db.Exec(ctx,
-		`UPDATE identity.users SET card_token_hash = $1 WHERE id = $2`,
+		`UPDATE medisync.users SET card_token_hash = $1 WHERE id = $2`,
 		hash, userID)
 	if err != nil {
 		return fmt.Errorf("set card token: %w", err)
@@ -124,7 +124,7 @@ func (s *Store) SetCardToken(ctx context.Context, userID, rawToken string) error
 // It returns true when a new admin was created.
 func (s *Store) SeedAdmin(ctx context.Context, passwordHash string) (bool, error) {
 	var count int
-	if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM identity.users`).Scan(&count); err != nil {
+	if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM medisync.users`).Scan(&count); err != nil {
 		return false, fmt.Errorf("count users: %w", err)
 	}
 	if count > 0 {
@@ -132,7 +132,7 @@ func (s *Store) SeedAdmin(ctx context.Context, passwordHash string) (bool, error
 	}
 
 	_, err := s.db.Exec(ctx,
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, project_id)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, project_id)
 		 VALUES ('admin', $1, 'Administrator', 'ADMIN', '{}', NULL)`, passwordHash)
 	if err != nil {
 		return false, fmt.Errorf("seed admin: %w", err)
@@ -150,7 +150,7 @@ func (s *Store) ListUsers(ctx context.Context, query, projectID string, pageSize
 
 	baseSQL := `SELECT id, username, password_hash, display_name, role, ward_ids,
 	                   project_id, active, created_at, updated_at
-	              FROM identity.users`
+	              FROM medisync.users`
 	var conditions []string
 	var args []any
 	argIdx := 1
@@ -175,7 +175,7 @@ func (s *Store) ListUsers(ctx context.Context, query, projectID string, pageSize
 	}
 
 	var totalCount int64
-	countSQL := "SELECT COUNT(*) FROM identity.users" + whereSQL
+	countSQL := "SELECT COUNT(*) FROM medisync.users" + whereSQL
 	if err := s.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
 		return nil, "", 0, fmt.Errorf("count users: %w", err)
 	}
@@ -229,7 +229,7 @@ func (s *Store) CreateUser(ctx context.Context, username, passwordHash, displayN
 		wardIDs = []string{}
 	}
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, project_id, active)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, project_id, active)
 		 VALUES ($1, $2, $3, $4, $5, $6, true)
 		 ON CONFLICT (username) DO NOTHING
 		 RETURNING id, username, password_hash, display_name, role, ward_ids, project_id, active, created_at, updated_at`,
@@ -285,7 +285,7 @@ func (s *Store) UpdateUser(ctx context.Context, id string, displayName *string, 
 	setClauses = append(setClauses, "updated_at = now()")
 
 	querySQL := fmt.Sprintf(
-		`UPDATE identity.users SET %s WHERE id = $1
+		`UPDATE medisync.users SET %s WHERE id = $1
 		 RETURNING id, username, password_hash, display_name, role, ward_ids, project_id, active, created_at, updated_at`,
 		joinWithCommas(setClauses))
 
@@ -334,7 +334,7 @@ func (s *Store) CreateProject(ctx context.Context, name, slug, code string) (*Pr
 	var p Project
 	var createdAt, updatedAt time.Time
 	err := s.db.QueryRow(ctx,
-		`INSERT INTO identity.projects (name, slug, code) VALUES ($1, $2, $3)
+		`INSERT INTO medisync.projects (name, slug, code) VALUES ($1, $2, $3)
 		 RETURNING id, name, slug, code, active, created_at, updated_at`,
 		name, slug, code).Scan(&p.ID, &p.Name, &p.Slug, &p.Code, &p.Active, &createdAt, &updatedAt)
 	if err != nil {
@@ -351,7 +351,7 @@ func (s *Store) GetProject(ctx context.Context, id string) (*Project, error) {
 	var createdAt, updatedAt time.Time
 	err := s.db.QueryRow(ctx,
 		`SELECT id, code, name, display_name, slug, active, created_at, updated_at
-		   FROM identity.projects WHERE id = $1`, id).Scan(
+		   FROM medisync.projects WHERE id = $1`, id).Scan(
 		&p.ID, &p.Code, &p.Name, &p.DisplayName, &p.Slug, &p.Active, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -369,7 +369,7 @@ func (s *Store) GetProject(ctx context.Context, id string) (*Project, error) {
 func (s *Store) ListProjects(ctx context.Context, pageSize int32, pageToken string) ([]*Project, string, int64, error) {
 	pageSize = pagination.NormalizePageSize(pageSize)
 	var totalCount int64
-	if err := s.db.QueryRow(ctx, "SELECT COUNT(*) FROM identity.projects").Scan(&totalCount); err != nil {
+	if err := s.db.QueryRow(ctx, "SELECT COUNT(*) FROM medisync.projects").Scan(&totalCount); err != nil {
 		return nil, "", 0, fmt.Errorf("count projects: %w", err)
 	}
 
@@ -378,7 +378,7 @@ func (s *Store) ListProjects(ctx context.Context, pageSize int32, pageToken stri
 	argIdx := 1
 	if pageToken != "" {
 		whereSQL = fmt.Sprintf(
-			"WHERE name < (SELECT name FROM identity.projects WHERE id = $%d)",
+			"WHERE name < (SELECT name FROM medisync.projects WHERE id = $%d)",
 			argIdx,
 		)
 		args = append(args, pageToken)
@@ -386,7 +386,7 @@ func (s *Store) ListProjects(ctx context.Context, pageSize int32, pageToken stri
 	}
 	query := fmt.Sprintf(
 		`SELECT id, code, name, display_name, slug, active, created_at, updated_at
-		   FROM identity.projects %s ORDER BY name DESC, id DESC LIMIT $%d`,
+		   FROM medisync.projects %s ORDER BY name DESC, id DESC LIMIT $%d`,
 		whereSQL, argIdx,
 	)
 	args = append(args, pageSize+1)
@@ -439,7 +439,7 @@ func (s *Store) UpdateProject(ctx context.Context, id string, name *string, acti
 	}
 	setClauses = append(setClauses, "updated_at = now()")
 	querySQL := fmt.Sprintf(
-		`UPDATE identity.projects SET %s WHERE id = $1
+		`UPDATE medisync.projects SET %s WHERE id = $1
 		 RETURNING id, code, name, display_name, slug, active, created_at, updated_at`,
 		joinWithCommas(setClauses))
 	var p Project

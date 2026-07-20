@@ -28,7 +28,6 @@ const (
 	demoKioskCode = "DEMO-K1"
 	demoKioskPIN  = "123456"
 	demoWard      = "WARD-3A"
-	demoCabinetID = "CAB1"
 )
 
 // Default project UUID from migration 0011.
@@ -139,14 +138,22 @@ func main() {
 }
 
 func clearDemoData(ctx context.Context, pool *pgxpool.Pool) error {
+	// Resolve the demo kiosk UUID so we can clean up its slots.
+	var kioskID string
+	err := pool.QueryRow(ctx, `SELECT id FROM medisync.kiosks WHERE code = $1`, demoKioskCode).Scan(&kioskID)
+	if err == nil && kioskID != "" {
+		// Delete slots attached to the demo kiosk.
+		if _, err := pool.Exec(ctx, `DELETE FROM medisync.slot WHERE cabinet_id = $1`, kioskID); err != nil {
+			return fmt.Errorf("delete slots: %w", err)
+		}
+	}
 	cmds := []string{
-		`DELETE FROM dispensing.outbox WHERE subject LIKE 'medisync.demo%'`,
-		`DELETE FROM dispensing.prescription WHERE source_system = '` + demoSource + `'`,
-		`DELETE FROM inventory.slot WHERE cabinet_id = '` + demoCabinetID + `'`,
-		`DELETE FROM catalog.drug WHERE code LIKE '` + demoPrefix + `%'`,
-		`DELETE FROM identity.users WHERE username IN ('pharmacist','nurse','refiller')`,
-		`DELETE FROM identity.kiosks WHERE code = '` + demoKioskCode + `'`,
-		`DELETE FROM audit.audit_log WHERE entity_id LIKE '` + demoPrefix + `%'`,
+		`DELETE FROM medisync.outbox WHERE subject LIKE 'medisync.demo%'`,
+		`DELETE FROM medisync.prescription WHERE source_system = '` + demoSource + `'`,
+		`DELETE FROM medisync.drug WHERE code LIKE '` + demoPrefix + `%'`,
+		`DELETE FROM medisync.users WHERE username IN ('pharmacist','nurse','refiller')`,
+		`DELETE FROM medisync.kiosks WHERE code = '` + demoKioskCode + `'`,
+		`DELETE FROM medisync.audit_log WHERE entity_id LIKE '` + demoPrefix + `%'`,
 	}
 	for _, cmd := range cmds {
 		if _, err := pool.Exec(ctx, cmd); err != nil {
@@ -163,11 +170,17 @@ func seed(ctx context.Context, pool *pgxpool.Pool, projectID string) error {
 	if err := seedKiosk(ctx, pool, projectID); err != nil {
 		return fmt.Errorf("kiosk: %w", err)
 	}
+	// Fetch the kiosk UUID so slots can reference it as cabinet_id.
+	var kioskID string
+	if err := pool.QueryRow(ctx,
+		`SELECT id FROM medisync.kiosks WHERE code = $1`, demoKioskCode).Scan(&kioskID); err != nil {
+		return fmt.Errorf("resolve kiosk id: %w", err)
+	}
 	drugIDs, err := seedDrugs(ctx, pool, projectID)
 	if err != nil {
 		return fmt.Errorf("drugs: %w", err)
 	}
-	if err := seedSlots(ctx, pool, drugIDs, projectID); err != nil {
+	if err := seedSlots(ctx, pool, kioskID, drugIDs, projectID); err != nil {
 		return fmt.Errorf("slots: %w", err)
 	}
 	if err := seedPrescription(ctx, pool, projectID); err != nil {
@@ -186,7 +199,7 @@ func seedUsers(ctx context.Context, pool *pgxpool.Pool, projectID string) error 
 		wardIDs := fmt.Sprintf(`{"%s"}`, demoWard)
 		pid = fmt.Sprintf(`'%s'`, projectID)
 		sql := fmt.Sprintf(
-			`INSERT INTO identity.users (username,password_hash,display_name,role,ward_ids,project_id,active)
+			`INSERT INTO medisync.users (username,password_hash,display_name,role,ward_ids,project_id,active)
 			 VALUES ('%s','%s','%s','%s','%s',%s,true) ON CONFLICT (username) DO NOTHING`,
 			u.Username, hash, u.DisplayName, u.Role, wardIDs, pid)
 		if _, err := pool.Exec(ctx, sql); err != nil {
@@ -204,7 +217,7 @@ func seedKiosk(ctx context.Context, pool *pgxpool.Pool, projectID string) error 
 		return err
 	}
 	_, err = pool.Exec(ctx,
-		`INSERT INTO identity.kiosks (code,display_name,pin_hash,active,project_id)
+		`INSERT INTO medisync.kiosks (code,display_name,pin_hash,active,project_id)
 		 VALUES ($1,$2,$3,true,$4) ON CONFLICT (code) DO NOTHING`,
 		demoKioskCode, "Demo Cabinet K1", pinHash, projectID)
 	if err != nil {
@@ -219,7 +232,7 @@ func seedDrugs(ctx context.Context, pool *pgxpool.Pool, projectID string) (map[s
 	for _, d := range demoDrugs {
 		var id string
 		err := pool.QueryRow(ctx,
-			`INSERT INTO catalog.drug (code,name,generic_name,form,strength,unit,project_id)
+			`INSERT INTO medisync.drug (code,name,generic_name,form,strength,unit,project_id)
 			 VALUES ($1,$2,$3,$4,$5,$6,$7)
 			 ON CONFLICT (code,project_id) DO UPDATE SET name=EXCLUDED.name,
 			   generic_name=EXCLUDED.generic_name, form=EXCLUDED.form,
@@ -235,7 +248,7 @@ func seedDrugs(ctx context.Context, pool *pgxpool.Pool, projectID string) (map[s
 	return ids, nil
 }
 
-func seedSlots(ctx context.Context, pool *pgxpool.Pool, drugIDs map[string]string, projectID string) error {
+func seedSlots(ctx context.Context, pool *pgxpool.Pool, kioskID string, drugIDs map[string]string, projectID string) error {
 	for _, s := range demoSlots {
 		drugID := drugIDs[s.DrugCode]
 		drugName := ""
@@ -246,14 +259,14 @@ func seedSlots(ctx context.Context, pool *pgxpool.Pool, drugIDs map[string]strin
 			}
 		}
 		_, err := pool.Exec(ctx,
-			`INSERT INTO inventory.slot (cabinet_id,code,drug_id,drug_code,drug_name,capacity,quantity,low_threshold,project_id)
-			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-			 ON CONFLICT (cabinet_id,code) DO UPDATE SET
-			   drug_id=EXCLUDED.drug_id, drug_code=EXCLUDED.drug_code,
-			   drug_name=EXCLUDED.drug_name, capacity=EXCLUDED.capacity,
-			   quantity=EXCLUDED.quantity, low_threshold=EXCLUDED.low_threshold,
-			   project_id=EXCLUDED.project_id, updated_at=now()`,
-			demoCabinetID, s.Code, drugID, s.DrugCode, drugName,
+			`INSERT INTO medisync.slot (cabinet_id,code,drug_id,drug_code,drug_name,capacity,quantity,low_threshold,project_id)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		 ON CONFLICT (cabinet_id,code) DO UPDATE SET
+		   drug_id=EXCLUDED.drug_id, drug_code=EXCLUDED.drug_code,
+		   drug_name=EXCLUDED.drug_name, capacity=EXCLUDED.capacity,
+		   quantity=EXCLUDED.quantity, low_threshold=EXCLUDED.low_threshold,
+		   project_id=EXCLUDED.project_id, updated_at=now()`,
+			kioskID, s.Code, drugID, s.DrugCode, drugName,
 			s.Capacity, s.Quantity, s.LowThreshold, projectID)
 		if err != nil {
 			return fmt.Errorf("slot %q: %w", s.Code, err)
@@ -271,7 +284,7 @@ func seedPrescription(ctx context.Context, pool *pgxpool.Pool, projectID string)
 	rxID := demoPrefix + "RX-001"
 	now := time.Now()
 	_, err = pool.Exec(ctx,
-		`INSERT INTO dispensing.prescription
+		`INSERT INTO medisync.prescription
 		   (prescription_id,source_system,hn,patient_name,ward_id,items,state,project_id,issued_at)
 		 VALUES ($1,$2,$3,$4,$5,$6,'READY',$7,$8)
 		 ON CONFLICT ON CONSTRAINT prescription_external_key DO UPDATE SET

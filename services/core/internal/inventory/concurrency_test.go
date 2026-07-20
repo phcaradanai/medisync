@@ -17,7 +17,7 @@ func concurrencyPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	pool := integrationPool(t)
 	// Clean up any leftover test data from prior runs.
-	_, _ = pool.Exec(context.Background(), `DELETE FROM inventory.slot`)
+	_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.slot`)
 	return pool
 }
 
@@ -26,7 +26,7 @@ func seedSlotConcurrent(t *testing.T, pool *pgxpool.Pool, cabinetID, code string
 	t.Helper()
 	var id string
 	err := pool.QueryRow(context.Background(),
-		`INSERT INTO inventory.slot (cabinet_id, code, capacity, quantity, low_threshold)
+		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
 		 VALUES ($1, $2, 10000, 0, 0)
 		 RETURNING id`, cabinetID, code).Scan(&id)
 	if err != nil {

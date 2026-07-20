@@ -24,20 +24,21 @@ func (r *fakeKioskRow) Scan(dest ...any) error {
 	return r.scanErr
 }
 
-// kioskScanData returns a Scan function that fills dest with a Kiosk (8 columns).
+// kioskScanData returns a Scan function that fills dest with a Kiosk (9 columns).
 func kioskScanData(k Kiosk) func(dest ...any) error {
 	return func(dest ...any) error {
-		if len(dest) != 8 {
-			return errors.New("expected 8 dests")
+		if len(dest) != 9 {
+			return errors.New("expected 9 dests")
 		}
 		*(dest[0].(*string)) = k.ID
 		*(dest[1].(*string)) = k.Code
 		*(dest[2].(*string)) = k.DisplayName
-		*(dest[3].(*string)) = k.PinHash
-		*(dest[4].(*bool)) = k.Active
-		*(dest[5].(*string)) = k.ProjectID
-		*(dest[6].(*time.Time)) = k.CreatedAt
-		*(dest[7].(*time.Time)) = k.UpdatedAt
+		*(dest[3].(*string)) = k.Name
+		*(dest[4].(*string)) = k.PinHash
+		*(dest[5].(*bool)) = k.Active
+		*(dest[6].(*string)) = k.ProjectID
+		*(dest[7].(*time.Time)) = k.CreatedAt
+		*(dest[8].(*time.Time)) = k.UpdatedAt
 		return nil
 	}
 }
@@ -69,17 +70,18 @@ func (r *fakeKioskRows) Scan(dest ...any) error {
 		return errors.New("fakeKioskRows: index out of range")
 	}
 	k := r.kiosks[r.idx-1]
-	if len(dest) != 8 {
-		return errors.New("expected 8 dests")
+	if len(dest) != 9 {
+		return errors.New("expected 9 dests")
 	}
 	*(dest[0].(*string)) = k.ID
 	*(dest[1].(*string)) = k.Code
 	*(dest[2].(*string)) = k.DisplayName
-	*(dest[3].(*string)) = k.PinHash
-	*(dest[4].(*bool)) = k.Active
-	*(dest[5].(*string)) = k.ProjectID
-	*(dest[6].(*time.Time)) = k.CreatedAt
-	*(dest[7].(*time.Time)) = k.UpdatedAt
+	*(dest[3].(*string)) = k.Name
+	*(dest[4].(*string)) = k.PinHash
+	*(dest[5].(*bool)) = k.Active
+	*(dest[6].(*string)) = k.ProjectID
+	*(dest[7].(*time.Time)) = k.CreatedAt
+	*(dest[8].(*time.Time)) = k.UpdatedAt
 	return nil
 }
 
@@ -98,8 +100,8 @@ func TestKioskStoreCreateSuccess(t *testing.T) {
 	if len(db.execCalls) != 1 {
 		t.Fatalf("expected 1 exec call, got %d", len(db.execCalls))
 	}
-	if !strings.Contains(db.execCalls[0].sql, "INSERT INTO identity.kiosks") {
-		t.Error("SQL should be an INSERT into identity.kiosks")
+	if !strings.Contains(db.execCalls[0].sql, "INSERT INTO medisync.kiosks") {
+		t.Error("SQL should be an INSERT into medisync.kiosks")
 	}
 }
 
@@ -227,7 +229,7 @@ func TestKioskStoreUpdateSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(db.lastExec().sql, "UPDATE identity.kiosks") {
+	if !strings.Contains(db.lastExec().sql, "UPDATE medisync.kiosks") {
 		t.Error("SQL should be an UPDATE")
 	}
 }

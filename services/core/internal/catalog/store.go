@@ -45,11 +45,11 @@ func NewStoreWithDB(db dbConn, aw *audit.Writer) *Store {
 	return &Store{db: db, auditWriter: aw}
 }
 
-// Create inserts a new drug into catalog.drug. It returns the created Drug
+// Create inserts a new drug into medisync.drug. It returns the created Drug
 // with server-generated fields (id, timestamps).
 func (s *Store) Create(ctx context.Context, d Drug) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO catalog.drug (code, name, display_name, generic_name, form, strength, unit, sticker_note, project_id, barcode, default_slot_capacity, category, manufacturer, safety_classification)
+		`INSERT INTO medisync.drug (code, name, display_name, generic_name, form, strength, unit, sticker_note, project_id, barcode, default_slot_capacity, category, manufacturer, safety_classification)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		 RETURNING id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
 		           active, project_id, barcode, default_slot_capacity, category, manufacturer, safety_classification, created_at, updated_at`,
@@ -62,7 +62,7 @@ func (s *Store) GetByID(ctx context.Context, id string) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
 		`SELECT id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
 		        active, project_id, barcode, default_slot_capacity, category, manufacturer, safety_classification, created_at, updated_at
-		   FROM catalog.drug WHERE id = $1`, id)
+		   FROM medisync.drug WHERE id = $1`, id)
 	return scanDrug(row)
 }
 
@@ -71,7 +71,7 @@ func (s *Store) GetByCode(ctx context.Context, code string) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
 		`SELECT id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
 		        active, project_id, barcode, default_slot_capacity, category, manufacturer, safety_classification, created_at, updated_at
-		   FROM catalog.drug WHERE code = $1`, code)
+		   FROM medisync.drug WHERE code = $1`, code)
 	return scanDrug(row)
 }
 
@@ -80,7 +80,7 @@ func (s *Store) GetByBarcode(ctx context.Context, barcode string) (*Drug, error)
 	row := s.db.QueryRow(ctx,
 		`SELECT id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
 		        active, project_id, barcode, default_slot_capacity, category, manufacturer, safety_classification, created_at, updated_at
-		   FROM catalog.drug WHERE barcode = $1`, barcode)
+		   FROM medisync.drug WHERE barcode = $1`, barcode)
 	return scanDrug(row)
 }
 
@@ -119,7 +119,7 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 		filterWhereSQL = "WHERE " + strings.Join(whereClauses, " AND ")
 	}
 	var totalCount int64
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM catalog.drug %s", filterWhereSQL)
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM medisync.drug %s", filterWhereSQL)
 	if err := s.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
 		return nil, "", 0, fmt.Errorf("count drugs: %w", err)
 	}
@@ -138,7 +138,7 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 	querySQL := fmt.Sprintf(
 		`SELECT id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
 		        active, project_id, barcode, default_slot_capacity, category, manufacturer, safety_classification, created_at, updated_at
-		   FROM catalog.drug %s ORDER BY id ASC LIMIT $%d`,
+		   FROM medisync.drug %s ORDER BY id ASC LIMIT $%d`,
 		whereSQL, argIdx)
 	args = append(args, pageSize+1)
 
@@ -178,7 +178,7 @@ func (s *Store) List(ctx context.Context, query string, includeInactive bool, pa
 // sets updated_at. Returns the updated Drug, or nil if not found.
 func (s *Store) Update(ctx context.Context, d Drug) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
-		`UPDATE catalog.drug
+		`UPDATE medisync.drug
 		   SET code = $1, name = $2, generic_name = $3, form = $4,
 		       strength = $5, unit = $6, sticker_note = $7, active = $8,
 		       display_name = $9, barcode = $10, default_slot_capacity = $11,
@@ -196,7 +196,7 @@ func (s *Store) Update(ctx context.Context, d Drug) (*Drug, error) {
 // drug does not exist or is already inactive.
 func (s *Store) Deactivate(ctx context.Context, id string) (*Drug, error) {
 	row := s.db.QueryRow(ctx,
-		`UPDATE catalog.drug SET active = false, updated_at = now()
+		`UPDATE medisync.drug SET active = false, updated_at = now()
 		 WHERE id = $1 AND active = true
 		 RETURNING id, code, name, display_name, generic_name, form, strength, unit, sticker_note,
 		           active, project_id, barcode, default_slot_capacity, category, manufacturer, safety_classification, created_at, updated_at`,

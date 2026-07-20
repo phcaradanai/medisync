@@ -57,7 +57,7 @@ func (w *Writer) Write(ctx context.Context, e Entry) error {
 	}
 
 	_, err := w.db.Exec(ctx,
-		`INSERT INTO audit.audit_log (trace_id, actor, action, entity, entity_id, project_id, detail)
+		`INSERT INTO medisync.audit_log (trace_id, actor, action, entity, entity_id, project_id, detail)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		e.TraceID, e.Actor, e.Action, e.Entity, e.EntityID, nilIfEmpty(e.ProjectID), detail)
 	if err != nil {
@@ -96,7 +96,7 @@ func List(ctx context.Context, pool *pgxpool.Pool, projectID string, pageSize in
 
 	var total int64
 	args := []any{}
-	countSQL := "SELECT COUNT(*) FROM audit.audit_log"
+	countSQL := "SELECT COUNT(*) FROM medisync.audit_log"
 	whereSQL := ""
 	if projectID != "" {
 		whereSQL = " WHERE project_id = $1"
@@ -106,7 +106,7 @@ func List(ctx context.Context, pool *pgxpool.Pool, projectID string, pageSize in
 		return nil, 0, "", fmt.Errorf("count audit: %w", err)
 	}
 
-	sql := "SELECT id, trace_id, actor, action, entity, entity_id, COALESCE(project_id::text,''), COALESCE(detail::text,'{}'), created_at::text FROM audit.audit_log" + whereSQL + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d OFFSET $%d", len(args)+1, len(args)+2)
+	sql := "SELECT id, trace_id, actor, action, entity, entity_id, COALESCE(project_id::text,''), COALESCE(detail::text,'{}'), created_at::text FROM medisync.audit_log" + whereSQL + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, pageSize+1, offset)
 
 	rows, err := pool.Query(ctx, sql, args...)

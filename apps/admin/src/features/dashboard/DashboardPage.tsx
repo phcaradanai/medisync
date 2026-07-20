@@ -4,59 +4,56 @@ import { create } from "@bufbuild/protobuf";
 import { ListDrugsRequestSchema } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
 import type { Drug } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
 import { ListProjectsRequestSchema, ListUsersRequestSchema } from "@medisync/proto/medisync/identity/v1/identity_pb";
-import { ListCabinetsRequestSchema } from "@medisync/proto/medisync/cabinet/v1/cabinet_pb";
 import { ListKiosksRequestSchema } from "@medisync/proto/medisync/kiosk/v1/kiosk_pb";
 import { ListSlotsRequestSchema } from "@medisync/proto/medisync/inventory/v1/inventory_pb";
 import type { Slot } from "@medisync/proto/medisync/inventory/v1/inventory_pb";
-import type { Cabinet } from "@medisync/proto/medisync/cabinet/v1/cabinet_pb";
-import { catalogClient, projectClient, cabinetClient, kioskClient, identityClient, inventoryClient } from "../../api/client";
+import type { Kiosk } from "@medisync/proto/medisync/kiosk/v1/kiosk_pb";
+import { catalogClient, projectClient, kioskClient, identityClient, inventoryClient } from "../../api/client";
 import { Icon } from "../masterdata/icons";
 import { MasterHeader } from "../masterdata/kit";
 
-interface Counts { drugs: number; drugsActive: number; projects: number; cabinets: number; kiosks: number; users: number; }
+interface Counts { drugs: number; drugsActive: number; projects: number; kiosks: number; users: number; }
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const [counts, setCounts] = useState<Counts>({ drugs: 0, drugsActive: 0, projects: 0, cabinets: 0, kiosks: 0, users: 0 });
+  const [counts, setCounts] = useState<Counts>({ drugs: 0, drugsActive: 0, projects: 0, kiosks: 0, users: 0 });
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [cabinets, setCabinets] = useState<Cabinet[]>([]);
+  const [kiosks, setKiosks] = useState<Kiosk[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
-    const next: Counts = { drugs: 0, drugsActive: 0, projects: 0, cabinets: 0, kiosks: 0, users: 0 };
+    const next: Counts = { drugs: 0, drugsActive: 0, projects: 0, kiosks: 0, users: 0 };
     try {
       const d = await catalogClient.listDrugs(create(ListDrugsRequestSchema, { query: "", pageSize: 500, includeInactive: true }));
       next.drugs = d.drugs.length;
       next.drugsActive = d.drugs.filter((x: Drug) => x.active).length;
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ"); }
     try { const r = await projectClient.listProjects(create(ListProjectsRequestSchema, {})); next.projects = r.projects.length; } catch { /* */ }
-    try { const r = await cabinetClient.listCabinets(create(ListCabinetsRequestSchema, {})); next.cabinets = r.cabinets.length; setCabinets(r.cabinets); } catch { /* */ }
-    try { const r = await kioskClient.listKiosks(create(ListKiosksRequestSchema, {})); next.kiosks = r.kiosks.length; } catch { /* */ }
+    try { const r = await kioskClient.listKiosks(create(ListKiosksRequestSchema, {})); next.kiosks = r.kiosks.length; setKiosks(r.kiosks); } catch { /* */ }
     try { const r = await identityClient.listUsers(create(ListUsersRequestSchema, { query: "" })); next.users = r.users.length; } catch { /* */ }
     try { const r = await inventoryClient.listSlots(create(ListSlotsRequestSchema, {})); setSlots(r.slots); } catch { /* */ }
     setCounts(next); setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const cabinetCode = useCallback((id: string) => cabinets.find((c) => c.id === id)?.code ?? "—", [cabinets]);
+  const kioskCode = useCallback((id: string) => kiosks.find((k) => k.id === id)?.code ?? "—", [kiosks]);
 
-  const totalItems = counts.drugs + counts.projects + counts.cabinets + counts.kiosks + counts.users;
+  const totalItems = counts.drugs + counts.projects + counts.kiosks + counts.users;
   const lowSlots = useMemo(() => slots.filter((s) => s.drugId && s.quantity <= s.lowThreshold), [slots]);
   const outSlots = useMemo(() => lowSlots.filter((s) => s.quantity <= 0), [lowSlots]);
 
   const kpis = [
-    { label: "รายการข้อมูลหลักทั้งหมด", value: totalItems, icon: Icon.database, tint: "md-tint-drug", sub: "5 หมวด" },
+    { label: "รายการข้อมูลหลักทั้งหมด", value: totalItems, icon: Icon.database, tint: "md-tint-drug", sub: "4 หมวด" },
     { label: "ยาที่พร้อมใช้งาน", value: counts.drugsActive, icon: Icon.pill, tint: "md-tint-proj", sub: <>จาก <strong>{counts.drugs}</strong> รายการ</> },
-    { label: "ช่องเก็บยาทั้งหมด", value: slots.length, icon: Icon.inventory, tint: "md-tint-cab", sub: `${cabinets.length} ตู้` },
+    { label: "ช่องเก็บยาทั้งหมด", value: slots.length, icon: Icon.inventory, tint: "md-tint-cab", sub: `${kiosks.length} ตู้` },
   ];
 
   const cards = [
     { key: "drug", label: "ยา", count: counts.drugs, icon: Icon.pill, tint: "md-tint-drug", to: "/drugs" },
     { key: "proj", label: "โครงการ", count: counts.projects, icon: Icon.folder, tint: "md-tint-proj", to: "/projects" },
-    { key: "cab", label: "ตู้ยา", count: counts.cabinets, icon: Icon.cabinet, tint: "md-tint-cab", to: "/devices" },
-    { key: "kiosk", label: "Kiosk", count: counts.kiosks, icon: Icon.monitor, tint: "md-tint-kiosk", to: "/devices" },
+    { key: "kiosk", label: "ตู้ยา", count: counts.kiosks, icon: Icon.cabinet, tint: "md-tint-cab", to: "/devices" },
     { key: "user", label: "ผู้ใช้งาน", count: counts.users, icon: Icon.users, tint: "md-tint-user", to: "/users" },
   ];
 
@@ -128,7 +125,7 @@ export function DashboardPage() {
                 lowSlots.slice(0, 8).map((s) => (
                   <tr key={s.id}>
                     <td><span className="md-code">{s.code}</span></td>
-                    <td className="md-cell-muted">{cabinetCode(s.cabinetId)}</td>
+                    <td className="md-cell-muted">{kioskCode(s.cabinetId)}</td>
                     <td>{s.drugName} <span className="md-cell-muted">· {s.drugCode}</span></td>
                     <td><strong>{s.quantity}</strong></td>
                     <td className="md-cell-muted">{s.lowThreshold}</td>

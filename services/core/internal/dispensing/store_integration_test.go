@@ -93,7 +93,7 @@ func TestGetByID_Integration(t *testing.T) {
 	// Read back the row to get its UUID.
 	var id string
 	err = tx.QueryRow(ctx,
-		`SELECT id FROM dispensing.prescription WHERE prescription_id = $1 AND source_system = $2`,
+		`SELECT id FROM medisync.prescription WHERE prescription_id = $1 AND source_system = $2`,
 		p.PrescriptionID, p.SourceSystem).Scan(&id)
 	if err != nil {
 		t.Fatalf("read id: %v", err)
@@ -235,7 +235,7 @@ func TestListByWardWithStateFilter_Integration(t *testing.T) {
 	// Use tx to update state to DISPENSING.
 	var id string
 	err = tx.QueryRow(ctx,
-		`UPDATE dispensing.prescription SET state = 'DISPENSING'
+		`UPDATE medisync.prescription SET state = 'DISPENSING'
 		 WHERE prescription_id = $1 AND source_system = $2
 		 RETURNING id`, p.PrescriptionID, p.SourceSystem).Scan(&id)
 	if err != nil {
@@ -276,7 +276,7 @@ func TestTransitionState_Integration(t *testing.T) {
 	// Read the inserted row id.
 	var id string
 	err = tx.QueryRow(ctx,
-		`SELECT id FROM dispensing.prescription WHERE prescription_id = $1 AND source_system = $2`,
+		`SELECT id FROM medisync.prescription WHERE prescription_id = $1 AND source_system = $2`,
 		p.PrescriptionID, p.SourceSystem).Scan(&id)
 	if err != nil {
 		t.Fatalf("read id: %v", err)
@@ -309,7 +309,7 @@ func TestTransitionState_Integration(t *testing.T) {
 	// cross-test contamination under parallel execution).
 	var outboxCount int
 	err = tx.QueryRow(ctx,
-		`SELECT COUNT(*) FROM dispensing.outbox
+		`SELECT COUNT(*) FROM medisync.outbox
 		 WHERE subject = 'medisync.dispense.requested'
 		 AND payload ->> 'prescriptionId' = $1`,
 		p.PrescriptionID,
@@ -324,7 +324,7 @@ func TestTransitionState_Integration(t *testing.T) {
 	// Verify outbox payload is valid JSON (scoped to this test's prescription).
 	var payloadRaw []byte
 	err = tx.QueryRow(ctx,
-		`SELECT payload FROM dispensing.outbox
+		`SELECT payload FROM medisync.outbox
 		 WHERE subject = 'medisync.dispense.requested'
 		 AND payload ->> 'prescriptionId' = $1
 		 LIMIT 1`,
@@ -356,7 +356,7 @@ func TestTransitionStateInvalid_Integration(t *testing.T) {
 
 	var id string
 	err = tx.QueryRow(ctx,
-		`SELECT id FROM dispensing.prescription WHERE prescription_id = $1 AND source_system = $2`,
+		`SELECT id FROM medisync.prescription WHERE prescription_id = $1 AND source_system = $2`,
 		p.PrescriptionID, p.SourceSystem).Scan(&id)
 	if err != nil {
 		t.Fatalf("read id: %v", err)
@@ -383,7 +383,7 @@ func TestTransitionStateAtomic_Integration(t *testing.T) {
 
 	var id string
 	err = tx.QueryRow(ctx,
-		`SELECT id FROM dispensing.prescription WHERE prescription_id = $1 AND source_system = $2`,
+		`SELECT id FROM medisync.prescription WHERE prescription_id = $1 AND source_system = $2`,
 		p.PrescriptionID, p.SourceSystem).Scan(&id)
 	if err != nil {
 		t.Fatalf("read id: %v", err)
@@ -500,7 +500,7 @@ func TestInsertStoresAsJSON_Integration(t *testing.T) {
 
 	var itemsRaw []byte
 	err = tx.QueryRow(ctx,
-		`SELECT items FROM dispensing.prescription WHERE prescription_id = $1 AND source_system = $2`,
+		`SELECT items FROM medisync.prescription WHERE prescription_id = $1 AND source_system = $2`,
 		p.PrescriptionID, p.SourceSystem,
 	).Scan(&itemsRaw)
 	if err != nil {

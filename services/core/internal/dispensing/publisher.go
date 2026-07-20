@@ -10,7 +10,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-// OutboxPublisher polls the dispensing.outbox table for unpublished rows
+// OutboxPublisher polls the medisync.outbox table for unpublished rows
 // and publishes them to NATS JetStream. A row is marked published only
 // after the NATS publish succeeds, providing at-least-once delivery.
 //
@@ -31,7 +31,7 @@ func NewOutboxPublisher(pool *pgxpool.Pool, js jetstream.JetStream, log *slog.Lo
 	return &OutboxPublisher{
 		pool:  pool,
 		js:    js,
-		log:   log.With("component", "dispensing.outbox-publisher"),
+		log:   log.With("component", "medisync.outbox-publisher"),
 		poll:  500 * time.Millisecond,
 		batch: 10,
 	}
@@ -74,7 +74,7 @@ func (p *OutboxPublisher) publishBatch(ctx context.Context) error {
 	// from racing on the same rows, and SKIP LOCKED keeps it non-blocking.
 	rows, err := tx.Query(ctx,
 		`SELECT id, subject, payload
-		   FROM dispensing.outbox
+		   FROM medisync.outbox
 		  WHERE NOT published
 		  ORDER BY created_at
 		  LIMIT $1
@@ -117,7 +117,7 @@ func (p *OutboxPublisher) publishBatch(ctx context.Context) error {
 
 		// Mark as published after successful NATS publish.
 		if _, err := tx.Exec(ctx,
-			`UPDATE dispensing.outbox SET published = true WHERE id = $1`,
+			`UPDATE medisync.outbox SET published = true WHERE id = $1`,
 			r.id,
 		); err != nil {
 			return fmt.Errorf("mark outbox[%d] published: %w", r.id, err)

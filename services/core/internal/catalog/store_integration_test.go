@@ -293,7 +293,7 @@ func TestStoreListEmpty_Integration(t *testing.T) {
 	defer cleanup()
 
 	// Ensure no drugs in this transaction (the table may have data from other tests).
-	_, err := tx.Exec(context.Background(), `DELETE FROM catalog.drug`)
+	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.drug`)
 	if err != nil {
 		t.Fatalf("clear drugs: %v", err)
 	}
@@ -317,7 +317,7 @@ func TestStoreListWithResults_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
 
-	_, err := tx.Exec(context.Background(), `DELETE FROM catalog.drug`)
+	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.drug`)
 	if err != nil {
 		t.Fatalf("clear drugs: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestStoreListPagination_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
 
-	_, err := tx.Exec(context.Background(), `DELETE FROM catalog.drug`)
+	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.drug`)
 	if err != nil {
 		t.Fatalf("clear drugs: %v", err)
 	}
@@ -407,7 +407,7 @@ func TestStoreListSearchQuery_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
 
-	_, err := tx.Exec(context.Background(), `DELETE FROM catalog.drug`)
+	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.drug`)
 	if err != nil {
 		t.Fatalf("clear drugs: %v", err)
 	}
@@ -446,7 +446,7 @@ func TestStoreListIncludeInactive_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
 
-	_, err := tx.Exec(context.Background(), `DELETE FROM catalog.drug`)
+	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.drug`)
 	if err != nil {
 		t.Fatalf("clear drugs: %v", err)
 	}
@@ -520,10 +520,10 @@ func TestCatalogDrugTableExists_Integration(t *testing.T) {
 		`SELECT EXISTS(SELECT 1 FROM information_schema.tables
 		 WHERE table_schema = 'catalog' AND table_name = 'drug')`).Scan(&exists)
 	if err != nil {
-		t.Fatalf("check catalog.drug table: %v", err)
+		t.Fatalf("check medisync.drug table: %v", err)
 	}
 	if !exists {
-		t.Fatal("catalog.drug table should exist (created by 0005 migration)")
+		t.Fatal("medisync.drug table should exist (created by 0005 migration)")
 	}
 }
 
@@ -547,7 +547,7 @@ func TestCatalogDrugColumnsExist_Integration(t *testing.T) {
 			t.Fatalf("check column %s: %v", col, err)
 		}
 		if !exists {
-			t.Errorf("column catalog.drug.%s should exist", col)
+			t.Errorf("column medisync.drug.%s should exist", col)
 		}
 	}
 }
@@ -558,14 +558,14 @@ func TestCatalogDrugUniqueCode_Integration(t *testing.T) {
 
 	code := fmt.Sprintf("UNIQUE-CONSTRAINT-%d", time.Now().UnixNano())
 	_, err := pool.Exec(context.Background(),
-		`INSERT INTO catalog.drug (code, name) VALUES ($1, 'First')`, code)
+		`INSERT INTO medisync.drug (code, name) VALUES ($1, 'First')`, code)
 	if err != nil {
 		t.Fatalf("first insert: %v", err)
 	}
-	defer pool.Exec(context.Background(), `DELETE FROM catalog.drug WHERE code = $1`, code)
+	defer pool.Exec(context.Background(), `DELETE FROM medisync.drug WHERE code = $1`, code)
 
 	_, err = pool.Exec(context.Background(),
-		`INSERT INTO catalog.drug (code, name) VALUES ($1, 'Second')`, code)
+		`INSERT INTO medisync.drug (code, name) VALUES ($1, 'Second')`, code)
 	if err == nil {
 		t.Fatal("expected unique constraint violation for duplicate code, got nil")
 	}

@@ -125,7 +125,7 @@ func TestFullM2ChainE2E(t *testing.T) {
 
 	// Create WARD-3A nurse.
 	err = pool.QueryRow(ctx,
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, active)
 		 VALUES ($1, '$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'Nurse 3A', 'NURSE', $2, true)
 		 RETURNING id`,
 		testRun+"-nurse-3a", []string{ward3A},
@@ -136,7 +136,7 @@ func TestFullM2ChainE2E(t *testing.T) {
 
 	// Create WARD-9Z nurse.
 	err = pool.QueryRow(ctx,
-		`INSERT INTO identity.users (username, password_hash, display_name, role, ward_ids, active)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, active)
 		 VALUES ($1, '$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'Nurse 9Z', 'NURSE', $2, true)
 		 RETURNING id`,
 		testRun+"-nurse-9z", []string{ward9Z},
@@ -197,7 +197,7 @@ func TestFullM2ChainE2E(t *testing.T) {
 	// Create a bare slot via raw SQL (inventory.Store has no CreateSlot method).
 	var slotID string
 	err = pool.QueryRow(ctx,
-		`INSERT INTO inventory.slot (cabinet_id, code, capacity, quantity, low_threshold)
+		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
 		 VALUES ($1, $2, 0, 0, 0)
 		 RETURNING id`,
 		cabinetID, slotCode,
@@ -275,7 +275,7 @@ func TestFullM2ChainE2E(t *testing.T) {
 	var storedID string
 	var storedState string
 	err = pool.QueryRow(ctx,
-		`SELECT id, state FROM dispensing.prescription
+		`SELECT id, state FROM medisync.prescription
 		 WHERE prescription_id = $1 AND source_system = $2`,
 		prescriptionID, "e2e-test",
 	).Scan(&storedID, &storedState)
@@ -320,7 +320,7 @@ func TestFullM2ChainE2E(t *testing.T) {
 
 	var auditCount int
 	err = pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM audit.audit_log
+		`SELECT COUNT(*) FROM medisync.audit_log
 		 WHERE action = 'prescription.dispense.requested'
 		   AND entity_id = $1`,
 		prescriptionID,
@@ -338,7 +338,7 @@ func TestFullM2ChainE2E(t *testing.T) {
 
 	var outboxCount int
 	err = pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM dispensing.outbox
+		`SELECT COUNT(*) FROM medisync.outbox
 		 WHERE subject = 'medisync.dispense.requested'
 		   AND payload ->> 'prescriptionId' = $1`,
 		prescriptionID,
@@ -353,7 +353,7 @@ func TestFullM2ChainE2E(t *testing.T) {
 	// Verify the outbox payload is valid proto JSON.
 	var payloadRaw []byte
 	err = pool.QueryRow(ctx,
-		`SELECT payload FROM dispensing.outbox
+		`SELECT payload FROM medisync.outbox
 		 WHERE subject = 'medisync.dispense.requested'
 		   AND payload ->> 'prescriptionId' = $1
 		 LIMIT 1`,
@@ -421,11 +421,11 @@ func TestFullM2ChainE2E(t *testing.T) {
 	t.Cleanup(func() {
 		// Remove all test rows so repeated runs don't collide on unique constraints.
 		// Order matters: FK-style references (none enforced, but be safe).
-		pool.Exec(context.Background(), `DELETE FROM dispensing.outbox WHERE payload ->> 'prescriptionId' = $1`, prescriptionID)
-		pool.Exec(context.Background(), `DELETE FROM dispensing.prescription WHERE prescription_id = $1`, prescriptionID)
-		pool.Exec(context.Background(), `DELETE FROM inventory.slot WHERE code = $1`, slotCode)
-		pool.Exec(context.Background(), `DELETE FROM catalog.drug WHERE code = $1`, drug.Code)
-		pool.Exec(context.Background(), `DELETE FROM identity.users WHERE id IN ($1, $2)`, user3AID, user9ZID)
-		pool.Exec(context.Background(), `DELETE FROM audit.audit_log WHERE entity_id = $1`, prescriptionID)
+		pool.Exec(context.Background(), `DELETE FROM medisync.outbox WHERE payload ->> 'prescriptionId' = $1`, prescriptionID)
+		pool.Exec(context.Background(), `DELETE FROM medisync.prescription WHERE prescription_id = $1`, prescriptionID)
+		pool.Exec(context.Background(), `DELETE FROM medisync.slot WHERE code = $1`, slotCode)
+		pool.Exec(context.Background(), `DELETE FROM medisync.drug WHERE code = $1`, drug.Code)
+		pool.Exec(context.Background(), `DELETE FROM medisync.users WHERE id IN ($1, $2)`, user3AID, user9ZID)
+		pool.Exec(context.Background(), `DELETE FROM medisync.audit_log WHERE entity_id = $1`, prescriptionID)
 	})
 }

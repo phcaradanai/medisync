@@ -346,8 +346,8 @@ func TestGetByUsernameQueryArgs(t *testing.T) {
 	}
 
 	call := db.lastQueryRow()
-	if !strings.Contains(call.sql, "FROM identity.users") {
-		t.Error("SQL should reference identity.users")
+	if !strings.Contains(call.sql, "FROM medisync.users") {
+		t.Error("SQL should reference medisync.users")
 	}
 	if !strings.Contains(call.sql, "username = $1") {
 		t.Error("SQL should filter by username")
@@ -642,8 +642,8 @@ func TestSeedAdminEmptyTable(t *testing.T) {
 
 	// Verify the insert was executed.
 	execCall := db.lastExec()
-	if !strings.Contains(execCall.sql, "INSERT INTO identity.users") {
-		t.Error("insert SQL should reference identity.users")
+	if !strings.Contains(execCall.sql, "INSERT INTO medisync.users") {
+		t.Error("insert SQL should reference medisync.users")
 	}
 	if !strings.Contains(execCall.sql, "'admin'") {
 		t.Error("should insert with username 'admin'")

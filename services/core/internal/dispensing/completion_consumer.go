@@ -168,8 +168,8 @@ func (c *CompletionConsumer) handleCompleted(ctx context.Context, msg jetstream.
 			// Query batches for this drug across all slots, ordered by expiry.
 			rows, err := c.pool.Query(ctx,
 				`SELECT b.id, b.slot_id, s.code, b.lot_number, b.expiry_date, b.quantity
-				   FROM inventory.slot_batch b
-				   JOIN inventory.slot s ON s.id = b.slot_id
+				   FROM medisync.slot_batch b
+				   JOIN medisync.slot s ON s.id = b.slot_id
 				  WHERE s.drug_code = $1 AND b.quantity > 0
 				  ORDER BY b.expiry_date ASC NULLS LAST`, item.DrugCode)
 			if err != nil {
@@ -199,13 +199,13 @@ func (c *CompletionConsumer) handleCompleted(ctx context.Context, msg jetstream.
 			// Apply allocations
 			for _, a := range allocs {
 				tag, err := c.pool.Exec(ctx,
-					`UPDATE inventory.slot_batch SET quantity = quantity - $1, updated_at = now()
+					`UPDATE medisync.slot_batch SET quantity = quantity - $1, updated_at = now()
 					  WHERE id = $2 AND quantity >= $1`, a.TakeQty, a.BatchID)
 				if err != nil || tag.RowsAffected() == 0 {
 					c.log.Warn("FIFO batch decrement failed", "batch_id", a.BatchID, "error", err)
 					continue
 				}
-				c.pool.Exec(ctx, `UPDATE inventory.slot SET quantity = quantity - $1, updated_at = now() WHERE id = (SELECT slot_id FROM inventory.slot_batch WHERE id = $2)`, a.TakeQty, a.BatchID)
+				c.pool.Exec(ctx, `UPDATE medisync.slot SET quantity = quantity - $1, updated_at = now() WHERE id = (SELECT slot_id FROM medisync.slot_batch WHERE id = $2)`, a.TakeQty, a.BatchID)
 				c.log.Info("FIFO dispensed",
 					"drug_code", item.DrugCode,
 					"slot", a.SlotCode,

@@ -341,8 +341,8 @@ func TestCreateDrugSuccess(t *testing.T) {
 	}
 
 	call := db.lastQueryRow()
-	if !strings.Contains(call.sql, "INSERT INTO catalog.drug") {
-		t.Error("SQL should be INSERT INTO catalog.drug")
+	if !strings.Contains(call.sql, "INSERT INTO medisync.drug") {
+		t.Error("SQL should be INSERT INTO medisync.drug")
 	}
 	if len(call.args) != 14 {
 		t.Errorf("expected 14 args (including capacity and safety metadata), got %d", len(call.args))
@@ -381,8 +381,8 @@ func TestGetByIDSuccess(t *testing.T) {
 	}
 
 	call := db.lastQueryRow()
-	if !strings.Contains(call.sql, "FROM catalog.drug") {
-		t.Error("SQL should reference catalog.drug")
+	if !strings.Contains(call.sql, "FROM medisync.drug") {
+		t.Error("SQL should reference medisync.drug")
 	}
 	if !strings.Contains(call.sql, "id = $1") {
 		t.Error("SQL should filter by id")
@@ -497,8 +497,8 @@ func TestUpdateDrugSuccess(t *testing.T) {
 	}
 
 	call := db.lastQueryRow()
-	if !strings.Contains(call.sql, "UPDATE catalog.drug") {
-		t.Error("SQL should be UPDATE catalog.drug")
+	if !strings.Contains(call.sql, "UPDATE medisync.drug") {
+		t.Error("SQL should be UPDATE medisync.drug")
 	}
 }
 
@@ -534,8 +534,8 @@ func TestDeactivateDrugSuccess(t *testing.T) {
 	}
 
 	call := db.lastQueryRow()
-	if !strings.Contains(call.sql, "UPDATE catalog.drug") {
-		t.Error("SQL should be UPDATE catalog.drug")
+	if !strings.Contains(call.sql, "UPDATE medisync.drug") {
+		t.Error("SQL should be UPDATE medisync.drug")
 	}
 	if !strings.Contains(call.sql, "active = false") {
 		t.Error("SQL should set active = false")

@@ -23,7 +23,10 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Kiosk is a provisioned dispensing kiosk terminal.
+// Kiosk is a physical dispensing device — a vending machine with shelves
+// and slots, plus an auth terminal (code + PIN). This unified model
+// replaces the former split between identity.kiosks (auth) and
+// cabinet.cabinet (physical registry).
 type Kiosk struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -37,7 +40,9 @@ type Kiosk struct {
 	// RPC. The admin must record or relay it at creation/reset time.
 	Pin *string `protobuf:"bytes,6,opt,name=pin,proto3,oneof" json:"pin,omitempty"`
 	// Project this kiosk belongs to.
-	ProjectId     string `protobuf:"bytes,7,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ProjectId string `protobuf:"bytes,7,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Full descriptive name (e.g. "ตู้ยาหอผู้ป่วย A"), merged from cabinet.
+	Name          string `protobuf:"bytes,8,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -117,6 +122,13 @@ func (x *Kiosk) GetPin() string {
 func (x *Kiosk) GetProjectId() string {
 	if x != nil {
 		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *Kiosk) GetName() string {
+	if x != nil {
+		return x.Name
 	}
 	return ""
 }
@@ -231,7 +243,9 @@ type CreateKioskRequest struct {
 	DisplayName string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	Pin         string                 `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
 	// Project to assign this kiosk to. Required.
-	ProjectId     string `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ProjectId string `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Full descriptive name (e.g. "ตู้ยาหอผู้ป่วย A").
+	Name          string `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -294,6 +308,13 @@ func (x *CreateKioskRequest) GetProjectId() string {
 	return ""
 }
 
+func (x *CreateKioskRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 type CreateKioskResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kiosk         *Kiosk                 `protobuf:"bytes,1,opt,name=kiosk,proto3" json:"kiosk,omitempty"`
@@ -343,6 +364,7 @@ type UpdateKioskRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	DisplayName   *string                `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	Active        *bool                  `protobuf:"varint,3,opt,name=active,proto3,oneof" json:"active,omitempty"`
+	Name          *string                `protobuf:"bytes,4,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -396,6 +418,13 @@ func (x *UpdateKioskRequest) GetActive() bool {
 		return *x.Active
 	}
 	return false
+}
+
+func (x *UpdateKioskRequest) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
 }
 
 type UpdateKioskResponse struct {
@@ -734,7 +763,7 @@ var File_medisync_kiosk_v1_kiosk_proto protoreflect.FileDescriptor
 
 const file_medisync_kiosk_v1_kiosk_proto_rawDesc = "" +
 	"\n" +
-	"\x1dmedisync/kiosk/v1/kiosk.proto\x12\x11medisync.kiosk.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#medisync/common/v1/pagination.proto\"\xdf\x01\n" +
+	"\x1dmedisync/kiosk/v1/kiosk.proto\x12\x11medisync.kiosk.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#medisync/common/v1/pagination.proto\"\xf3\x01\n" +
 	"\x05Kiosk\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12!\n" +
@@ -744,7 +773,8 @@ const file_medisync_kiosk_v1_kiosk_proto_rawDesc = "" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x15\n" +
 	"\x03pin\x18\x06 \x01(\tH\x00R\x03pin\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\a \x01(\tR\tprojectIdB\x06\n" +
+	"project_id\x18\a \x01(\tR\tprojectId\x12\x12\n" +
+	"\x04name\x18\b \x01(\tR\x04nameB\x06\n" +
 	"\x04_pin\"Y\n" +
 	"\x11ListKiosksRequest\x12D\n" +
 	"\n" +
@@ -754,21 +784,24 @@ const file_medisync_kiosk_v1_kiosk_proto_rawDesc = "" +
 	"\x06kiosks\x18\x01 \x03(\v2\x18.medisync.kiosk.v1.KioskR\x06kiosks\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
 	"\vtotal_count\x18\x03 \x01(\x03R\n" +
-	"totalCount\"|\n" +
+	"totalCount\"\x90\x01\n" +
 	"\x12CreateKioskRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x10\n" +
 	"\x03pin\x18\x03 \x01(\tR\x03pin\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x04 \x01(\tR\tprojectId\"E\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x12\x12\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\"E\n" +
 	"\x13CreateKioskResponse\x12.\n" +
-	"\x05kiosk\x18\x01 \x01(\v2\x18.medisync.kiosk.v1.KioskR\x05kiosk\"\x85\x01\n" +
+	"\x05kiosk\x18\x01 \x01(\v2\x18.medisync.kiosk.v1.KioskR\x05kiosk\"\xa7\x01\n" +
 	"\x12UpdateKioskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12\x1b\n" +
-	"\x06active\x18\x03 \x01(\bH\x01R\x06active\x88\x01\x01B\x0f\n" +
+	"\x06active\x18\x03 \x01(\bH\x01R\x06active\x88\x01\x01\x12\x17\n" +
+	"\x04name\x18\x04 \x01(\tH\x02R\x04name\x88\x01\x01B\x0f\n" +
 	"\r_display_nameB\t\n" +
-	"\a_active\"E\n" +
+	"\a_activeB\a\n" +
+	"\x05_name\"E\n" +
 	"\x13UpdateKioskResponse\x12.\n" +
 	"\x05kiosk\x18\x01 \x01(\v2\x18.medisync.kiosk.v1.KioskR\x05kiosk\"?\n" +
 	"\x14ResetKioskPinRequest\x12\x0e\n" +

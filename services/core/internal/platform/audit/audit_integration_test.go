@@ -66,7 +66,7 @@ func TestWriteDefaultsActor_Integration(t *testing.T) {
 
 	var actor string
 	err = tx.QueryRow(context.Background(),
-		`SELECT actor FROM audit.audit_log WHERE entity_id = $1`,
+		`SELECT actor FROM medisync.audit_log WHERE entity_id = $1`,
 		e.EntityID,
 	).Scan(&actor)
 	if err != nil {
@@ -96,7 +96,7 @@ func TestWriteWithActor_Integration(t *testing.T) {
 
 	var actor string
 	err = tx.QueryRow(context.Background(),
-		`SELECT actor FROM audit.audit_log WHERE entity_id = $1`,
+		`SELECT actor FROM medisync.audit_log WHERE entity_id = $1`,
 		e.EntityID,
 	).Scan(&actor)
 	if err != nil {
@@ -132,7 +132,7 @@ func TestWriteWithDetail_Integration(t *testing.T) {
 
 	var detailRaw []byte
 	err = tx.QueryRow(context.Background(),
-		`SELECT detail FROM audit.audit_log WHERE entity_id = $1`,
+		`SELECT detail FROM medisync.audit_log WHERE entity_id = $1`,
 		e.EntityID,
 	).Scan(&detailRaw)
 	if err != nil {
@@ -167,7 +167,7 @@ func TestWriteEmptyDetail_Integration(t *testing.T) {
 
 	var detailRaw []byte
 	err = tx.QueryRow(context.Background(),
-		`SELECT detail FROM audit.audit_log WHERE entity_id = $1`,
+		`SELECT detail FROM medisync.audit_log WHERE entity_id = $1`,
 		e.EntityID,
 	).Scan(&detailRaw)
 	if err != nil {
@@ -199,7 +199,7 @@ func TestAuditLogWritten_Integration(t *testing.T) {
 	var actor string
 	var detailRaw []byte
 	err = tx.QueryRow(context.Background(),
-		`SELECT actor, detail FROM audit.audit_log WHERE entity_id = $1 ORDER BY id DESC LIMIT 1`,
+		`SELECT actor, detail FROM medisync.audit_log WHERE entity_id = $1 ORDER BY id DESC LIMIT 1`,
 		e.EntityID,
 	).Scan(&actor, &detailRaw)
 	if err != nil {

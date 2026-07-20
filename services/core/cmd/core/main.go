@@ -19,10 +19,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go/jetstream"
 
-	"github.com/adm-chura3inter/medisync/services/core/internal/cabinet"
 	"github.com/adm-chura3inter/medisync/services/core/internal/catalog"
 	"github.com/adm-chura3inter/medisync/services/core/internal/dispensing"
-	cabinetv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/cabinet/v1/cabinetv1connect"
 	catalogv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/catalog/v1/catalogv1connect"
 	dispensingv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1/dispensingv1connect"
 	identityv1connect "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1/identityv1connect"
@@ -164,12 +162,6 @@ func run() (runErr error) {
 	kioskStore := identity.NewKioskStore(pool)
 	kioskPath, kioskHandler := newKioskHandler(kioskStore, jwtMgr, cfg, auditw, rpcOptions...)
 	mux.Handle(kioskPath, kioskHandler)
-
-	// ── Cabinet ──────────────────────────────────────────────────────
-	cabinetStore := cabinet.NewStore(pool)
-	cabinetServer := cabinet.NewServer(cabinetStore, newCabinetTokenParser(jwtMgr), auditw)
-	cabinetPath, cabinetHandler := cabinetv1connect.NewCabinetServiceHandler(cabinetServer, rpcOptions...)
-	mux.Handle(cabinetPath, cabinetHandler)
 
 	// ── Catalog ─────────────────────────────────────────────────────
 	catalogStore := catalog.NewStore(pool, auditw)
@@ -405,29 +397,6 @@ func (p *dispensingTokenParser) Parse(tokenString string) (*dispensing.TokenClai
 		return nil, err
 	}
 	return &dispensing.TokenClaims{
-		Subject:   claims.Subject,
-		Role:      claims.Role,
-		ProjectID: claims.ProjectID,
-		WardIDs:   claims.WardIDs,
-	}, nil
-}
-
-// ── Cabinet token parser adapter ──────────────────────────────────
-
-func newCabinetTokenParser(mgr *identity.JWTManager) *cabinetTokenParser {
-	return &cabinetTokenParser{mgr: mgr}
-}
-
-type cabinetTokenParser struct {
-	mgr *identity.JWTManager
-}
-
-func (p *cabinetTokenParser) Parse(tokenString string) (*cabinet.TokenClaims, error) {
-	claims, err := p.mgr.Parse(tokenString)
-	if err != nil {
-		return nil, err
-	}
-	return &cabinet.TokenClaims{
 		Subject:   claims.Subject,
 		Role:      claims.Role,
 		ProjectID: claims.ProjectID,

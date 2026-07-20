@@ -76,7 +76,7 @@ func (s *Store) Insert(ctx context.Context, p Prescription) (bool, error) {
 	}
 
 	tag, err := s.db.Exec(ctx,
-		`INSERT INTO dispensing.prescription
+		`INSERT INTO medisync.prescription
 		   (prescription_id, source_system, hn, patient_name, ward_id, items, state, issued_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, 'READY', $7)
 		 ON CONFLICT ON CONSTRAINT prescription_external_key DO NOTHING`,
@@ -92,7 +92,7 @@ func (s *Store) GetByID(ctx context.Context, id string) (*PrescriptionRow, error
 	row := s.db.QueryRow(ctx,
 		`SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
 		        items, state, failure_reason, issued_at, created_at, updated_at
-		   FROM dispensing.prescription WHERE id = $1`, id)
+		   FROM medisync.prescription WHERE id = $1`, id)
 	return scanPrescription(row)
 }
 
@@ -104,13 +104,13 @@ func (s *Store) GetByPrescriptionID(ctx context.Context, prescriptionID, sourceS
 		row = s.db.QueryRow(ctx,
 			`SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
 			        items, state, failure_reason, issued_at, created_at, updated_at
-			   FROM dispensing.prescription
+			   FROM medisync.prescription
 			  WHERE prescription_id = $1 AND source_system = $2`, prescriptionID, sourceSystem)
 	} else {
 		row = s.db.QueryRow(ctx,
 			`SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
 			        items, state, failure_reason, issued_at, created_at, updated_at
-			   FROM dispensing.prescription
+			   FROM medisync.prescription
 			  WHERE prescription_id = $1`, prescriptionID)
 	}
 	return scanPrescription(row)
@@ -158,7 +158,7 @@ func (s *Store) ListByWard(ctx context.Context, wardIDs []string, states []State
 	}
 
 	var totalCount int64
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM dispensing.prescription %s", filterWhereSQL)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM medisync.prescription %s", filterWhereSQL)
 	if err := s.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
 		return nil, "", 0, fmt.Errorf("count prescriptions: %w", err)
 	}
@@ -166,7 +166,7 @@ func (s *Store) ListByWard(ctx context.Context, wardIDs []string, states []State
 	whereSQL := filterWhereSQL
 	if pageToken != "" {
 		whereSQL += fmt.Sprintf(
-			" AND created_at < (SELECT created_at FROM dispensing.prescription WHERE id = $%d)",
+			" AND created_at < (SELECT created_at FROM medisync.prescription WHERE id = $%d)",
 			argIdx,
 		)
 		args = append(args, pageToken)
@@ -176,7 +176,7 @@ func (s *Store) ListByWard(ctx context.Context, wardIDs []string, states []State
 	query := fmt.Sprintf(
 		`SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
 		        items, state, failure_reason, issued_at, created_at, updated_at
-		   FROM dispensing.prescription %s
+		   FROM medisync.prescription %s
 		  ORDER BY created_at DESC, id DESC LIMIT $%d`, whereSQL, argIdx)
 	args = append(args, pageSize+1)
 
@@ -221,7 +221,7 @@ func (s *Store) TransitionState(ctx context.Context, tx pgx.Tx, id string, from,
 	// Atomically update state — the WHERE current_state = $from clause
 	// prevents lost updates and enforces the guard at the database level.
 	row := tx.QueryRow(ctx,
-		`UPDATE dispensing.prescription
+		`UPDATE medisync.prescription
 		   SET state = $1, updated_at = now()
 		 WHERE id = $2 AND state = $3
 		 RETURNING id, prescription_id, source_system, hn, patient_name, ward_id,
@@ -239,7 +239,7 @@ func (s *Store) TransitionState(ctx context.Context, tx pgx.Tx, id string, from,
 	// medisync.dispense.requested in the same transaction.
 	if from == StateReady && to == StateDispensing && len(outboxPayload) > 0 {
 		_, err := tx.Exec(ctx,
-			`INSERT INTO dispensing.outbox (subject, payload) VALUES ($1, $2)`,
+			`INSERT INTO medisync.outbox (subject, payload) VALUES ($1, $2)`,
 			"medisync.dispense.requested", outboxPayload)
 		if err != nil {
 			return nil, fmt.Errorf("insert outbox: %w", err)

@@ -7,7 +7,10 @@ import "medisync/common/v1/pagination.proto";
 
 option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/kiosk/v1;kioskv1";
 
-// Kiosk is a provisioned dispensing kiosk terminal.
+// Kiosk is a physical dispensing device — a vending machine with shelves
+// and slots, plus an auth terminal (code + PIN). This unified model
+// replaces the former split between identity.kiosks (auth) and
+// cabinet.cabinet (physical registry).
 message Kiosk {
   string id = 1;
   string code = 2;
@@ -21,6 +24,8 @@ message Kiosk {
   optional string pin = 6;
   // Project this kiosk belongs to.
   string project_id = 7;
+  // Full descriptive name (e.g. "ตู้ยาหอผู้ป่วย A"), merged from cabinet.
+  string name = 8;
 }
 
 // ── Admin RPCs ─────────────────────────────────────────────────────
@@ -41,6 +46,8 @@ message CreateKioskRequest {
   string pin = 3;
   // Project to assign this kiosk to. Required.
   string project_id = 4;
+  // Full descriptive name (e.g. "ตู้ยาหอผู้ป่วย A").
+  string name = 5;
 }
 
 message CreateKioskResponse {
@@ -51,6 +58,7 @@ message UpdateKioskRequest {
   string id = 1;
   optional string display_name = 2;
   optional bool active = 3;
+  optional string name = 4;
 }
 
 message UpdateKioskResponse {

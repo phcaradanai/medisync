@@ -59,7 +59,7 @@ func uniqueCabinetCode(t *testing.T, prefix string) (string, string) {
 func seedSlot(t *testing.T, store *Store, cabinetID, code string) *Slot {
 	t.Helper()
 	row := store.db.(pgx.Tx).QueryRow(context.Background(),
-		`INSERT INTO inventory.slot (cabinet_id, code, capacity, quantity, low_threshold)
+		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
 		 VALUES ($1, $2, 0, 0, 0)
 		 RETURNING id, cabinet_id, code, drug_id, drug_code, drug_name,
 		           capacity, quantity, low_threshold, created_at, updated_at`,
@@ -135,7 +135,7 @@ func TestStoreListSlots_Integration(t *testing.T) {
 	defer cleanup()
 
 	// Clear slots in this transaction.
-	_, err := tx.Exec(context.Background(), `DELETE FROM inventory.slot`)
+	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.slot`)
 	if err != nil {
 		t.Fatalf("clear slots: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestStoreListSlotsFilterByCabinet_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
 
-	_, err := tx.Exec(context.Background(), `DELETE FROM inventory.slot`)
+	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.slot`)
 	if err != nil {
 		t.Fatalf("clear slots: %v", err)
 	}
@@ -334,7 +334,7 @@ func TestSlotTableExists_Integration(t *testing.T) {
 		t.Fatalf("check slot table: %v", err)
 	}
 	if !exists {
-		t.Fatal("inventory.slot table does not exist — 0006 migration may not have run")
+		t.Fatal("medisync.slot table does not exist — 0006 migration may not have run")
 	}
 }
 
@@ -359,7 +359,7 @@ func TestSlotColumns_Integration(t *testing.T) {
 			t.Fatalf("check column %s: %v", col, err)
 		}
 		if !exists {
-			t.Errorf("column inventory.slot.%s does not exist", col)
+			t.Errorf("column medisync.slot.%s does not exist", col)
 		}
 	}
 }
@@ -370,7 +370,7 @@ func TestSlotUniqueConstraint_Integration(t *testing.T) {
 
 	cabinetID, code := uniqueCabinetCode(t, "UNIQ")
 	_, err := store.db.(pgx.Tx).Exec(context.Background(),
-		`INSERT INTO inventory.slot (cabinet_id, code, capacity, quantity, low_threshold)
+		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
 		 VALUES ($1, $2, 0, 0, 0)`, cabinetID, code)
 	if err != nil {
 		t.Fatalf("first insert: %v", err)
@@ -378,7 +378,7 @@ func TestSlotUniqueConstraint_Integration(t *testing.T) {
 
 	// Second insert with the same cabinet_id + code should fail.
 	_, err = store.db.(pgx.Tx).Exec(context.Background(),
-		`INSERT INTO inventory.slot (cabinet_id, code, capacity, quantity, low_threshold)
+		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
 		 VALUES ($1, $2, 0, 0, 0)`, cabinetID, code)
 	if err == nil {
 		t.Fatal("expected unique constraint violation, got nil")
@@ -392,7 +392,7 @@ func TestSlotCapacityCheck_Integration(t *testing.T) {
 	cabinetID, code := uniqueCabinetCode(t, "CC")
 	// Negative capacity should be rejected by the CHECK constraint.
 	_, err := store.db.(pgx.Tx).Exec(context.Background(),
-		`INSERT INTO inventory.slot (cabinet_id, code, capacity, quantity, low_threshold)
+		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
 		 VALUES ($1, $2, -1, 0, 0)`, cabinetID, code)
 	if err == nil {
 		t.Fatal("expected check constraint violation for negative capacity")
