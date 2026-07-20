@@ -107,7 +107,7 @@ export default function ShelfGrid({
 }: ShelfGridProps) {
   const [activeShelf, setActiveShelf] = useState(clampShelf(initialShelf));
   const [cabinetView, setCabinetView] = useState<"overview" | "shelf">("overview");
-  const [focusedSlotId, setFocusedSlotId] = useState<string | null>(null);
+  const [, setFocusedSlotId] = useState<string | null>(null);
   const [detailSlotId, setDetailSlotId] = useState<string | null>(null);
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(
     null,
@@ -281,12 +281,12 @@ export default function ShelfGrid({
                 return <SlotCell key={`${activeShelf}:${row}`} slot={slot} shelfNumber={activeShelf} rowNumber={(activeShelf - 1) * ROW_COUNT + row} selected={Boolean(slot && requestedSlotIds.includes(slot.id))} expiryWarningDays={expiryWarningDays} readOnly onSelect={(selected) => setDetailSlotId(selected.id)} />;
               })}
             </div>
-            {focusedSlotId && (() => {
+            {/* {focusedSlotId && (() => {
               const focused = slots.find((slot) => slot.id === focusedSlotId);
               const position = focused ? getSlotPosition(focused) : null;
               return focused && position ? <div className="cabinet-detail__focus" aria-live="polite"><strong>{focused.drugName || focused.displayName}</strong><span>ตู้ {focused.code} · ชั้น {position.shelf} · ช่อง {(position.shelf - 1) * 22 + position.row} · คงเหลือ {focused.quantity}/{focused.capacity}</span></div> : null;
-            })()}
-          </div>
+            })()} */}
+          </div> 
         )}
         {detailSlot && <SlotDetailModal slot={detailSlot} relatedSlots={relatedSlots} expiryWarningDays={expiryWarningDays} onClose={() => setDetailSlotId(null)} onSelectRelated={(related) => setDetailSlotId(related.id)} />}
       </section>

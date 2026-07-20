@@ -110,33 +110,37 @@ function KioskShell() {
 
   return (
     <>
-      <header className={`kiosk-header${isWithdraw ? " kiosk-header--withdraw" : ""}`}>
-        <div className="flex flex-col">
-          <span className="text-white text-lg font-bold">{state.kiosk.displayName}</span>
-          <span className="text-sm text-gray-400">{state.kiosk.code}</span>
-        </div>
-        <div className="flex gap-3 items-center">
-          <button
-            className={`kiosk-header__mode-btn ${isWithdraw ? "kiosk-header__mode-btn--active" : ""}`}
-            onClick={() => navigate("/withdraw")}
-          >
-            💊 เบิกยา
-          </button>
-          <button
-            className={`kiosk-header__mode-btn ${isRefill ? "kiosk-header__mode-btn--refill-active" : ""}`}
-            onClick={() => navigate("/refill")}
-          >
-            📦 เติมยา
-          </button>
-          <button
-            className={`kiosk-header__mode-btn ${isCatalog ? "kiosk-header__mode-btn--active" : ""}`}
-            onClick={() => navigate("/catalog")}
-          >
-            ▦ ผังช่องยา
-          </button>
-        </div>
-      </header>
-      {isRefill && <div className="kiosk-refill-banner">🔄 โหมดเติมยา</div>}
+      {/* The refill dashboard carries its own full-width ADM cabinet header and
+          in-page navigation, so the shared dark mode bar is suppressed there to
+          avoid stacking two headers. */}
+      {!isRefill && (
+        <header className={`kiosk-header${isWithdraw ? " kiosk-header--withdraw" : ""}`}>
+          <div className="flex flex-col">
+            <span className="text-white text-lg font-bold">{state.kiosk.displayName}</span>
+            <span className="text-sm text-gray-400">{state.kiosk.code}</span>
+          </div>
+          <div className="flex gap-3 items-center">
+            <button
+              className={`kiosk-header__mode-btn ${isWithdraw ? "kiosk-header__mode-btn--active" : ""}`}
+              onClick={() => navigate("/withdraw")}
+            >
+              💊 เบิกยา
+            </button>
+            <button
+              className="kiosk-header__mode-btn"
+              onClick={() => navigate("/refill")}
+            >
+              📦 เติมยา
+            </button>
+            <button
+              className={`kiosk-header__mode-btn ${isCatalog ? "kiosk-header__mode-btn--active" : ""}`}
+              onClick={() => navigate("/catalog")}
+            >
+              ▦ ผังช่องยา
+            </button>
+          </div>
+        </header>
+      )}
       <Routes>
         <Route index element={<Navigate to="/withdraw" replace />} />
         <Route path="withdraw" element={<WithdrawFlow />} />

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kiosk Flow Tester</title>
+<style>
+  :root {
+    --ink: #1e293b; --muted: #64748b; --line: #e6e9f0; --surface: #fff;
+    --bg: #f3f4fb; --brand: linear-gradient(135deg, #3b82f6, #7c5cff);
+    --ok: #22b95a; --ok-bg: #eafaf0; --err: #ef4444; --err-bg: #fdecec;
+    --busy: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: system-ui, "Noto Sans Thai", sans-serif; line-height: 1.5;
+    padding: 24px; max-width: 1040px; margin: 0 auto;
+  }
+  h1 { font-size: 1.5rem; margin: 0; }
+  .sub { color: var(--muted); font-size: .9rem; margin: 2px 0 0; }
+  .brandbar {
+    display: flex; align-items: center; gap: 14px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; margin-bottom: 18px;
+  }
+  .logo {
+    font-size: 1.8rem; font-weight: 800; letter-spacing: .04em;
+    background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  label { display: block; font-size: .8rem; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
+  input, select {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+    font-size: .95rem; font-family: inherit; color: var(--ink); background: var(--surface);
+  }
+  input:focus, select:focus { outline: none; border-color: var(--busy); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  button {
+    border: none; border-radius: 11px; padding: 11px 16px; font-weight: 800; font-size: .95rem;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-ghost { background: #f1f5f9; color: var(--ink); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .hint { font-size: .75rem; color: var(--muted); margin-top: 6px; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 800; font-size: .85rem; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.err { background: var(--err-bg); color: var(--err); }
+  .badge.busy { background: #e0edff; color: var(--busy); }
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 14px;
+    font-size: .82rem; white-space: pre-wrap; word-break: break-word; margin: 12px 0 0;
+    min-height: 120px; max-height: 340px; overflow: auto;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .85rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 700; }
+  tr.pick { cursor: pointer; }
+  tr.pick:hover { background: #f1f5f9; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .idpill {
+    font-family: ui-monospace, monospace; background: #eef2ff; border: 1px solid #d9e0ff;
+    border-radius: 8px; padding: 4px 8px; display: inline-block; margin-top: 8px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="brandbar">
+    <span class="logo">ADM</span>
+    <div>
+      <h1>Kiosk Flow Tester</h1>
+      <p class="sub">สร้างรายการเบิกยา → จำลองสแกน sticker → ยืนยันจ่ายเข้า core (E2E เหมือน hardware)</p>
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- Left: form -->
+    <div class="card">
+      <h2>ตั้งค่ารายการ</h2>
+      <div class="row">
+        <div>
+          <label>Cabinet</label>
+          <input id="cabinet" value="CAB1" />
+        </div>
+        <div>
+          <label>Ward</label>
+          <input id="ward" value="WARD-3A" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>HN</label>
+          <input id="hn" value="HN900001" />
+        </div>
+        <div>
+          <label>ชื่อผู้ป่วย</label>
+          <input id="patient" value="ผู้ป่วยทดสอบ Kiosk" />
+        </div>
+      </div>
+      <label>ยา (เว้นว่าง = auto จากตู้) — CODE:จำนวน, คั่นด้วย ,</label>
+      <input id="drugs" placeholder="DEMO-PARA500:2, DEMO-AMOX500:3" />
+      <div class="row">
+        <div>
+          <label>จำนวนยา auto (ตอนเว้นว่าง)</label>
+          <input id="items" type="number" value="2" min="1" />
+        </div>
+        <div>
+          <label>Prescription ID (confirm / คงที่)</label>
+          <input id="pid" placeholder="เว้นว่าง = สร้างใหม่" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-ghost" onclick="loadSlots()">🔄 โหลดยาในตู้</button>
+        <button class="btn-ghost" onclick="run('create')">📦 สร้าง sticker</button>
+        <button class="btn-ghost" onclick="run('confirm')">📤 ยืนยันจ่าย (ใช้ ID)</button>
+        <button class="btn-primary" onclick="run('flow')">▶ รัน E2E flow</button>
+      </div>
+      <p class="hint">create ส่งเข้า NATS เหมือน producer จริง · confirm/flow เรียก Dispense เหมือนสแกนยืนยันหน้าตู้</p>
+
+      <div id="slots"></div>
+    </div>
+
+    <!-- Right: result -->
+    <div class="card">
+      <h2>ผลลัพธ์ <span id="badge"></span></h2>
+      <div id="idout"></div>
+      <pre id="log">พร้อมทำงาน กดปุ่มด้านซ้ายเพื่อเริ่ม…</pre>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function body() {
+    return {
+      cabinet: $("cabinet").value.trim(),
+      ward: $("ward").value.trim(),
+      hn: $("hn").value.trim(),
+      patient: $("patient").value.trim(),
+      drugs: $("drugs").value.trim(),
+      items: parseInt($("items").value, 10) || 2,
+      id: $("pid").value.trim(),
+    };
+  }
+
+  function setBadge(kind, text) {
+    $("badge").innerHTML = text ? `<span class="badge ${kind}">${text}</span>` : "";
+  }
+
+  async function run(mode) {
+    setBadge("busy", "กำลังทำงาน…");
+    $("log").textContent = "…";
+    $("idout").innerHTML = "";
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ...body() }),
+      });
+      const data = await res.json();
+      $("log").textContent = (data.log || []).join("\n") || data.error || "(no output)";
+      if (data.id) {
+        $("pid").value = data.id;
+        $("idout").innerHTML = `<span class="idpill" title="คลิกเพื่อคัดลอก" onclick="copyId('${data.id}')">🏷️ ${data.id}</span>`;
+      }
+      if (data.state === "DISPENSED") setBadge("ok", "✅ DISPENSED");
+      else if (!data.ok) setBadge("err", "❌ " + (data.state || "ERROR"));
+      else setBadge("ok", data.state || "OK");
+    } catch (e) {
+      $("log").textContent = "เชื่อมต่อ tester ไม่ได้: " + e;
+      setBadge("err", "ERROR");
+    } finally {
+      document.querySelectorAll("button").forEach(b => b.disabled = false);
+    }
+  }
+
+  async function loadSlots() {
+    $("slots").innerHTML = "<p class='hint'>กำลังโหลด…</p>";
+    try {
+      const res = await fetch("/api/slots?cabinet=" + encodeURIComponent($("cabinet").value.trim()));
+      const data = await res.json();
+      if (data.error) { $("slots").innerHTML = "<p class='hint'>ผิดพลาด: " + data.error + "</p>"; return; }
+      const rows = (data.slots || []).filter(s => s.drugCode).map(s => {
+        const low = s.quantity <= 0 ? "var(--err)" : "var(--ok)";
+        return `<tr class="pick" onclick="addDrug('${s.drugCode}')">
+          <td><span class="dot" style="background:${low}"></span>${s.code}</td>
+          <td>${s.drugName || ""}</td>
+          <td><code>${s.drugCode}</code></td>
+          <td>${s.quantity}/${s.capacity}</td></tr>`;
+      }).join("");
+      $("slots").innerHTML = rows
+        ? `<table><thead><tr><th>ช่อง</th><th>ยา</th><th>รหัส</th><th>คงเหลือ</th></tr></thead><tbody>${rows}</tbody></table>
+           <p class="hint">คลิกแถวเพื่อเพิ่มยานั้นลงช่อง “ยา”</p>`
+        : "<p class='hint'>ไม่พบยาในตู้นี้ (seed demo ก่อน)</p>";
+    } catch (e) {
+      $("slots").innerHTML = "<p class='hint'>โหลดไม่ได้: " + e + "</p>";
+    }
+  }
+
+  function addDrug(code) {
+    const cur = $("drugs").value.trim();
+    const parts = cur ? cur.split(",").map(s => s.trim()).filter(Boolean) : [];
+    if (parts.some(p => p.split(":")[0].trim() === code)) return;
+    parts.push(code + ":1");
+    $("drugs").value = parts.join(", ");
+  }
+
+  function copyId(id) { navigator.clipboard && navigator.clipboard.writeText(id); }
+</script>
+</body>
+</html>

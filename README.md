@@ -56,8 +56,8 @@ services/core/       # Go backend (modular monolith)
     printing/        # print_ops client + consumer
     cabinet/         # cabinet registry
 apps/
-  kiosk/             # cabinet touch UI (React + Vite, :5173)
-  admin/             # management UI (React + Vite, :5174)
+  kiosk/             # cabinet touch UI (React + Vite, :5175 in docker, :5173 dev)
+  admin/             # management UI (React + Vite, :5176 in docker, :5174 dev)
 packages/proto-ts/   # generated TS types (shared)
 infra/               # docker compose files
 migrations/          # PostgreSQL migrations (0001-0009)
@@ -75,7 +75,7 @@ npm run dev:all          # postgres + nats + core (Docker) + admin + kiosk
 
 # ── Or per layer ──
 npm run infra:up         # postgres:5432 + nats:4222 + core:8080
-npm run dev              # admin (:5174) + kiosk (:5173)
+npm run dev              # admin (:5174) + kiosk (:5173) dev servers
 
 # ── Demo data (optional) ──
 npm run seed:demo        # drugs, slots, kiosk for testing
@@ -85,8 +85,8 @@ npm run seed:demo        # drugs, slots, kiosk for testing
 
 | Surface | URL | Login |
 |---|---|---|
-| Admin | http://localhost:5174 | `admin` / `medisync-local-admin-2026` |
-| Kiosk | http://localhost:5173 | Code: `KIOSK-1` PIN: `1234` (after `seed:demo`) |
+| Admin | http://localhost:5176 | `admin` / `medisync-local-admin-2026` |
+| Kiosk | http://localhost:5175 | Code: `DEMO-K1` PIN: `123456` (after `seed:demo`) |
 | Core API | http://localhost:8080 | Connect-RPC |
 
 ## Admin Features

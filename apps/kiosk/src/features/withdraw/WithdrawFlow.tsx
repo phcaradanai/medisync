@@ -9,6 +9,7 @@ import { transport } from "../../transport.ts";
 import { useAuth } from "../../auth.tsx";
 import ShelfGrid, { getSlotPosition } from "../catalog/ShelfGrid.tsx";
 import DispensingStatusModal from "../dispensing/DispensingStatusModal.tsx";
+import DispenseProcessingOverlay from "../dispensing/DispenseProcessingOverlay.tsx";
 
 export type ScannerState = "awaiting_scan" | "validating_sticker" | "scan_failed" | "request_loaded" | "awaiting_identity" | "verifying_identity" | "submitting_to_hardware" | "submission_uncertain" | "identity_failed" | "unauthorized";
 type QueueState = "queued" | "dispensing" | "completed" | "failed" | "unknown";
@@ -49,6 +50,7 @@ export default function WithdrawFlow() {
   const [queue, setQueue] = useState<QueueTransaction[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [activeTxnId, setActiveTxnId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState("");
   const [now, setNow] = useState(() => new Date());
@@ -148,6 +150,7 @@ export default function WithdrawFlow() {
       if (!res.prescription || res.prescription.state !== PrescriptionState.DISPENSING) throw new Error("uncertain");
       const accepted = res.prescription;
       setQueue((items) => [{ id: accepted.id, requestId: accepted.prescriptionId, prescription: accepted, operator: user.displayName, acceptedAt: Date.now(), state: "queued" }, ...items.filter((item) => item.id !== accepted.id)]);
+      setActiveTxnId(accepted.id);
       resetScanner(`ส่งรายการ ${accepted.prescriptionId} เข้าคิวสำเร็จ · ไม่สามารถยกเลิกได้ · สามารถสแกนรายการถัดไปได้`);
     } catch (error) {
       const ce = ConnectError.from(error);
@@ -157,6 +160,7 @@ export default function WithdrawFlow() {
       const reconciled = await reconcile(request.id);
       if (reconciled?.state === PrescriptionState.DISPENSING) {
         setQueue((items) => items.map((item) => item.id === reconciled.id ? { ...item, operator: user.displayName } : item));
+        setActiveTxnId(reconciled.id);
         resetScanner(`ตรวจสอบแล้ว: รายการ ${reconciled.prescriptionId} ถูกส่งเข้าคิว · ไม่สามารถยกเลิกได้`);
       }
     }
@@ -231,6 +235,15 @@ export default function WithdrawFlow() {
         onClose={() => setStatusOpen(false)}
       />
     )}
+    {/* Live dispense status — only on the idle scan screen so it never covers
+        the next scan/cart/identity step; the dispense keeps polling in the
+        queue while hidden. Driven purely by real backend state. */}
+    {workflow === "awaiting_scan" && (() => {
+      const activeTxn = queue.find((item) => item.id === activeTxnId);
+      return activeTxn ? (
+        <DispenseProcessingOverlay txn={activeTxn} onDismiss={() => setActiveTxnId(null)} />
+      ) : null;
+    })()}
   </main>;
 }
 function DecorativeQr() {
