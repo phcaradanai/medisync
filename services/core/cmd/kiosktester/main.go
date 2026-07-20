@@ -111,6 +111,13 @@ func run(c config) error {
 		res := confirmPrescription(context.Background(), c, c.fixedID)
 		fmt.Print(res.text())
 		return res.Err
+	case "poll":
+		if c.fixedID == "" {
+			return fmt.Errorf("-mode=poll requires -id=<internal_id>")
+		}
+		res := pollPrescription(context.Background(), c, c.fixedID)
+		fmt.Print(res.text())
+		return res.Err
 	case "flow":
 		cr := createPrescription(context.Background(), c, c.fixedID)
 		fmt.Print(cr.text())
@@ -120,9 +127,17 @@ func run(c config) error {
 		time.Sleep(1500 * time.Millisecond)
 		cf := confirmPrescription(context.Background(), c, cr.ID)
 		fmt.Print(cf.text())
-		return cf.Err
+		if cf.Err != nil {
+			return cf.Err
+		}
+		if cf.State != "DISPENSED" {
+			pl := pollPrescription(context.Background(), c, cf.ID)
+			fmt.Print(pl.text())
+			return pl.Err
+		}
+		return nil
 	default:
-		return fmt.Errorf("unknown -mode=%q (want create|confirm|flow|serve)", c.mode)
+		return fmt.Errorf("unknown -mode=%q (want create|confirm|poll|flow|serve)", c.mode)
 	}
 }
 
@@ -295,11 +310,11 @@ func staffCredentials(c config) (username, password, role string) {
 	return username, password, role
 }
 
-// ── confirm ──────────────────────────────────────────────────────────
+// ── confirm (scan + dispense, no polling) ───────────────────────────
 
 func confirmPrescription(ctx context.Context, c config, prescriptionID string) *result {
 	r := &result{OK: true, ID: prescriptionID}
-	ctx, cancel := context.WithTimeout(ctx, c.timeout+15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	username, password, role := staffCredentials(c)
@@ -315,14 +330,39 @@ func confirmPrescription(ctx context.Context, c config, prescriptionID string) *
 		return r.fail(fmt.Errorf("dispense: %w", err))
 	}
 	r.log("   → รับเข้าคิว state=%s (internal id=%s)", shortState(pr.State), pr.ID)
+	r.State = shortState(pr.State)
+	r.ID = pr.ID
+	if r.State == "DISPENSED" {
+		r.log("✅ จ่ายยาสำเร็จ")
+	} else if r.State == "FAILED" {
+		return r.fail(fmt.Errorf("dispense failed: %s", pr.FailureReason))
+	} else {
+		r.log("   กด [ดูสถานะ] เพื่อ poll จนจบ")
+	}
+	return r
+}
 
+// ── poll (check status until terminal) ──────────────────────────────
+
+func pollPrescription(ctx context.Context, c config, internalID string) *result {
+	r := &result{OK: true, ID: internalID}
+	ctx, cancel := context.WithTimeout(ctx, c.timeout+5*time.Second)
+	defer cancel()
+
+	username, password, role := staffCredentials(c)
+	staffTok, err := staffLogin(ctx, c.core, username, password)
+	if err != nil {
+		return r.fail(fmt.Errorf("staff login (%s/%s): %w", username, role, err))
+	}
+
+	r.log("🔄 ตรวจสอบสถานะ: %s", internalID)
 	deadline := time.Now().Add(c.timeout)
-	last := pr.State
+	last := ""
 	for time.Now().Before(deadline) {
-		time.Sleep(1 * time.Second)
-		cur, err := getPrescription(ctx, c.core, staffTok, pr.ID)
+		cur, err := getPrescription(ctx, c.core, staffTok, internalID)
 		if err != nil {
 			r.log("   … poll error: %v", err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
 		if cur.State != last {
@@ -332,15 +372,16 @@ func confirmPrescription(ctx context.Context, c config, prescriptionID string) *
 		switch shortState(cur.State) {
 		case "DISPENSED":
 			r.State = "DISPENSED"
-			r.log("✅ จ่ายยาสำเร็จ (ครบ flow เหมือน hardware)")
+			r.log("✅ จ่ายยาสำเร็จ")
 			return r
 		case "FAILED":
 			r.State = "FAILED"
 			return r.fail(fmt.Errorf("dispense failed: %s", cur.FailureReason))
 		}
+		time.Sleep(1 * time.Second)
 	}
 	r.State = shortState(last)
-	return r.fail(fmt.Errorf("timed out after %s (last=%s); if parked at DISPENSING check FULFILLMENT_FAKE/VENDING_FAKE + vending agent", c.timeout, shortState(last)))
+	return r.fail(fmt.Errorf("timed out after %s (last=%s)", c.timeout, shortState(last)))
 }
 
 // ── web console (serve mode) ─────────────────────────────────────────
@@ -372,6 +413,24 @@ func serve(c config) error {
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"slots": slots})
+	})
+	mux.HandleFunc("/api/prescriptions", func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
+		defer cancel()
+		username, password, role := staffCredentials(c)
+		override(&username, req.URL.Query().Get("staff"))
+		tok, err := staffLogin(ctx, c.core, username, password)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		ward := req.URL.Query().Get("ward")
+		pres, err := listPrescriptions(ctx, c.core, tok, ward)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"prescriptions": pres, "role": role})
 	})
 	mux.HandleFunc("/api/run", func(w http.ResponseWriter, req *http.Request) {
 		var body struct {
@@ -406,6 +465,12 @@ func serve(c config) error {
 			} else {
 				res = confirmPrescription(req.Context(), rc, body.ID)
 			}
+		case "poll":
+			if body.ID == "" {
+				res = (&result{}).fail(fmt.Errorf("ต้องมี Internal ID สำหรับ poll"))
+			} else {
+				res = pollPrescription(req.Context(), rc, body.ID)
+			}
 		case "flow":
 			res = createPrescription(req.Context(), rc, body.ID)
 			if res.Err == nil {
@@ -413,8 +478,16 @@ func serve(c config) error {
 				time.Sleep(1500 * time.Millisecond)
 				cf := confirmPrescription(req.Context(), rc, id)
 				res.Log = append(res.Log, cf.Log...)
-				res.State, res.OK, res.Err, res.Error = cf.State, cf.OK, cf.Err, cf.Error
-				res.ID = id
+				if cf.Err != nil {
+					res.State, res.OK, res.Err, res.Error = cf.State, cf.OK, cf.Err, cf.Error
+					res.ID = id
+				} else {
+					// confirm returned immediately; poll to terminal
+					pl := pollPrescription(req.Context(), rc, cf.ID)
+					res.Log = append(res.Log, pl.Log...)
+					res.State, res.OK, res.Err, res.Error = pl.State, pl.OK, pl.Err, pl.Error
+					res.ID = id
+				}
 			}
 		default:
 			res = (&result{}).fail(fmt.Errorf("unknown mode %q", body.Mode))
@@ -463,6 +536,9 @@ type prescription struct {
 	PrescriptionID string `json:"prescriptionId"`
 	State          string `json:"state"`
 	FailureReason  string `json:"failureReason"`
+	WardID         string `json:"wardId"`
+	PatientName    string `json:"patientName"`
+	HN             string `json:"hn"`
 }
 
 func kioskLogin(ctx context.Context, core, code, pin string) (token, kioskID string, err error) {
@@ -511,6 +587,18 @@ func getPrescription(ctx context.Context, core, token, internalID string) (*pres
 	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/GetPrescription", token,
 		map[string]any{"id": internalID}, &out)
 	return &out.Prescription, err
+}
+
+func listPrescriptions(ctx context.Context, core, token, wardID string) ([]prescription, error) {
+	var out struct {
+		Prescriptions []prescription `json:"prescriptions"`
+	}
+	body := map[string]any{"pageSize": 50}
+	if wardID != "" {
+		body["wardId"] = wardID
+	}
+	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/ListPrescriptions", token, body, &out)
+	return out.Prescriptions, err
 }
 
 // connectCall POSTs a Connect unary JSON request and decodes the reply.

@@ -31,7 +31,7 @@
   @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
   .card {
     background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-    padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 18px;
   }
   .card h2 { font-size: 1.05rem; margin: 0 0 12px; }
   label { display: block; font-size: .8rem; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
@@ -50,6 +50,7 @@
   .btn-primary { background: var(--brand); color: #fff; }
   .btn-ghost { background: #f1f5f9; color: var(--ink); border: 1px solid var(--line); }
   .btn-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid #fcd34d; }
+  .btn-ok { background: var(--ok-bg); color: var(--ok); border: 1px solid #86efac; }
   button:disabled { opacity: .5; cursor: not-allowed; }
   .hint { font-size: .75rem; color: var(--muted); margin-top: 6px; }
   .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 800; font-size: .85rem; }
@@ -59,7 +60,7 @@
   pre {
     background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 14px;
     font-size: .82rem; white-space: pre-wrap; word-break: break-word; margin: 12px 0 0;
-    min-height: 120px; max-height: 340px; overflow: auto;
+    min-height: 80px; max-height: 300px; overflow: auto;
   }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .85rem; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
@@ -73,7 +74,7 @@
   }
 
   /* Flow pipeline */
-  .pipeline { display: flex; align-items: center; gap: 4px; margin: 14px 0; flex-wrap: wrap; }
+  .pipeline { display: flex; align-items: center; gap: 4px; margin: 6px 0; flex-wrap: wrap; }
   .step {
     display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px;
     font-size: .8rem; font-weight: 700; background: #f1f5f9; color: var(--muted);
@@ -92,6 +93,14 @@
   .role-tag.pharm { background: #e0edff; color: #2563eb; }
   .role-tag.nurse { background: #f0fdf4; color: #16a34a; }
   .role-tag.refill { background: var(--warn-bg); color: var(--warn); }
+
+  /* State badges for table */
+  .st { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: .75rem; font-weight: 700; }
+  .st.received { background: #f1f5f9; color: var(--muted); }
+  .st.ready { background: #e0edff; color: var(--busy); }
+  .st dispensing { background: var(--warn-bg); color: var(--warn); }
+  .st.dispensed { background: var(--ok-bg); color: var(--ok); }
+  .st.failed { background: var(--err-bg); color: var(--err); }
 </style>
 </head>
 <body>
@@ -99,12 +108,12 @@
     <span class="logo">ADM</span>
     <div>
       <h1>Kiosk Flow Tester</h1>
-      <p class="sub">จำลองสแกน sticker เบิกยา → สแกนบัตรผู้ใช้ → ยืนยันจ่าย → ดูสถานะ E2E เหมือน hardware จริง</p>
+      <p class="sub">จำลองสแกน sticker → สแกนบัตร → ดูสถานะ — กดแยกทีละ step หรือรัน flow รวม</p>
     </div>
   </div>
 
   <!-- Flow pipeline -->
-  <div class="card" style="margin-bottom: 18px;">
+  <div class="card">
     <h2>Flow Pipeline</h2>
     <div class="pipeline" id="pipeline">
       <span class="step" id="st-create">① สร้าง sticker</span>
@@ -122,13 +131,13 @@
   </div>
 
   <div class="cols">
-    <!-- Left: form -->
+    <!-- Left: form + actions -->
     <div class="card">
       <h2>ตั้งค่ารายการ</h2>
       <div class="row">
         <div>
           <label>Cabinet</label>
-          <input id="cabinet" value="CAB1" />
+          <input id="cabinet" value="" placeholder="(any)" />
         </div>
         <div>
           <label>Ward</label>
@@ -157,8 +166,8 @@
           <input id="pid" placeholder="เว้นว่าง = ใหม่" />
         </div>
         <div>
-          <label>Source</label>
-          <input id="source" value="kiosktester" />
+          <label>Internal ID (poll)</label>
+          <input id="iid" placeholder="สำหรับ poll" />
         </div>
       </div>
 
@@ -169,7 +178,7 @@
           <select id="role" onchange="onRoleChange()">
             <option value="pharmacist">เภสัชกร (PHARMACIST) — เบิกยา</option>
             <option value="nurse">พยาบาล (NURSE) — เบิกยา</option>
-            <option value="refiller">เจ้าหน้าที่เติมยา (REFILLER) — หน้าเติมยา</option>
+            <option value="refiller">เจ้าหน้าที่เติมยา (REFILLER)</option>
             <option value="admin">ผู้ดูแลระบบ (ADMIN)</option>
           </select>
         </div>
@@ -178,23 +187,26 @@
           <input id="staffUser" placeholder="auto จาก role" />
         </div>
       </div>
-      <div class="row">
-        <div>
-          <label>Password (override)</label>
-          <input id="staffPass" type="password" placeholder="auto: demo-<role>-2026" />
-        </div>
-        <div></div>
-      </div>
 
       <div class="actions">
         <button class="btn-ghost" onclick="loadSlots()">🔄 โหลดยาในตู้</button>
-        <button class="btn-ghost" onclick="run('create')">📦 สร้าง sticker</button>
-        <button class="btn-ghost" onclick="run('confirm')">📤 ยืนยันจ่าย (ใช้ ID)</button>
-        <button class="btn-primary" onclick="run('flow')">▶ รัน E2E flow</button>
+        <button class="btn-ghost" onclick="loadPrescriptions()">📋 ดูรายการทั้งหมด</button>
       </div>
-      <p class="hint">create = ส่ง NATS JetStream (เหมือน producer จริง) · confirm = สแกนบัตร + Dispense · flow = ทั้งสองต่อกัน</p>
+      <div class="actions">
+        <button class="btn-primary" onclick="run('create')">① สร้าง sticker</button>
+        <button class="btn-warn" onclick="run('confirm')">④ สแกนบัตร + Dispense</button>
+        <button class="btn-ok" onclick="run('poll')">🔄 Poll สถานะ</button>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick="run('flow')">▶ รัน E2E flow รวม</button>
+      </div>
+      <p class="hint">
+        ① ส่ง NATS JetStream → ④ สแกนบัตร+Dispense → 🔄 poll จนจบ<br>
+        หรือกด ▶ flow รวมทั้งหมด
+      </p>
 
       <div id="slots"></div>
+      <div id="prescriptions"></div>
     </div>
 
     <!-- Right: result -->
@@ -207,6 +219,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
+  let lastInternalId = "";
 
   function body() {
     const role = $("role").value;
@@ -218,9 +231,9 @@
       drugs: $("drugs").value.trim(),
       items: parseInt($("items").value, 10) || 2,
       id: $("pid").value.trim(),
-      source: $("source").value.trim(),
+      source: "kiosktester",
       staff: $("staffUser").value.trim() || role,
-      staffPass: $("staffPass").value,
+      staffPass: "",
       role: "auto",
     };
   }
@@ -235,7 +248,6 @@
     };
     $("roleTag").innerHTML = tags[role] || "";
     $("staffUser").placeholder = role;
-    $("staffPass").placeholder = "demo-" + role + "-2026";
   }
   onRoleChange();
 
@@ -245,15 +257,10 @@
 
   function resetPipeline() {
     ["st-create","st-received","st-ready","st-scan","st-dispensing","st-done"].forEach(id => {
-      const el = $(id);
-      el.className = "step";
+      $(id).className = "step";
     });
   }
-
-  function setStep(id, state) {
-    const el = $(id);
-    el.className = "step " + state;
-  }
+  function setStep(id, state) { $(id).className = "step " + state; }
 
   function updatePipelineFromLog(logLines) {
     const text = logLines.join("\n");
@@ -269,10 +276,9 @@
       setStep("st-done", "done");
     }
     if (text.includes("❌") || text.includes("FAILED")) {
-      const failStep = ["st-create","st-received","st-ready","st-scan","st-dispensing","st-done"]
-        .map(id => $(id))
-        .find(el => el.className === "step active");
-      if (failStep) failStep.className = "step fail";
+      ["st-create","st-received","st-ready","st-scan","st-dispensing","st-done"].forEach(id => {
+        if ($(id).className === "step active") $(id).className = "step fail";
+      });
     }
   }
 
@@ -280,22 +286,35 @@
     setBadge("busy", "กำลังทำงาน…");
     $("log").textContent = "…";
     $("idout").innerHTML = "";
-    resetPipeline();
+    if (mode !== "poll") resetPipeline();
     if (mode === "create" || mode === "flow") setStep("st-create", "active");
     if (mode === "confirm") setStep("st-scan", "active");
+    if (mode === "poll") setStep("st-dispensing", "active");
     document.querySelectorAll("button").forEach(b => b.disabled = true);
     try {
+      // For poll mode, use internal ID
+      const payload = { mode, ...body() };
+      if (mode === "poll") {
+        payload.id = $("iid").value.trim() || lastInternalId;
+        if (!payload.id) { throw new Error("ต้องมี Internal ID สำหรับ poll"); }
+      }
       const res = await fetch("/api/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, ...body() }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       const logs = data.log || [];
       $("log").textContent = logs.join("\n") || data.error || "(no output)";
       updatePipelineFromLog(logs);
       if (data.id) {
-        $("pid").value = data.id;
+        if (mode === "create" || mode === "flow" || mode === "confirm") {
+          $("pid").value = data.id;
+        }
+        if (mode === "confirm" || mode === "flow" || mode === "poll") {
+          lastInternalId = data.id;
+          $("iid").value = data.id;
+        }
         $("idout").innerHTML = `<span class="idpill" title="คลิกเพื่อคัดลอก" onclick="copyId('${data.id}')">🏷️ ${data.id}</span>`;
       }
       if (data.state === "DISPENSED") setBadge("ok", "✅ DISPENSED");
@@ -325,11 +344,43 @@
       }).join("");
       $("slots").innerHTML = rows
         ? `<table><thead><tr><th>ช่อง</th><th>ยา</th><th>รหัส</th><th>คงเหลือ</th></tr></thead><tbody>${rows}</tbody></table>
-           <p class="hint">คลิกแถวเพื่อเพิ่มยานั้นลงช่อง "ยา"</p>`
-        : "<p class='hint'>ไม่พบยาในตู้นี้ (seed demo ก่อน)</p>";
+           <p class="hint">คลิกแถวเพื่อเพิ่มยาลงช่อง "ยา"</p>`
+        : "<p class='hint'>ไม่พบยาในตู้ (seed demo ก่อน)</p>";
     } catch (e) {
       $("slots").innerHTML = "<p class='hint'>โหลดไม่ได้: " + e + "</p>";
     }
+  }
+
+  async function loadPrescriptions() {
+    $("prescriptions").innerHTML = "<p class='hint'>กำลังโหลด…</p>";
+    try {
+      const ward = $("ward").value.trim();
+      const res = await fetch("/api/prescriptions?ward=" + encodeURIComponent(ward));
+      const data = await res.json();
+      if (data.error) { $("prescriptions").innerHTML = "<p class='hint'>ผิดพลาด: " + data.error + "</p>"; return; }
+      const rows = (data.prescriptions || []).map(p => {
+        const st = shortState(p.state);
+        const cls = st.toLowerCase();
+        return `<tr class="pick" onclick="pickPres('${p.prescriptionId || ""}','${p.id || ""}')">
+          <td><span class="st ${cls}">${st}</span></td>
+          <td><code>${p.prescriptionId || ""}</code></td>
+          <td>${p.patientName || ""}</td>
+          <td>${p.wardId || ""}</td></tr>`;
+      }).join("");
+      $("prescriptions").innerHTML = rows
+        ? `<table><thead><tr><th>สถานะ</th><th>Prescription ID</th><th>ผู้ป่วย</th><th>Ward</th></tr></thead><tbody>${rows}</tbody></table>
+           <p class="hint">คลิกแถวเพื่อเลือก ID</p>`
+        : "<p class='hint'>ไม่มีรายการ</p>";
+    } catch (e) {
+      $("prescriptions").innerHTML = "<p class='hint'>โหลดไม่ได้: " + e + "</p>";
+    }
+  }
+
+  function shortState(s) { return (s || "").replace("PRESCRIPTION_STATE_", ""); }
+
+  function pickPres(presId, internalId) {
+    if (presId) $("pid").value = presId;
+    if (internalId) { $("iid").value = internalId; lastInternalId = internalId; }
   }
 
   function addDrug(code) {
