@@ -105,12 +105,12 @@ func (r *fakeRow) Scan(dest ...any) error {
 }
 
 // rowWithSlot returns a fakeRow that fills dest with a sample slot.
-// Matches the 19-column scan used by inventory queries.
+// Matches the 21-column scan used by inventory queries.
 func rowWithSlot(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 19 {
-				return fmt.Errorf("expected 19 dests, got %d", len(dest))
+			if len(dest) != 21 {
+				return fmt.Errorf("expected 21 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
@@ -182,8 +182,8 @@ func (r *fakeRows) Scan(dest ...any) error {
 		return errors.New("no row to scan")
 	}
 	sl := r.slots[r.current-1]
-	if len(dest) != 19 {
-		return fmt.Errorf("expected 19 dests, got %d", len(dest))
+	if len(dest) != 21 {
+		return fmt.Errorf("expected 21 dests, got %d", len(dest))
 	}
 	*(dest[0].(*string)) = sl.ID
 	*(dest[1].(*string)) = sl.CabinetID
@@ -210,6 +210,8 @@ func (r *fakeRows) Scan(dest ...any) error {
 	*(dest[16].(*string)) = sl.Category
 	*(dest[17].(*string)) = sl.Manufacturer
 	*(dest[18].(*string)) = sl.SafetyClassification
+	*(dest[19].(*bool)) = sl.EmergencyDrug
+	*(dest[20].(*int32)) = sl.EmergencyMaxQuantity
 	return nil
 }
 
@@ -225,8 +227,8 @@ func (r *fakeRows) Conn() *pgx.Conn                              { return nil }
 func rowWithSlot11(sl Slot) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 19 {
-				return fmt.Errorf("expected 19 dests, got %d", len(dest))
+			if len(dest) != 21 {
+				return fmt.Errorf("expected 21 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = sl.ID
 			*(dest[1].(*string)) = sl.CabinetID
@@ -253,6 +255,10 @@ func rowWithSlot11(sl Slot) *fakeRow {
 			*(dest[16].(*string)) = sl.Category
 			*(dest[17].(*string)) = sl.Manufacturer
 			*(dest[18].(*string)) = sl.SafetyClassification
+			*(dest[19].(*bool)) = sl.EmergencyDrug
+			*(dest[20].(*int32)) = sl.EmergencyMaxQuantity
+			*(dest[19].(*bool)) = sl.EmergencyDrug
+			*(dest[20].(*int32)) = sl.EmergencyMaxQuantity
 			return nil
 		},
 	}
@@ -279,8 +285,8 @@ func TestScanSlotSuccess(t *testing.T) {
 
 	row := &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 19 {
-				return fmt.Errorf("expected 19 dests, got %d", len(dest))
+			if len(dest) != 21 {
+				return fmt.Errorf("expected 21 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = expected.ID
 			*(dest[1].(*string)) = expected.CabinetID
@@ -307,6 +313,8 @@ func TestScanSlotSuccess(t *testing.T) {
 			*(dest[16].(*string)) = expected.Category
 			*(dest[17].(*string)) = expected.Manufacturer
 			*(dest[18].(*string)) = expected.SafetyClassification
+			*(dest[19].(*bool)) = expected.EmergencyDrug
+			*(dest[20].(*int32)) = expected.EmergencyMaxQuantity
 			return nil
 		},
 	}
@@ -473,8 +481,8 @@ func TestListSlotsCursor(t *testing.T) {
 		t.Fatalf("ListSlots: %v", err)
 	}
 	call := db.lastQuery()
-	if !strings.Contains(call.sql, "created_at < (SELECT created_at FROM medisync.slot WHERE id = $1)") {
-		t.Errorf("SQL missing created_at cursor: %s", call.sql)
+	if !strings.Contains(call.sql, "(s.created_at, s.id) < (SELECT created_at, id FROM medisync.slot WHERE id = $1)") {
+		t.Errorf("SQL missing stable created_at/id cursor: %s", call.sql)
 	}
 	if got := call.args[len(call.args)-1]; got != int32(26) {
 		t.Errorf("LIMIT arg = %v, want 26", got)

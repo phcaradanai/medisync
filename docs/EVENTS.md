@@ -6,7 +6,8 @@ Wire format: **protojson** of the messages in `proto/medisync/events/v1/events.p
 
 | Stream | Subjects | Retention | Notes |
 |---|---|---|---|
-| `RX` | `rx.>` | WorkQueue | Inbound from the hospital feeder. Exactly one consumer group (`core-dispensing`) drains it. |
+| `RX` | `rx.prescription.created` | WorkQueue | Inbound prescriptions; one core dispensing consumer group drains it. |
+| `RX_RESULTS` | `rx.prescription.dispense_result` | Limits, 30 days | Terminal results; each producer may use an independent durable consumer and filter by payload `source_system`. |
 | `MEDISYNC` | `medisync.>` | Limits, 7 days | Internal domain events + DLQ. |
 
 ## Subjects
@@ -14,6 +15,7 @@ Wire format: **protojson** of the messages in `proto/medisync/events/v1/events.p
 | Subject | Message | Producer | Consumer | Status |
 |---|---|---|---|---|
 | `rx.prescription.created` | `PrescriptionCreated` | hospital feeder (external team); `cmd/feeder` mock in dev | core/dispensing | **live (M1)** |
+| `rx.prescription.dispense_result` | `PrescriptionDispenseResult` | core/dispensing transactional outbox | originating hospital producer | **live (software); external acceptance pending** |
 | `medisync.dispense.requested` | `DispenseRequested` | core/dispensing | core/fulfillment | M3 |
 | `medisync.dispense.completed` | `DispenseCompleted` | core/fulfillment | core/dispensing | M3 |
 | `medisync.dispense.failed` | `DispenseFailed` | core/fulfillment | core/dispensing | M3 |
@@ -34,3 +36,13 @@ Wire format: **protojson** of the messages in `proto/medisync/events/v1/events.p
 - Idempotency: `(prescription_id, source_system)` — replays are safe and ignored; additionally set the `Nats-Msg-Id` header to `<source_system>/<prescription_id>` for broker-level dedupe
 - Invalid payloads are terminated to `medisync.dlq.rx.prescription.created` with an audit record — they are **not** retried
 - Reference implementation: `services/core/cmd/feeder`
+
+## Result contract for the external producer team
+
+- Subject: `rx.prescription.dispense_result`
+- Payload: protojson of `medisync.events.v1.PrescriptionDispenseResult`
+- Correlation/routing key: `prescription_id + source_system`; `dispense_id` identifies the MediSync transaction and `kiosk_code` identifies the exact cabinet
+- Emission: exactly one transactional-outbox row when a normal Prescription dispense becomes hardware-confirmed `DISPENSED` or `FAILED`
+- Item outcomes include requested quantity, actual dispensed quantity, and terminal item status; failures include machine-readable code and diagnostic detail
+- Emergency transactions do not emit this event because they have no originating Prescription producer
+- Consumers must still be idempotent by `dispense_id` because JetStream delivery is at-least-once

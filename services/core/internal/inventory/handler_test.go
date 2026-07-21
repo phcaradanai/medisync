@@ -32,24 +32,27 @@ func newAuthedRequest[T any](msg *T) *connect.Request[T] {
 // ── Fake SlotStore ─────────────────────────────────────────
 
 type fakeSlotStore struct {
-	listResult     []*Slot
-	listNextToken  string
-	listTotalCount int64
-	listErr        error
-	createResult   *Slot
-	createErr      error
-	getByIDResult  *Slot
-	getByIDErr     error
-	assignResult   *Slot
-	assignErr      error
-	refillResult   *Slot
-	refillErr      error
-	adjustResult   *Slot
-	adjustErr      error
+	listResult      []*Slot
+	listNextToken   string
+	listTotalCount  int64
+	listErr         error
+	createResult    *Slot
+	createErr       error
+	getByIDResult   *Slot
+	getByIDErr      error
+	assignResult    *Slot
+	assignErr       error
+	refillResult    *Slot
+	refillErr       error
+	adjustResult    *Slot
+	adjustErr       error
+	emergencyResult *Slot
+	emergencyErr    error
 	// call recording
-	refillCalls []refillCall
-	adjustCalls []adjustCall
-	assignCalls []assignCall
+	refillCalls    []refillCall
+	adjustCalls    []adjustCall
+	assignCalls    []assignCall
+	emergencyCalls []emergencyConfigCall
 }
 
 type refillCall struct {
@@ -72,11 +75,17 @@ type assignCall struct {
 	lowThreshold int32
 }
 
+type emergencyConfigCall struct {
+	kioskCode, slotCode, projectID string
+	enabled                        bool
+	maxQuantity                    int32
+}
+
 func (s *fakeSlotStore) ListSlots(_ context.Context, cabinetID, projectID string, lowOnly bool, pageSize int32, pageToken string) ([]*Slot, string, int64, error) {
 	return s.listResult, s.listNextToken, s.listTotalCount, s.listErr
 }
 
-func (s *fakeSlotStore) CreateSlot(_ context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32, expiryDate *time.Time) (*Slot, error) {
+func (s *fakeSlotStore) CreateSlot(_ context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold, shelf, rowNum int32, expiryDate *time.Time) (*Slot, error) {
 	return s.createResult, s.createErr
 }
 
@@ -97,6 +106,42 @@ func (s *fakeSlotStore) Refill(_ context.Context, id string, delta int32, expiry
 func (s *fakeSlotStore) AdjustStock(_ context.Context, id string, newQuantity int32) (*Slot, error) {
 	s.adjustCalls = append(s.adjustCalls, adjustCall{id, newQuantity})
 	return s.adjustResult, s.adjustErr
+}
+
+func (s *fakeSlotStore) UpdateEmergencyConfig(_ context.Context, kioskCode, slotCode, projectID string, enabled bool, maxQuantity int32) (*Slot, error) {
+	s.emergencyCalls = append(s.emergencyCalls, emergencyConfigCall{kioskCode, slotCode, projectID, enabled, maxQuantity})
+	return s.emergencyResult, s.emergencyErr
+}
+
+func TestUpdateSlotEmergencyConfigUsesBusinessCodes(t *testing.T) {
+	configured := sampleSlot()
+	configured.CabinetID = "00010001"
+	configured.Code = "S01"
+	configured.ProjectID = "proj-1"
+	configured.EmergencyDrug = true
+	configured.EmergencyMaxQuantity = 2
+	store := &fakeSlotStore{emergencyResult: configured}
+	server := NewInventoryServerWithAuth(store, nil, nil, &fakeTokenParser{claims: adminClaims()})
+	req := newAuthedRequest(&inventoryv1.UpdateSlotEmergencyConfigRequest{KioskCode: "00010001", SlotCode: "S01", Enabled: true, MaxQuantity: 2})
+	response, err := server.UpdateSlotEmergencyConfig(context.Background(), req)
+	if err != nil {
+		t.Fatalf("UpdateSlotEmergencyConfig: %v", err)
+	}
+	if len(store.emergencyCalls) != 1 || store.emergencyCalls[0].kioskCode != "00010001" || store.emergencyCalls[0].slotCode != "S01" {
+		t.Fatalf("calls=%+v", store.emergencyCalls)
+	}
+	if !response.Msg.Slot.EmergencyDrug || response.Msg.Slot.EmergencyMaxQuantity != 2 {
+		t.Fatalf("slot=%+v", response.Msg.Slot)
+	}
+}
+
+func TestUpdateSlotEmergencyConfigRejectsKioskRole(t *testing.T) {
+	store := &fakeSlotStore{}
+	server := NewInventoryServerWithAuth(store, nil, nil, &fakeTokenParser{claims: Claims{Subject: "00010001", Role: "KIOSK", ProjectID: "proj-1"}})
+	req := newAuthedRequest(&inventoryv1.UpdateSlotEmergencyConfigRequest{KioskCode: "00010001", SlotCode: "S01", Enabled: true, MaxQuantity: 1})
+	if _, err := server.UpdateSlotEmergencyConfig(context.Background(), req); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("error=%v, want permission denied", err)
+	}
 }
 
 // ── Fake audit.Writer DB ────────────────────────────────────────────

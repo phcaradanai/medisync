@@ -208,6 +208,24 @@ message ListDispenseTransactionsResponse {
   int64 total_count = 3;
 }
 
+enum KioskHardwareStatus {
+  KIOSK_HARDWARE_STATUS_UNSPECIFIED = 0;
+  KIOSK_HARDWARE_STATUS_READY = 1;
+  KIOSK_HARDWARE_STATUS_UNAVAILABLE = 2;
+}
+
+message GetKioskHardwareStatusRequest {
+  // Immutable 8-digit kiosk business code, e.g. 00010001.
+  string kiosk_code = 1;
+}
+
+message GetKioskHardwareStatusResponse {
+  string kiosk_code = 1;
+  KioskHardwareStatus status = 2;
+  string detail = 3;
+  google.protobuf.Timestamp checked_at = 4;
+}
+
 service DispensingService {
   rpc ListPrescriptions(ListPrescriptionsRequest) returns (ListPrescriptionsResponse);
   rpc GetPrescription(GetPrescriptionRequest) returns (GetPrescriptionResponse);
@@ -217,6 +235,7 @@ service DispensingService {
   rpc CancelDispense(CancelDispenseRequest) returns (CancelDispenseResponse);
   rpc GetDispenseTransaction(GetDispenseTransactionRequest) returns (GetDispenseTransactionResponse);
   rpc ListDispenseTransactions(ListDispenseTransactionsRequest) returns (ListDispenseTransactionsResponse);
+  rpc GetKioskHardwareStatus(GetKioskHardwareStatusRequest) returns (GetKioskHardwareStatusResponse);
 
   // Emergency dispensing for medication without a prescription-generated
   // sticker. HN identifies the patient and employee_code identifies the

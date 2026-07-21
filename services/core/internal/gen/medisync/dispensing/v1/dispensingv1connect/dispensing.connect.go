@@ -57,6 +57,9 @@ const (
 	// DispensingServiceListDispenseTransactionsProcedure is the fully-qualified name of the
 	// DispensingService's ListDispenseTransactions RPC.
 	DispensingServiceListDispenseTransactionsProcedure = "/medisync.dispensing.v1.DispensingService/ListDispenseTransactions"
+	// DispensingServiceGetKioskHardwareStatusProcedure is the fully-qualified name of the
+	// DispensingService's GetKioskHardwareStatus RPC.
+	DispensingServiceGetKioskHardwareStatusProcedure = "/medisync.dispensing.v1.DispensingService/GetKioskHardwareStatus"
 	// DispensingServiceListEmergencyDrugsProcedure is the fully-qualified name of the
 	// DispensingService's ListEmergencyDrugs RPC.
 	DispensingServiceListEmergencyDrugsProcedure = "/medisync.dispensing.v1.DispensingService/ListEmergencyDrugs"
@@ -81,6 +84,7 @@ type DispensingServiceClient interface {
 	CancelDispense(context.Context, *connect.Request[v1.CancelDispenseRequest]) (*connect.Response[v1.CancelDispenseResponse], error)
 	GetDispenseTransaction(context.Context, *connect.Request[v1.GetDispenseTransactionRequest]) (*connect.Response[v1.GetDispenseTransactionResponse], error)
 	ListDispenseTransactions(context.Context, *connect.Request[v1.ListDispenseTransactionsRequest]) (*connect.Response[v1.ListDispenseTransactionsResponse], error)
+	GetKioskHardwareStatus(context.Context, *connect.Request[v1.GetKioskHardwareStatusRequest]) (*connect.Response[v1.GetKioskHardwareStatusResponse], error)
 	// Emergency dispensing for medication without a prescription-generated
 	// sticker. HN identifies the patient and employee_code identifies the
 	// responsible operator; this does not create a prescription transaction.
@@ -149,6 +153,12 @@ func NewDispensingServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(dispensingServiceMethods.ByName("ListDispenseTransactions")),
 			connect.WithClientOptions(opts...),
 		),
+		getKioskHardwareStatus: connect.NewClient[v1.GetKioskHardwareStatusRequest, v1.GetKioskHardwareStatusResponse](
+			httpClient,
+			baseURL+DispensingServiceGetKioskHardwareStatusProcedure,
+			connect.WithSchema(dispensingServiceMethods.ByName("GetKioskHardwareStatus")),
+			connect.WithClientOptions(opts...),
+		),
 		listEmergencyDrugs: connect.NewClient[v1.ListEmergencyDrugsRequest, v1.ListEmergencyDrugsResponse](
 			httpClient,
 			baseURL+DispensingServiceListEmergencyDrugsProcedure,
@@ -186,6 +196,7 @@ type dispensingServiceClient struct {
 	cancelDispense                    *connect.Client[v1.CancelDispenseRequest, v1.CancelDispenseResponse]
 	getDispenseTransaction            *connect.Client[v1.GetDispenseTransactionRequest, v1.GetDispenseTransactionResponse]
 	listDispenseTransactions          *connect.Client[v1.ListDispenseTransactionsRequest, v1.ListDispenseTransactionsResponse]
+	getKioskHardwareStatus            *connect.Client[v1.GetKioskHardwareStatusRequest, v1.GetKioskHardwareStatusResponse]
 	listEmergencyDrugs                *connect.Client[v1.ListEmergencyDrugsRequest, v1.ListEmergencyDrugsResponse]
 	emergencyDispense                 *connect.Client[v1.EmergencyDispenseRequest, v1.EmergencyDispenseResponse]
 	getEmergencyDispenseTransaction   *connect.Client[v1.GetEmergencyDispenseTransactionRequest, v1.GetEmergencyDispenseTransactionResponse]
@@ -232,6 +243,11 @@ func (c *dispensingServiceClient) ListDispenseTransactions(ctx context.Context, 
 	return c.listDispenseTransactions.CallUnary(ctx, req)
 }
 
+// GetKioskHardwareStatus calls medisync.dispensing.v1.DispensingService.GetKioskHardwareStatus.
+func (c *dispensingServiceClient) GetKioskHardwareStatus(ctx context.Context, req *connect.Request[v1.GetKioskHardwareStatusRequest]) (*connect.Response[v1.GetKioskHardwareStatusResponse], error) {
+	return c.getKioskHardwareStatus.CallUnary(ctx, req)
+}
+
 // ListEmergencyDrugs calls medisync.dispensing.v1.DispensingService.ListEmergencyDrugs.
 func (c *dispensingServiceClient) ListEmergencyDrugs(ctx context.Context, req *connect.Request[v1.ListEmergencyDrugsRequest]) (*connect.Response[v1.ListEmergencyDrugsResponse], error) {
 	return c.listEmergencyDrugs.CallUnary(ctx, req)
@@ -265,6 +281,7 @@ type DispensingServiceHandler interface {
 	CancelDispense(context.Context, *connect.Request[v1.CancelDispenseRequest]) (*connect.Response[v1.CancelDispenseResponse], error)
 	GetDispenseTransaction(context.Context, *connect.Request[v1.GetDispenseTransactionRequest]) (*connect.Response[v1.GetDispenseTransactionResponse], error)
 	ListDispenseTransactions(context.Context, *connect.Request[v1.ListDispenseTransactionsRequest]) (*connect.Response[v1.ListDispenseTransactionsResponse], error)
+	GetKioskHardwareStatus(context.Context, *connect.Request[v1.GetKioskHardwareStatusRequest]) (*connect.Response[v1.GetKioskHardwareStatusResponse], error)
 	// Emergency dispensing for medication without a prescription-generated
 	// sticker. HN identifies the patient and employee_code identifies the
 	// responsible operator; this does not create a prescription transaction.
@@ -329,6 +346,12 @@ func NewDispensingServiceHandler(svc DispensingServiceHandler, opts ...connect.H
 		connect.WithSchema(dispensingServiceMethods.ByName("ListDispenseTransactions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dispensingServiceGetKioskHardwareStatusHandler := connect.NewUnaryHandler(
+		DispensingServiceGetKioskHardwareStatusProcedure,
+		svc.GetKioskHardwareStatus,
+		connect.WithSchema(dispensingServiceMethods.ByName("GetKioskHardwareStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	dispensingServiceListEmergencyDrugsHandler := connect.NewUnaryHandler(
 		DispensingServiceListEmergencyDrugsProcedure,
 		svc.ListEmergencyDrugs,
@@ -371,6 +394,8 @@ func NewDispensingServiceHandler(svc DispensingServiceHandler, opts ...connect.H
 			dispensingServiceGetDispenseTransactionHandler.ServeHTTP(w, r)
 		case DispensingServiceListDispenseTransactionsProcedure:
 			dispensingServiceListDispenseTransactionsHandler.ServeHTTP(w, r)
+		case DispensingServiceGetKioskHardwareStatusProcedure:
+			dispensingServiceGetKioskHardwareStatusHandler.ServeHTTP(w, r)
 		case DispensingServiceListEmergencyDrugsProcedure:
 			dispensingServiceListEmergencyDrugsHandler.ServeHTTP(w, r)
 		case DispensingServiceEmergencyDispenseProcedure:
@@ -418,6 +443,10 @@ func (UnimplementedDispensingServiceHandler) GetDispenseTransaction(context.Cont
 
 func (UnimplementedDispensingServiceHandler) ListDispenseTransactions(context.Context, *connect.Request[v1.ListDispenseTransactionsRequest]) (*connect.Response[v1.ListDispenseTransactionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.dispensing.v1.DispensingService.ListDispenseTransactions is not implemented"))
+}
+
+func (UnimplementedDispensingServiceHandler) GetKioskHardwareStatus(context.Context, *connect.Request[v1.GetKioskHardwareStatusRequest]) (*connect.Response[v1.GetKioskHardwareStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.dispensing.v1.DispensingService.GetKioskHardwareStatus is not implemented"))
 }
 
 func (UnimplementedDispensingServiceHandler) ListEmergencyDrugs(context.Context, *connect.Request[v1.ListEmergencyDrugsRequest]) (*connect.Response[v1.ListEmergencyDrugsResponse], error) {

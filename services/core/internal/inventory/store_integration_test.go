@@ -49,22 +49,57 @@ func txStore(t *testing.T) (*Store, pgx.Tx, func()) {
 	return store, tx, cleanup
 }
 
-func uniqueCabinetCode(t *testing.T, prefix string) (string, string) {
+func uniqueSlotCode(t *testing.T, prefix string) string {
 	t.Helper()
-	ts := time.Now().UnixNano()
-	return fmt.Sprintf("cab-%s-%d", prefix, ts), fmt.Sprintf("%s-%d", prefix, ts)
+	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
+}
+
+type integrationScope struct {
+	projectID string
+	kioskCode string
+}
+
+type rowQuerier interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func seedProject(t *testing.T, db rowQuerier) (string, string) {
+	t.Helper()
+	unique := time.Now().UnixNano()
+	var projectID, projectCode string
+	if err := db.QueryRow(context.Background(),
+		`INSERT INTO medisync.projects (name, slug, display_name)
+		 VALUES ($1, $2, $1) RETURNING id, code`,
+		fmt.Sprintf("Inventory Integration %d", unique), fmt.Sprintf("inventory-integration-%d", unique),
+	).Scan(&projectID, &projectCode); err != nil {
+		t.Fatalf("seed project: %v", err)
+	}
+	return projectID, projectCode
+}
+
+func seedKiosk(t *testing.T, db rowQuerier, projectID string, sequence int32) string {
+	t.Helper()
+	var kioskCode string
+	if err := db.QueryRow(context.Background(),
+		`INSERT INTO medisync.kiosks (display_name, pin_hash, project_id, kiosk_sequence)
+		 VALUES ($1, 'integration-test-pin-hash', $2, $3) RETURNING code`,
+		fmt.Sprintf("Inventory Test Cabinet %d", sequence), projectID, sequence,
+	).Scan(&kioskCode); err != nil {
+		t.Fatalf("seed kiosk: %v", err)
+	}
+	return kioskCode
+}
+
+func seedScope(t *testing.T, db rowQuerier) integrationScope {
+	t.Helper()
+	projectID, _ := seedProject(t, db)
+	return integrationScope{projectID: projectID, kioskCode: seedKiosk(t, db, projectID, 1)}
 }
 
 // seedSlot inserts a bare slot row (no drug assignment) and returns it.
-func seedSlot(t *testing.T, store *Store, cabinetID, code string) *Slot {
+func seedSlot(t *testing.T, store *Store, scope integrationScope, code string) *Slot {
 	t.Helper()
-	row := store.db.(pgx.Tx).QueryRow(context.Background(),
-		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
-		 VALUES ($1, $2, 0, 0, 0)
-		 RETURNING id, cabinet_id, code, drug_id, drug_code, drug_name,
-		           capacity, quantity, low_threshold, created_at, updated_at`,
-		cabinetID, code)
-	slot, err := scanSlot(row)
+	slot, err := store.CreateSlot(context.Background(), scope.kioskCode, code, code, scope.projectID, 0, 0, 1, 1, nil)
 	if err != nil {
 		t.Fatalf("seed slot: %v", err)
 	}
@@ -80,8 +115,9 @@ func TestStoreGetByID_Integration(t *testing.T) {
 	store, _, cleanup := txStore(t)
 	defer cleanup()
 
-	cabinetID, code := uniqueCabinetCode(t, "GID")
-	slot := seedSlot(t, store, cabinetID, code)
+	scope := seedScope(t, store.db.(pgx.Tx))
+	code := uniqueSlotCode(t, "GID")
+	slot := seedSlot(t, store, scope, code)
 
 	got, err := store.GetByID(context.Background(), slot.ID)
 	if err != nil {
@@ -115,10 +151,11 @@ func TestStoreGetByCabinetAndCode_Integration(t *testing.T) {
 	store, _, cleanup := txStore(t)
 	defer cleanup()
 
-	cabinetID, code := uniqueCabinetCode(t, "GBC")
-	seeded := seedSlot(t, store, cabinetID, code)
+	scope := seedScope(t, store.db.(pgx.Tx))
+	code := uniqueSlotCode(t, "GBC")
+	seeded := seedSlot(t, store, scope, code)
 
-	got, err := store.GetByCabinetAndCode(context.Background(), cabinetID, code)
+	got, err := store.GetByCabinetAndCode(context.Background(), scope.kioskCode, code)
 	if err != nil {
 		t.Fatalf("GetByCabinetAndCode: %v", err)
 	}
@@ -134,18 +171,13 @@ func TestStoreListSlots_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
 
-	// Clear slots in this transaction.
-	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.slot`)
-	if err != nil {
-		t.Fatalf("clear slots: %v", err)
-	}
+	projectID, _ := seedProject(t, tx)
+	scope1 := integrationScope{projectID: projectID, kioskCode: seedKiosk(t, tx, projectID, 1)}
+	scope2 := integrationScope{projectID: projectID, kioskCode: seedKiosk(t, tx, projectID, 2)}
+	seedSlot(t, store, scope1, uniqueSlotCode(t, "L1"))
+	seedSlot(t, store, scope2, uniqueSlotCode(t, "L2"))
 
-	cab1, code1 := uniqueCabinetCode(t, "L1")
-	cab2, code2 := uniqueCabinetCode(t, "L2")
-	seedSlot(t, store, cab1, code1)
-	seedSlot(t, store, cab2, code2)
-
-	slots, nextToken, totalCount, err := store.ListSlots(context.Background(), "", "", false, 1, "")
+	slots, nextToken, totalCount, err := store.ListSlots(context.Background(), "", projectID, false, 1, "")
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
@@ -153,7 +185,7 @@ func TestStoreListSlots_Integration(t *testing.T) {
 		t.Errorf("page 1 = len %d, token %q, total %d", len(slots), nextToken, totalCount)
 	}
 
-	page2, nextToken2, totalCount2, err := store.ListSlots(context.Background(), "", "", false, 1, nextToken)
+	page2, nextToken2, totalCount2, err := store.ListSlots(context.Background(), "", projectID, false, 1, nextToken)
 	if err != nil {
 		t.Fatalf("ListSlots page 2: %v", err)
 	}
@@ -166,22 +198,18 @@ func TestStoreListSlotsFilterByCabinet_Integration(t *testing.T) {
 	store, tx, cleanup := txStore(t)
 	defer cleanup()
 
-	_, err := tx.Exec(context.Background(), `DELETE FROM medisync.slot`)
-	if err != nil {
-		t.Fatalf("clear slots: %v", err)
-	}
+	projectID, _ := seedProject(t, tx)
+	scope1 := integrationScope{projectID: projectID, kioskCode: seedKiosk(t, tx, projectID, 1)}
+	scope2 := integrationScope{projectID: projectID, kioskCode: seedKiosk(t, tx, projectID, 2)}
+	seedSlot(t, store, scope1, uniqueSlotCode(t, "FC1"))
+	seedSlot(t, store, scope2, uniqueSlotCode(t, "FC2"))
 
-	cab1, code1 := uniqueCabinetCode(t, "FC1")
-	cab2, code2 := uniqueCabinetCode(t, "FC2")
-	seedSlot(t, store, cab1, code1)
-	seedSlot(t, store, cab2, code2)
-
-	slots, _, totalCount, err := store.ListSlots(context.Background(), cab1, "", false, 50, "")
+	slots, _, totalCount, err := store.ListSlots(context.Background(), scope1.kioskCode, projectID, false, 50, "")
 	if err != nil {
 		t.Fatalf("ListSlots: %v", err)
 	}
 	if len(slots) != 1 {
-		t.Errorf("expected 1 slot for cabinet %s, got %d", cab1, len(slots))
+		t.Errorf("expected 1 slot for cabinet %s, got %d", scope1.kioskCode, len(slots))
 	}
 	if totalCount != 1 {
 		t.Errorf("totalCount = %d, want 1", totalCount)
@@ -192,8 +220,8 @@ func TestStoreAssignDrug_Integration(t *testing.T) {
 	store, _, cleanup := txStore(t)
 	defer cleanup()
 
-	cabinetID, code := uniqueCabinetCode(t, "AD")
-	slot := seedSlot(t, store, cabinetID, code)
+	scope := seedScope(t, store.db.(pgx.Tx))
+	slot := seedSlot(t, store, scope, uniqueSlotCode(t, "AD"))
 
 	assigned, err := store.AssignDrug(context.Background(), slot.ID, "drug-1", "PARA-500", "Paracetamol", 100, 10)
 	if err != nil {
@@ -233,8 +261,8 @@ func TestStoreRefill_Integration(t *testing.T) {
 	store, _, cleanup := txStore(t)
 	defer cleanup()
 
-	cabinetID, code := uniqueCabinetCode(t, "RF")
-	slot := seedSlot(t, store, cabinetID, code)
+	scope := seedScope(t, store.db.(pgx.Tx))
+	slot := seedSlot(t, store, scope, uniqueSlotCode(t, "RF"))
 	// Assign a drug with capacity.
 	_, err := store.AssignDrug(context.Background(), slot.ID, "drug-1", "PARA-500", "Paracetamol", 100, 10)
 	if err != nil {
@@ -257,8 +285,8 @@ func TestStoreRefillInsufficientStock_Integration(t *testing.T) {
 	store, _, cleanup := txStore(t)
 	defer cleanup()
 
-	cabinetID, code := uniqueCabinetCode(t, "RIS")
-	slot := seedSlot(t, store, cabinetID, code)
+	scope := seedScope(t, store.db.(pgx.Tx))
+	slot := seedSlot(t, store, scope, uniqueSlotCode(t, "RIS"))
 	// Assign a drug with capacity and add some stock.
 	_, err := store.AssignDrug(context.Background(), slot.ID, "drug-1", "PARA-500", "Paracetamol", 100, 10)
 	if err != nil {
@@ -280,8 +308,8 @@ func TestStoreAdjustStock_Integration(t *testing.T) {
 	store, _, cleanup := txStore(t)
 	defer cleanup()
 
-	cabinetID, code := uniqueCabinetCode(t, "AS")
-	slot := seedSlot(t, store, cabinetID, code)
+	scope := seedScope(t, store.db.(pgx.Tx))
+	slot := seedSlot(t, store, scope, uniqueSlotCode(t, "AS"))
 	_, err := store.AssignDrug(context.Background(), slot.ID, "drug-1", "PARA-500", "Paracetamol", 100, 10)
 	if err != nil {
 		t.Fatalf("AssignDrug: %v", err)
@@ -303,6 +331,32 @@ func TestStoreAdjustStock_Integration(t *testing.T) {
 	}
 }
 
+func TestStoreUpdateEmergencyConfigByBusinessCodes_Integration(t *testing.T) {
+	store, _, cleanup := txStore(t)
+	defer cleanup()
+
+	scope := seedScope(t, store.db.(pgx.Tx))
+	code := uniqueSlotCode(t, "EMERGENCY")
+	seedSlot(t, store, scope, code)
+
+	updated, err := store.UpdateEmergencyConfig(context.Background(), scope.kioskCode, code, scope.projectID, true, 3)
+	if err != nil {
+		t.Fatalf("UpdateEmergencyConfig: %v", err)
+	}
+	if updated == nil || !updated.EmergencyDrug || updated.EmergencyMaxQuantity != 3 {
+		t.Fatalf("emergency config = %+v, want enabled with max 3", updated)
+	}
+
+	otherProjectID, _ := seedProject(t, store.db.(pgx.Tx))
+	notUpdated, err := store.UpdateEmergencyConfig(context.Background(), scope.kioskCode, code, otherProjectID, false, 1)
+	if err != nil {
+		t.Fatalf("cross-project UpdateEmergencyConfig: %v", err)
+	}
+	if notUpdated != nil {
+		t.Fatal("cross-project business-code update must not find the slot")
+	}
+}
+
 // ── Schema verification on fresh Postgres ───────────────────────────
 
 func TestInventorySchemaExists_Integration(t *testing.T) {
@@ -311,12 +365,12 @@ func TestInventorySchemaExists_Integration(t *testing.T) {
 
 	var exists bool
 	err := pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'inventory')`).Scan(&exists)
+		`SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'medisync')`).Scan(&exists)
 	if err != nil {
 		t.Fatalf("check inventory schema: %v", err)
 	}
 	if !exists {
-		t.Fatal("inventory schema does not exist — migrations may not have run")
+		t.Fatal("medisync schema does not exist — migrations may not have run")
 	}
 }
 
@@ -328,7 +382,7 @@ func TestSlotTableExists_Integration(t *testing.T) {
 	err := pool.QueryRow(context.Background(),
 		`SELECT EXISTS(
 		   SELECT 1 FROM information_schema.tables
-		   WHERE table_schema = 'inventory' AND table_name = 'slot'
+		   WHERE table_schema = 'medisync' AND table_name = 'slot'
 		)`).Scan(&exists)
 	if err != nil {
 		t.Fatalf("check slot table: %v", err)
@@ -344,7 +398,8 @@ func TestSlotColumns_Integration(t *testing.T) {
 
 	expectedCols := []string{
 		"id", "cabinet_id", "code", "drug_id", "drug_code", "drug_name",
-		"capacity", "quantity", "low_threshold", "created_at", "updated_at",
+		"capacity", "quantity", "low_threshold", "project_id", "shelf", "row_num",
+		"emergency_drug", "emergency_max_quantity", "created_at", "updated_at",
 	}
 
 	for _, col := range expectedCols {
@@ -352,7 +407,7 @@ func TestSlotColumns_Integration(t *testing.T) {
 		err := pool.QueryRow(context.Background(),
 			`SELECT EXISTS(
 			   SELECT 1 FROM information_schema.columns
-			   WHERE table_schema = 'inventory' AND table_name = 'slot'
+			   WHERE table_schema = 'medisync' AND table_name = 'slot'
 			   AND column_name = $1
 			)`, col).Scan(&exists)
 		if err != nil {
@@ -368,18 +423,19 @@ func TestSlotUniqueConstraint_Integration(t *testing.T) {
 	store, _, cleanup := txStore(t)
 	defer cleanup()
 
-	cabinetID, code := uniqueCabinetCode(t, "UNIQ")
+	scope := seedScope(t, store.db.(pgx.Tx))
+	code := uniqueSlotCode(t, "UNIQ")
 	_, err := store.db.(pgx.Tx).Exec(context.Background(),
-		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
-		 VALUES ($1, $2, 0, 0, 0)`, cabinetID, code)
+		`INSERT INTO medisync.slot (cabinet_id, code, project_id, capacity, quantity, low_threshold)
+		 VALUES ($1, $2, $3, 0, 0, 0)`, scope.kioskCode, code, scope.projectID)
 	if err != nil {
 		t.Fatalf("first insert: %v", err)
 	}
 
 	// Second insert with the same cabinet_id + code should fail.
 	_, err = store.db.(pgx.Tx).Exec(context.Background(),
-		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
-		 VALUES ($1, $2, 0, 0, 0)`, cabinetID, code)
+		`INSERT INTO medisync.slot (cabinet_id, code, project_id, capacity, quantity, low_threshold)
+		 VALUES ($1, $2, $3, 0, 0, 0)`, scope.kioskCode, code, scope.projectID)
 	if err == nil {
 		t.Fatal("expected unique constraint violation, got nil")
 	}
@@ -389,11 +445,12 @@ func TestSlotCapacityCheck_Integration(t *testing.T) {
 	store, _, cleanup := txStore(t)
 	defer cleanup()
 
-	cabinetID, code := uniqueCabinetCode(t, "CC")
+	scope := seedScope(t, store.db.(pgx.Tx))
+	code := uniqueSlotCode(t, "CC")
 	// Negative capacity should be rejected by the CHECK constraint.
 	_, err := store.db.(pgx.Tx).Exec(context.Background(),
-		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
-		 VALUES ($1, $2, -1, 0, 0)`, cabinetID, code)
+		`INSERT INTO medisync.slot (cabinet_id, code, project_id, capacity, quantity, low_threshold)
+		 VALUES ($1, $2, $3, -1, 0, 0)`, scope.kioskCode, code, scope.projectID)
 	if err == nil {
 		t.Fatal("expected check constraint violation for negative capacity")
 	}

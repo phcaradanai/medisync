@@ -102,6 +102,44 @@ func newTestServer(store *fakeDispensingStore, parser *fakeTokenParser) *Dispens
 	}
 }
 
+func TestGetKioskHardwareStatusIsScopedToAuthenticatedKiosk(t *testing.T) {
+	svr := newTestServer(newFakeStore(), &fakeTokenParser{claims: &TokenClaims{Subject: "00010001", Role: "KIOSK", ProjectID: "project-1"}})
+	checkedCode := ""
+	svr.SetHardwareHealthChecker(func(_ context.Context, kioskCode string) error {
+		checkedCode = kioskCode
+		return nil
+	})
+	req := connect.NewRequest(&dispensingv1.GetKioskHardwareStatusRequest{KioskCode: "00010001"})
+	req.Header().Set("Authorization", "Bearer kiosk-token")
+	response, err := svr.GetKioskHardwareStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GetKioskHardwareStatus: %v", err)
+	}
+	if checkedCode != "00010001" || response.Msg.Status != dispensingv1.KioskHardwareStatus_KIOSK_HARDWARE_STATUS_READY {
+		t.Fatalf("status=%v checked=%q", response.Msg.Status, checkedCode)
+	}
+
+	wrong := connect.NewRequest(&dispensingv1.GetKioskHardwareStatusRequest{KioskCode: "00010002"})
+	wrong.Header().Set("Authorization", "Bearer kiosk-token")
+	if _, err := svr.GetKioskHardwareStatus(context.Background(), wrong); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("wrong kiosk code = %v, want permission denied", err)
+	}
+}
+
+func TestGetKioskHardwareStatusReportsUnavailable(t *testing.T) {
+	svr := newTestServer(newFakeStore(), &fakeTokenParser{claims: &TokenClaims{Subject: "00010001", Role: "KIOSK", ProjectID: "project-1"}})
+	svr.SetHardwareHealthChecker(func(context.Context, string) error { return fmt.Errorf("agent offline") })
+	req := connect.NewRequest(&dispensingv1.GetKioskHardwareStatusRequest{})
+	req.Header().Set("Authorization", "Bearer kiosk-token")
+	response, err := svr.GetKioskHardwareStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GetKioskHardwareStatus: %v", err)
+	}
+	if response.Msg.Status != dispensingv1.KioskHardwareStatus_KIOSK_HARDWARE_STATUS_UNAVAILABLE {
+		t.Fatalf("status=%v, want unavailable", response.Msg.Status)
+	}
+}
+
 // --- ListPrescriptions Tests ---
 
 func TestListPrescriptionsRequiresAuth(t *testing.T) {

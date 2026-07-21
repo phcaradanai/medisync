@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/events/v1/events.proto.
  */
 export const file_medisync_events_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("Ch9tZWRpc3luYy9ldmVudHMvdjEvZXZlbnRzLnByb3RvEhJtZWRpc3luYy5ldmVudHMudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIoQCChNQcmVzY3JpcHRpb25DcmVhdGVkEhcKD3ByZXNjcmlwdGlvbl9pZBgBIAEoCRIVCg1zb3VyY2Vfc3lzdGVtGAIgASgJEgoKAmhuGAMgASgJEhQKDHBhdGllbnRfbmFtZRgEIAEoCRIPCgd3YXJkX2lkGAUgASgJEjMKBWl0ZW1zGAYgAygLMiQubWVkaXN5bmMuZXZlbnRzLnYxLlByZXNjcmlwdGlvbkl0ZW0SLQoJaXNzdWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCgh0cmFjZV9pZBgIIAEoCRIUCgxwcm9qZWN0X2NvZGUYCSABKAki3QEKEURpc3BlbnNlUmVxdWVzdGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSEAoIcXVhbnRpdHkYBCABKAUSEAoIdHJhY2VfaWQYBSABKAkSEgoKa2lvc2tfY29kZRgGIAEoCRI7CgthbGxvY2F0aW9ucxgHIAMoCzImLm1lZGlzeW5jLmV2ZW50cy52MS5EaXNwZW5zZUFsbG9jYXRpb24SEgoKcHJvamVjdF9pZBgIIAEoCSLbAQoSRGlzcGVuc2VBbGxvY2F0aW9uEhUKDWFsbG9jYXRpb25faWQYASABKAkSDwoHaXRlbV9pZBgCIAEoCRIRCglkcnVnX2NvZGUYAyABKAkSEQoJc2xvdF9jb2RlGAQgASgJEhAKCGJhdGNoX2lkGAUgASgJEhAKCHF1YW50aXR5GAYgASgFEg8KB2Rvb3Jfbm8YByABKAUSFgoOaGFyZHdhcmVfbGF5ZXIYCCABKAUSFQoNY2hhbm5lbF9zdGFydBgJIAEoBRITCgtjaGFubmVsX2VuZBgKIAEoBSJSChhEaXNwZW5zZUFsbG9jYXRpb25SZXN1bHQSFQoNYWxsb2NhdGlvbl9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEg4KBmRldGFpbBgDIAEoCSKYAgoRRGlzcGVuc2VDb21wbGV0ZWQSEwoLZGlzcGVuc2VfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhEKCXNsb3RfY29kZRgDIAEoCRIQCghxdWFudGl0eRgEIAEoBRIwCgxjb21wbGV0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhAKCHRyYWNlX2lkGAYgASgJEhIKCmtpb3NrX2NvZGUYByABKAkSGQoRaGFyZHdhcmVfcmVzcG9uc2UYCCABKAkSPQoHcmVzdWx0cxgJIAMoCzIsLm1lZGlzeW5jLmV2ZW50cy52MS5EaXNwZW5zZUFsbG9jYXRpb25SZXN1bHQi1gEKDkRpc3BlbnNlRmFpbGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSDgoGcmVhc29uGAQgASgJEg4KBmRldGFpbBgFIAEoCRIQCgh0cmFjZV9pZBgGIAEoCRISCgpraW9za19jb2RlGAcgASgJEj0KB3Jlc3VsdHMYCCADKAsyLC5tZWRpc3luYy5ldmVudHMudjEuRGlzcGVuc2VBbGxvY2F0aW9uUmVzdWx0ImEKDlByaW50UmVxdWVzdGVkEhAKCHByaW50X2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIQCgh0cmFjZV9pZBgDIAEoCRISCgpwcm9qZWN0X2lkGAQgASgJIoIBCg5QcmludENvbXBsZXRlZBIQCghwcmludF9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZkZXRhaWwYBCABKAkSEAoIdHJhY2VfaWQYBSABKAkSEgoKcHJvamVjdF9pZBgGIAEoCSK+AQoURnVsZmlsbG1lbnRSZXF1ZXN0ZWQSFgoOZnVsZmlsbG1lbnRfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhAKCHRyYWNlX2lkGAMgASgJEhIKCmtpb3NrX2NvZGUYBCABKAkSOwoLYWxsb2NhdGlvbnMYBSADKAsyJi5tZWRpc3luYy5ldmVudHMudjEuRGlzcGVuc2VBbGxvY2F0aW9uEhIKCnByb2plY3RfaWQYBiABKAkijgEKFEZ1bGZpbGxtZW50Q29tcGxldGVkEhYKDmZ1bGZpbGxtZW50X2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIPCgdzdWNjZXNzGAMgASgIEg4KBmRldGFpbBgEIAEoCRIQCgh0cmFjZV9pZBgFIAEoCRISCgpraW9za19jb2RlGAYgASgJIs0BCgxTdG9ja0NoYW5nZWQSEQoJc2xvdF9jb2RlGAEgASgJEhEKCWRydWdfY29kZRgCIAEoCRINCgVkZWx0YRgDIAEoBRIWCg5xdWFudGl0eV9hZnRlchgEIAEoBRI1CgZyZWFzb24YBSABKA4yJS5tZWRpc3luYy5ldmVudHMudjEuU3RvY2tDaGFuZ2VSZWFzb24SEAoIdHJhY2VfaWQYBiABKAkSEgoKa2lvc2tfY29kZRgHIAEoCRITCgtkaXNwZW5zZV9pZBgIIAEoCSJVCghTdG9ja0xvdxIRCglzbG90X2NvZGUYASABKAkSEQoJZHJ1Z19jb2RlGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhEKCXRocmVzaG9sZBgEIAEoBSrGAQoRU3RvY2tDaGFuZ2VSZWFzb24SIwofU1RPQ0tfQ0hBTkdFX1JFQVNPTl9VTlNQRUNJRklFRBAAEiAKHFNUT0NLX0NIQU5HRV9SRUFTT05fRElTUEVOU0UQARIeChpTVE9DS19DSEFOR0VfUkVBU09OX1JFRklMTBACEh4KGlNUT0NLX0NIQU5HRV9SRUFTT05fQURKVVNUEAMSKgomU1RPQ0tfQ0hBTkdFX1JFQVNPTl9FTUVSR0VOQ1lfRElTUEVOU0UQBEJcWlpnaXRodWIuY29tL2FkbS1jaHVyYTNpbnRlci9tZWRpc3luYy9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi9tZWRpc3luYy9ldmVudHMvdjE7ZXZlbnRzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("Ch9tZWRpc3luYy9ldmVudHMvdjEvZXZlbnRzLnByb3RvEhJtZWRpc3luYy5ldmVudHMudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIoQCChNQcmVzY3JpcHRpb25DcmVhdGVkEhcKD3ByZXNjcmlwdGlvbl9pZBgBIAEoCRIVCg1zb3VyY2Vfc3lzdGVtGAIgASgJEgoKAmhuGAMgASgJEhQKDHBhdGllbnRfbmFtZRgEIAEoCRIPCgd3YXJkX2lkGAUgASgJEjMKBWl0ZW1zGAYgAygLMiQubWVkaXN5bmMuZXZlbnRzLnYxLlByZXNjcmlwdGlvbkl0ZW0SLQoJaXNzdWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCgh0cmFjZV9pZBgIIAEoCRIUCgxwcm9qZWN0X2NvZGUYCSABKAki3QEKEURpc3BlbnNlUmVxdWVzdGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSEAoIcXVhbnRpdHkYBCABKAUSEAoIdHJhY2VfaWQYBSABKAkSEgoKa2lvc2tfY29kZRgGIAEoCRI7CgthbGxvY2F0aW9ucxgHIAMoCzImLm1lZGlzeW5jLmV2ZW50cy52MS5EaXNwZW5zZUFsbG9jYXRpb24SEgoKcHJvamVjdF9pZBgIIAEoCSLbAQoSRGlzcGVuc2VBbGxvY2F0aW9uEhUKDWFsbG9jYXRpb25faWQYASABKAkSDwoHaXRlbV9pZBgCIAEoCRIRCglkcnVnX2NvZGUYAyABKAkSEQoJc2xvdF9jb2RlGAQgASgJEhAKCGJhdGNoX2lkGAUgASgJEhAKCHF1YW50aXR5GAYgASgFEg8KB2Rvb3Jfbm8YByABKAUSFgoOaGFyZHdhcmVfbGF5ZXIYCCABKAUSFQoNY2hhbm5lbF9zdGFydBgJIAEoBRITCgtjaGFubmVsX2VuZBgKIAEoBSJSChhEaXNwZW5zZUFsbG9jYXRpb25SZXN1bHQSFQoNYWxsb2NhdGlvbl9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEg4KBmRldGFpbBgDIAEoCSKYAgoRRGlzcGVuc2VDb21wbGV0ZWQSEwoLZGlzcGVuc2VfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhEKCXNsb3RfY29kZRgDIAEoCRIQCghxdWFudGl0eRgEIAEoBRIwCgxjb21wbGV0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhAKCHRyYWNlX2lkGAYgASgJEhIKCmtpb3NrX2NvZGUYByABKAkSGQoRaGFyZHdhcmVfcmVzcG9uc2UYCCABKAkSPQoHcmVzdWx0cxgJIAMoCzIsLm1lZGlzeW5jLmV2ZW50cy52MS5EaXNwZW5zZUFsbG9jYXRpb25SZXN1bHQi1gEKDkRpc3BlbnNlRmFpbGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSDgoGcmVhc29uGAQgASgJEg4KBmRldGFpbBgFIAEoCRIQCgh0cmFjZV9pZBgGIAEoCRISCgpraW9za19jb2RlGAcgASgJEj0KB3Jlc3VsdHMYCCADKAsyLC5tZWRpc3luYy5ldmVudHMudjEuRGlzcGVuc2VBbGxvY2F0aW9uUmVzdWx0ImEKDlByaW50UmVxdWVzdGVkEhAKCHByaW50X2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIQCgh0cmFjZV9pZBgDIAEoCRISCgpwcm9qZWN0X2lkGAQgASgJIoIBCg5QcmludENvbXBsZXRlZBIQCghwcmludF9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZkZXRhaWwYBCABKAkSEAoIdHJhY2VfaWQYBSABKAkSEgoKcHJvamVjdF9pZBgGIAEoCSK+AQoURnVsZmlsbG1lbnRSZXF1ZXN0ZWQSFgoOZnVsZmlsbG1lbnRfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhAKCHRyYWNlX2lkGAMgASgJEhIKCmtpb3NrX2NvZGUYBCABKAkSOwoLYWxsb2NhdGlvbnMYBSADKAsyJi5tZWRpc3luYy5ldmVudHMudjEuRGlzcGVuc2VBbGxvY2F0aW9uEhIKCnByb2plY3RfaWQYBiABKAkijgEKFEZ1bGZpbGxtZW50Q29tcGxldGVkEhYKDmZ1bGZpbGxtZW50X2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIPCgdzdWNjZXNzGAMgASgIEg4KBmRldGFpbBgEIAEoCRIQCgh0cmFjZV9pZBgFIAEoCRISCgpraW9za19jb2RlGAYgASgJIs0BCgxTdG9ja0NoYW5nZWQSEQoJc2xvdF9jb2RlGAEgASgJEhEKCWRydWdfY29kZRgCIAEoCRINCgVkZWx0YRgDIAEoBRIWCg5xdWFudGl0eV9hZnRlchgEIAEoBRI1CgZyZWFzb24YBSABKA4yJS5tZWRpc3luYy5ldmVudHMudjEuU3RvY2tDaGFuZ2VSZWFzb24SEAoIdHJhY2VfaWQYBiABKAkSEgoKa2lvc2tfY29kZRgHIAEoCRITCgtkaXNwZW5zZV9pZBgIIAEoCSJVCghTdG9ja0xvdxIRCglzbG90X2NvZGUYASABKAkSEQoJZHJ1Z19jb2RlGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhEKCXRocmVzaG9sZBgEIAEoBSJ7Ch5QcmVzY3JpcHRpb25EaXNwZW5zZUl0ZW1SZXN1bHQSEQoJZHJ1Z19jb2RlGAEgASgJEhoKEnJlcXVlc3RlZF9xdWFudGl0eRgCIAEoBRIaChJkaXNwZW5zZWRfcXVhbnRpdHkYAyABKAUSDgoGc3RhdHVzGAQgASgJIu8CChpQcmVzY3JpcHRpb25EaXNwZW5zZVJlc3VsdBIXCg9wcmVzY3JpcHRpb25faWQYASABKAkSFQoNc291cmNlX3N5c3RlbRgCIAEoCRITCgtkaXNwZW5zZV9pZBgDIAEoCRISCgpraW9za19jb2RlGAQgASgJEkQKBnN0YXR1cxgFIAEoDjI0Lm1lZGlzeW5jLmV2ZW50cy52MS5QcmVzY3JpcHRpb25EaXNwZW5zZVJlc3VsdFN0YXR1cxJBCgVpdGVtcxgGIAMoCzIyLm1lZGlzeW5jLmV2ZW50cy52MS5QcmVzY3JpcHRpb25EaXNwZW5zZUl0ZW1SZXN1bHQSFAoMZmFpbHVyZV9jb2RlGAcgASgJEhYKDmZhaWx1cmVfZGV0YWlsGAggASgJEhAKCHRyYWNlX2lkGAkgASgJEi8KC29jY3VycmVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCrGAQoRU3RvY2tDaGFuZ2VSZWFzb24SIwofU1RPQ0tfQ0hBTkdFX1JFQVNPTl9VTlNQRUNJRklFRBAAEiAKHFNUT0NLX0NIQU5HRV9SRUFTT05fRElTUEVOU0UQARIeChpTVE9DS19DSEFOR0VfUkVBU09OX1JFRklMTBACEh4KGlNUT0NLX0NIQU5HRV9SRUFTT05fQURKVVNUEAMSKgomU1RPQ0tfQ0hBTkdFX1JFQVNPTl9FTUVSR0VOQ1lfRElTUEVOU0UQBCq6AQogUHJlc2NyaXB0aW9uRGlzcGVuc2VSZXN1bHRTdGF0dXMSMwovUFJFU0NSSVBUSU9OX0RJU1BFTlNFX1JFU1VMVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIxCi1QUkVTQ1JJUFRJT05fRElTUEVOU0VfUkVTVUxUX1NUQVRVU19ESVNQRU5TRUQQARIuCipQUkVTQ1JJUFRJT05fRElTUEVOU0VfUkVTVUxUX1NUQVRVU19GQUlMRUQQAkJcWlpnaXRodWIuY29tL2FkbS1jaHVyYTNpbnRlci9tZWRpc3luYy9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi9tZWRpc3luYy9ldmVudHMvdjE7ZXZlbnRzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.events.v1.PrescriptionItem
@@ -630,6 +630,105 @@ export const StockLowSchema: GenMessage<StockLow> = /*@__PURE__*/
   messageDesc(file_medisync_events_v1_events, 12);
 
 /**
+ * @generated from message medisync.events.v1.PrescriptionDispenseItemResult
+ */
+export type PrescriptionDispenseItemResult = Message<"medisync.events.v1.PrescriptionDispenseItemResult"> & {
+  /**
+   * @generated from field: string drug_code = 1;
+   */
+  drugCode: string;
+
+  /**
+   * @generated from field: int32 requested_quantity = 2;
+   */
+  requestedQuantity: number;
+
+  /**
+   * @generated from field: int32 dispensed_quantity = 3;
+   */
+  dispensedQuantity: number;
+
+  /**
+   * @generated from field: string status = 4;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message medisync.events.v1.PrescriptionDispenseItemResult.
+ * Use `create(PrescriptionDispenseItemResultSchema)` to create a new message.
+ */
+export const PrescriptionDispenseItemResultSchema: GenMessage<PrescriptionDispenseItemResult> = /*@__PURE__*/
+  messageDesc(file_medisync_events_v1_events, 13);
+
+/**
+ * Subject: rx.prescription.dispense_result
+ * Core emits this exactly once through the transactional outbox when a normal
+ * prescription dispense reaches its hardware-confirmed terminal result.
+ * prescription_id + source_system routes the result to the originating system.
+ *
+ * @generated from message medisync.events.v1.PrescriptionDispenseResult
+ */
+export type PrescriptionDispenseResult = Message<"medisync.events.v1.PrescriptionDispenseResult"> & {
+  /**
+   * @generated from field: string prescription_id = 1;
+   */
+  prescriptionId: string;
+
+  /**
+   * @generated from field: string source_system = 2;
+   */
+  sourceSystem: string;
+
+  /**
+   * @generated from field: string dispense_id = 3;
+   */
+  dispenseId: string;
+
+  /**
+   * @generated from field: string kiosk_code = 4;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: medisync.events.v1.PrescriptionDispenseResultStatus status = 5;
+   */
+  status: PrescriptionDispenseResultStatus;
+
+  /**
+   * @generated from field: repeated medisync.events.v1.PrescriptionDispenseItemResult items = 6;
+   */
+  items: PrescriptionDispenseItemResult[];
+
+  /**
+   * @generated from field: string failure_code = 7;
+   */
+  failureCode: string;
+
+  /**
+   * @generated from field: string failure_detail = 8;
+   */
+  failureDetail: string;
+
+  /**
+   * @generated from field: string trace_id = 9;
+   */
+  traceId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 10;
+   */
+  occurredAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message medisync.events.v1.PrescriptionDispenseResult.
+ * Use `create(PrescriptionDispenseResultSchema)` to create a new message.
+ */
+export const PrescriptionDispenseResultSchema: GenMessage<PrescriptionDispenseResult> = /*@__PURE__*/
+  messageDesc(file_medisync_events_v1_events, 14);
+
+/**
  * @generated from enum medisync.events.v1.StockChangeReason
  */
 export enum StockChangeReason {
@@ -664,4 +763,30 @@ export enum StockChangeReason {
  */
 export const StockChangeReasonSchema: GenEnum<StockChangeReason> = /*@__PURE__*/
   enumDesc(file_medisync_events_v1_events, 0);
+
+/**
+ * @generated from enum medisync.events.v1.PrescriptionDispenseResultStatus
+ */
+export enum PrescriptionDispenseResultStatus {
+  /**
+   * @generated from enum value: PRESCRIPTION_DISPENSE_RESULT_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: PRESCRIPTION_DISPENSE_RESULT_STATUS_DISPENSED = 1;
+   */
+  DISPENSED = 1,
+
+  /**
+   * @generated from enum value: PRESCRIPTION_DISPENSE_RESULT_STATUS_FAILED = 2;
+   */
+  FAILED = 2,
+}
+
+/**
+ * Describes the enum medisync.events.v1.PrescriptionDispenseResultStatus.
+ */
+export const PrescriptionDispenseResultStatusSchema: GenEnum<PrescriptionDispenseResultStatus> = /*@__PURE__*/
+  enumDesc(file_medisync_events_v1_events, 1);
 

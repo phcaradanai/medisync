@@ -85,7 +85,7 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowO
 
 	if pageToken != "" {
 		cursorClause := fmt.Sprintf(
-			"s.created_at < (SELECT created_at FROM medisync.slot WHERE id = $%d)",
+			"(s.created_at, s.id) < (SELECT created_at, id FROM medisync.slot WHERE id = $%d)",
 			argIdx,
 		)
 		if whereSQL == "" {
@@ -101,7 +101,8 @@ func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowO
 		`SELECT s.id, s.cabinet_id, s.code, s.display_name, s.drug_id, s.drug_code, s.drug_name,
 		        s.capacity, s.quantity, s.low_threshold,
 		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
-		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL')
+		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL'),
+		        s.emergency_drug, s.emergency_max_quantity
 		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id %s
 		  ORDER BY s.created_at DESC, s.id DESC LIMIT $%d`, whereSQL, argIdx)
 	args = append(args, pageSize+1)
@@ -138,7 +139,8 @@ func (s *Store) GetByID(ctx context.Context, id string) (*Slot, error) {
 		`SELECT s.id, s.cabinet_id, s.code, s.display_name, s.drug_id, s.drug_code, s.drug_name,
 		        s.capacity, s.quantity, s.low_threshold,
 		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
-		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL')
+		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL'),
+		        s.emergency_drug, s.emergency_max_quantity
 		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id WHERE s.id = $1`, id)
 	return scanSlot(row)
 }
@@ -149,7 +151,8 @@ func (s *Store) GetByCabinetAndCode(ctx context.Context, cabinetID, code string)
 		`SELECT s.id, s.cabinet_id, s.code, s.display_name, s.drug_id, s.drug_code, s.drug_name,
 		        s.capacity, s.quantity, s.low_threshold,
 		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
-		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL')
+		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL'),
+		        s.emergency_drug, s.emergency_max_quantity
 		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id WHERE s.cabinet_id = $1 AND s.code = $2`, cabinetID, code)
 	return scanSlot(row)
 }
@@ -165,7 +168,8 @@ func (s *Store) AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugNa
 		 WHERE id = $6
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
 		           capacity, quantity, low_threshold,
-		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL'`,
+		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL',
+		           emergency_drug, emergency_max_quantity`,
 		drugID, drugCode, drugName, capacity, lowThreshold, slotID)
 	return scanSlot(row)
 }
@@ -181,7 +185,8 @@ func (s *Store) Refill(ctx context.Context, id string, delta int32, expiryDate *
 		 WHERE id = $3 AND quantity + $1 >= 0
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
 		           capacity, quantity, low_threshold,
-		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL'`,
+		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL',
+		           emergency_drug, emergency_max_quantity`,
 		delta, expiryDate, id)
 	slot, err := scanSlot(row)
 	if err != nil {
@@ -204,15 +209,16 @@ func (s *Store) Refill(ctx context.Context, id string, delta int32, expiryDate *
 }
 
 // CreateSlot inserts a new empty slot into a cabinet.
-func (s *Store) CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32, expiryDate *time.Time) (*Slot, error) {
+func (s *Store) CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold, shelf, rowNum int32, expiryDate *time.Time) (*Slot, error) {
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO medisync.slot (cabinet_id, code, display_name, capacity, quantity, low_threshold, project_id, expiry_date)
-		 VALUES ($1, $2, $3, $4, 0, $5, $6, $7)
+		`INSERT INTO medisync.slot (cabinet_id, code, display_name, capacity, quantity, low_threshold, project_id, expiry_date, shelf, row_num)
+		 VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9)
 		 ON CONFLICT (cabinet_id, code) DO NOTHING
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
 		           capacity, quantity, low_threshold,
-		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL'`,
-		cabinetID, code, displayName, capacity, lowThreshold, projectID, expiryDate)
+		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL',
+		           emergency_drug, emergency_max_quantity`,
+		cabinetID, code, displayName, capacity, lowThreshold, projectID, expiryDate, shelf, rowNum)
 	slot, err := scanSlot(row)
 	if err != nil {
 		return nil, fmt.Errorf("create slot: %w", err)
@@ -233,8 +239,24 @@ func (s *Store) AdjustStock(ctx context.Context, id string, newQuantity int32) (
 		 WHERE id = $2
 		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
 		           capacity, quantity, low_threshold,
-		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL'`,
+		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL',
+		           emergency_drug, emergency_max_quantity`,
 		newQuantity, id)
+	return scanSlot(row)
+}
+
+// UpdateEmergencyConfig persists emergency eligibility using immutable kiosk
+// and slot business codes. projectID prevents cross-tenant updates.
+func (s *Store) UpdateEmergencyConfig(ctx context.Context, kioskCode, slotCode, projectID string, enabled bool, maxQuantity int32) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`UPDATE medisync.slot
+		    SET emergency_drug=$1, emergency_max_quantity=$2, updated_at=now()
+		  WHERE cabinet_id=$3 AND code=$4 AND project_id=$5 AND is_active=true
+		  RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		            capacity, quantity, low_threshold,
+		            project_id, expiry_date, shelf, row_num, created_at, updated_at,
+		            '', '', 'NORMAL', emergency_drug, emergency_max_quantity`,
+		enabled, maxQuantity, kioskCode, slotCode, projectID)
 	return scanSlot(row)
 }
 
@@ -256,7 +278,8 @@ func scanSlot(row pgx.Row) (*Slot, error) {
 		&slot.DrugID, &slot.DrugCode, &slot.DrugName,
 		&slot.Capacity, &slot.Quantity, &slot.LowThreshold,
 		&slot.ProjectID, &slot.ExpiryDate, &slot.Shelf, &slot.RowNum, &createdAt, &updatedAt,
-		&slot.Category, &slot.Manufacturer, &slot.SafetyClassification)
+		&slot.Category, &slot.Manufacturer, &slot.SafetyClassification,
+		&slot.EmergencyDrug, &slot.EmergencyMaxQuantity)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

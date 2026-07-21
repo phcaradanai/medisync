@@ -122,6 +122,9 @@ code เป็น business identity แบบ immutable รูปแบบ `PPPP
    allocation ส่งไปยัง agent ที่ map ไว้เพียงตัวเดียว
 6. หลัง hardware ตอบ ระบบบันทึกผลราย allocation, ตัด stock ที่จ่ายจริง, คืน reservation
    ที่ไม่สำเร็จ และจบเป็น `DISPENSED` หรือ `FAILED`
+7. Core เขียน `rx.prescription.dispense_result` เข้า transactional outbox ใน transaction
+   เดียวกับสถานะสุดท้าย เพื่อส่งผลกลับระบบต้นทางโดยอ้างอิง
+   `prescription_id + source_system`
 
 ถ้าปิดหน้าหรือไม่ยืนยันตัวตนภายใน 5 นาที reservation จะถูกคืนและ transaction เป็น
 `EXPIRED`; ถ้ากดยกเลิกก่อนยืนยันจะเป็น `CANCELLED`
@@ -277,6 +280,7 @@ hardware ให้เปิด Compose ใหม่ด้วย `FULFILLMENT_FAK
 เปิด Admin ที่ <http://localhost:5176> แล้วเลือกเมนู **Dispense Transactions** เพื่อ:
 
 - กรองตาม kiosk code, prescription และสถานะ
+- สลับดู Prescription transaction หรือ Emergency transaction ที่แยกจากกัน
 - ดูผู้ยืนยัน, จำนวนที่ขอ/จ่ายจริง, slot, lot และ failure detail
 - ส่งออก CSV แบบหนึ่งแถวต่อ allocation พร้อม hardware address และ timestamp ทุกขั้น
 

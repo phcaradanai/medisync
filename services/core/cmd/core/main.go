@@ -298,6 +298,13 @@ func run() (runErr error) {
 	if err != nil {
 		return fmt.Errorf("configure vending router: %w", err)
 	}
+	dispensingServer.SetHardwareHealthChecker(func(ctx context.Context, kioskCode string) error {
+		client, err := vendingRouter.ClientFor(kioskCode)
+		if err != nil {
+			return err
+		}
+		return client.Health(ctx)
+	})
 	vendingConsumer := vending.NewRoutedConsumer(js, vendingRouter, dispensingStore, auditw, log)
 	stopVendingConsumer, err := vendingConsumer.Start(startupCtx)
 	if err != nil {

@@ -8,6 +8,8 @@ import {
   DispensingService,
   DispenseTransactionStatus,
   GetDispenseTransactionRequestSchema,
+  GetKioskHardwareStatusRequestSchema,
+  KioskHardwareStatus,
   PrepareDispenseRequestSchema,
   PrescriptionSchema,
   type DispenseTransaction,
@@ -31,7 +33,7 @@ type PersistedQueueSummary = Pick<QueueTransaction, "id" | "requestId" | "operat
 const dispensingClient = createClient(DispensingService, transport);
 const identityClient = createClient(IdentityService, transport);
 const inventoryClient = createClient(InventoryService, transport);
-const ACTIVE_QUEUE_KEY = "medisync.active-withdrawals.v1";
+const activeQueueKey = (kioskCode: string) => `medisync.active-withdrawals.v1.${kioskCode}`;
 
 function staffDispensingClient(token: string, kioskToken: string) {
   const staffAuth: Interceptor = (next) => (req) => {
@@ -60,11 +62,12 @@ function prescriptionFromTransaction(tx: DispenseTransaction): Prescription {
     })),
   });
 }
-function loadQueueSummaries(): PersistedQueueSummary[] { try { return JSON.parse(localStorage.getItem(ACTIVE_QUEUE_KEY) || "[]") as PersistedQueueSummary[]; } catch { return []; } }
+function loadQueueSummaries(kioskCode: string): PersistedQueueSummary[] { try { return JSON.parse(localStorage.getItem(activeQueueKey(kioskCode)) || "[]") as PersistedQueueSummary[]; } catch { return []; } }
 
 export default function WithdrawFlow() {
   const { state: auth } = useAuth();
   const kiosk = auth!.kiosk;
+  const kioskToken = auth!.token;
   const [workflow, setWorkflow] = useState<ScannerState>("awaiting_scan");
   const [prescription, setPrescription] = useState<Prescription | null>(null);
   const [preparedTransaction, setPreparedTransaction] = useState<DispenseTransaction | null>(null);
@@ -77,23 +80,21 @@ export default function WithdrawFlow() {
   const [activeTxnId, setActiveTxnId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState("");
-  const [now, setNow] = useState(() => new Date());
   const [online, setOnline] = useState(() => navigator.onLine);
+  const [hardwareStatus, setHardwareStatus] = useState<"checking" | "ready" | "unavailable">("checking");
   const scannerBuffer = useRef("");
   const scannerTimer = useRef<number | null>(null);
   const scanLock = useRef(false);
   const identityLock = useRef(false);
   const submitLock = useRef(false);
   const requestGeneration = useRef(0);
-  const persistedQueue = useRef(new Map(loadQueueSummaries().map((item) => [item.id, item])));
+  const persistedQueue = useRef(new Map(loadQueueSummaries(kiosk.code).map((item) => [item.id, item])));
 
   useEffect(() => {
-    const clock = window.setInterval(() => setNow(new Date()), 1_000);
     const updateConnection = () => setOnline(navigator.onLine);
     window.addEventListener("online", updateConnection);
     window.addEventListener("offline", updateConnection);
     return () => {
-      window.clearInterval(clock);
       window.removeEventListener("online", updateConnection);
       window.removeEventListener("offline", updateConnection);
     };
@@ -126,11 +127,11 @@ export default function WithdrawFlow() {
     const activeItems = queue.filter((item) => !["completed", "failed"].includes(item.state));
     const active = activeItems.map(({ id, requestId, operator, acceptedAt }) => ({ id, requestId, operator, acceptedAt }));
     persistedQueue.current = new Map(active.map((item) => [item.id, item]));
-    localStorage.setItem(ACTIVE_QUEUE_KEY, JSON.stringify(active));
+    localStorage.setItem(activeQueueKey(kiosk.code), JSON.stringify(active));
     if (!activeItems.length) return;
     const timer = window.setInterval(() => { for (const item of activeItems) void reconcile(item.id); }, 2_000);
     return () => window.clearInterval(timer);
-  }, [queue, reconcile]);
+  }, [kiosk.code, queue, reconcile]);
 
   const resetScanner = useCallback((announcement = "") => {
     requestGeneration.current += 1;
@@ -169,10 +170,11 @@ export default function WithdrawFlow() {
       const ce = ConnectError.from(error);
       if (ce.code === Code.NotFound) setMessage("ไม่พบรายการ READY จาก Sticker นี้ หรือรายการถูกใช้ไปแล้ว");
       else if (ce.code === Code.FailedPrecondition) setMessage("ยาในตู้นี้ไม่พอหรือรายการยังไม่พร้อม กรุณาติดต่อเภสัชกร");
+      else if (ce.code === Code.Unavailable) setMessage(`Hardware ตู้ ${kiosk.code} ไม่พร้อม ยังไม่ได้จองหรือส่งรายการยา`);
       else setMessage("ไม่สามารถตรวจสอบ Sticker กับระบบได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่");
       setWorkflow("scan_failed");
     } finally { scanLock.current = false; }
-  }, [queue]);
+  }, [kiosk.code, queue]);
 
   useEffect(() => {
     if (emergencyOpen || !["awaiting_scan", "scan_failed"].includes(workflow)) return;
@@ -188,7 +190,7 @@ export default function WithdrawFlow() {
     if (submitLock.current || generation !== requestGeneration.current) return;
     submitLock.current = true; setWorkflow("submitting_to_hardware"); setMessage("");
     try {
-      const res = await staffDispensingClient(token, auth!.token).confirmDispense(create(ConfirmDispenseRequestSchema, { dispenseId: prepared.dispenseId }));
+      const res = await staffDispensingClient(token, kioskToken).confirmDispense(create(ConfirmDispenseRequestSchema, { dispenseId: prepared.dispenseId }));
       if (!res.transaction || res.transaction.status !== DispenseTransactionStatus.QUEUED) throw new Error("uncertain");
       const accepted = res.transaction;
       setPreparedTransaction(null);
@@ -198,6 +200,7 @@ export default function WithdrawFlow() {
     } catch (error) {
       const ce = ConnectError.from(error);
       if (ce.code === Code.PermissionDenied || ce.code === Code.NotFound) { identityLock.current = false; submitLock.current = false; setWorkflow("unauthorized"); setMessage("ระบบไม่อนุญาตให้เบิกรายการนี้ และไม่ได้ส่งคำสั่งไปยังเครื่อง"); return; }
+      if (ce.code === Code.Unavailable) { identityLock.current = false; submitLock.current = false; setWorkflow("awaiting_identity"); setMessage(`Hardware ตู้ ${kiosk.code} ไม่พร้อม ยังไม่ได้ส่งคำสั่งจ่ายยา`); return; }
       setWorkflow("submission_uncertain"); setMessage("ยังยืนยันผลการส่งคำสั่งไม่ได้ ระบบกำลังตรวจสอบรายการเดิม ห้ามสแกนหรือส่งซ้ำ");
       setQueue((items) => items.some((item) => item.id === prepared.dispenseId) ? items : [{ id: prepared.dispenseId, requestId: request.prescriptionId, prescription: request, operator: user.displayName, acceptedAt: Date.now(), state: "unknown", reconnecting: true }, ...items]);
       const reconciled = await reconcile(prepared.dispenseId);
@@ -208,7 +211,7 @@ export default function WithdrawFlow() {
         resetScanner(`ตรวจสอบแล้ว: รายการ ${reconciled.prescriptionId} ถูกส่งเข้าคิวตู้ ${reconciled.kioskCode}`);
       }
     }
-  }, [auth, reconcile, resetScanner]);
+  }, [kiosk.code, kioskToken, reconcile, resetScanner]);
 
   const verifyIdentity = useCallback(async (rawToken: string) => {
     const token = rawToken.trim();
@@ -276,24 +279,40 @@ export default function WithdrawFlow() {
     [queue],
   );
   const attentionCount = queue.filter((item) => item.state === "failed" || item.reconnecting).length;
+  const systemAttention = attentionCount > 0 || hardwareStatus === "unavailable";
   const step = stateStep(workflow);
   const handleEmergencyDispensed = useCallback((slotCode: string, dispensed: number) => {
     setSlots((current) => current.map((slot) => slot.code === slotCode ? { ...slot, quantity: Math.max(0, slot.quantity - dispensed) } : slot));
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      try {
+        const response = await dispensingClient.getKioskHardwareStatus(create(GetKioskHardwareStatusRequestSchema, { kioskCode: kiosk.code }));
+        if (active) setHardwareStatus(response.status === KioskHardwareStatus.READY ? "ready" : "unavailable");
+      } catch {
+        if (active) setHardwareStatus("unavailable");
+      }
+    };
+    void check();
+    const timer = window.setInterval(() => void check(), 5_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [kiosk.code]);
+
   return <main className="withdraw-workflow withdraw-workflow--cabinet">
     {["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) && <h1 className="sr-only">สแกน Sticker เบิกยา</h1>}
     <header className="medical-header" aria-label="สถานะเครื่องจ่ายยา">
-      <section className="medical-header__card environment-card" aria-label="สภาพแวดล้อมและความพร้อมของระบบ"><span className="medical-header__icon is-neutral" aria-hidden="true"><StatusIcon name="sensor"/></span><div><strong>ไม่มีข้อมูลเซนเซอร์</strong><small>อุณหภูมิและความชื้น</small></div><span className={`medical-header__icon ${attentionCount ? "is-warning" : "is-ready"}`} aria-hidden="true"><StatusIcon name={attentionCount ? "warning" : "check"}/></span><div><strong>{attentionCount ? "ต้องตรวจสอบระบบ" : "ระบบพร้อมใช้งาน"}</strong><small>{slots.length ? `Hardware พร้อม · ${slots.length} ตำแหน่ง` : "กำลังตรวจสอบ Hardware"}</small></div></section>
+      <section className="medical-header__card environment-card" aria-label="สภาพแวดล้อมและความพร้อมของระบบ"><span className="medical-header__icon is-neutral" aria-hidden="true"><StatusIcon name="sensor"/></span><div><strong>ไม่มีข้อมูลเซนเซอร์</strong><small>อุณหภูมิและความชื้น</small></div><span className={`medical-header__icon ${systemAttention ? "is-warning" : hardwareStatus === "ready" ? "is-ready" : "is-neutral"}`} aria-hidden="true"><StatusIcon name={systemAttention ? "warning" : hardwareStatus === "ready" ? "check" : "sensor"}/></span><div><strong>{hardwareStatus === "checking" ? "กำลังตรวจสอบระบบ" : systemAttention ? "ต้องตรวจสอบระบบ" : "ระบบพร้อมใช้งาน"}</strong><small>{hardwareStatus === "ready" ? `Hardware ตู้ ${kiosk.code} พร้อม · ${slots.length} ตำแหน่ง` : hardwareStatus === "unavailable" ? `Hardware ตู้ ${kiosk.code} ไม่พร้อม` : "กำลังตรวจสอบ Hardware ของตู้นี้"}</small></div></section>
       <section className="medical-header__brand" aria-label={`${kiosk.displayName} ${kiosk.code}`}><strong>ADM</strong><span>AUTOMATED DISPENSING MACHINE</span><b title={kiosk.displayName}>{kiosk.displayName}</b><small>{kiosk.code}</small></section>
-      <section className="medical-header__card connection-card" aria-label="เครือข่าย วันและเวลา"><div className={`medical-header__network ${online ? "is-online" : "is-offline"}`}><span className="network-icon" aria-hidden="true"><StatusIcon name={online ? "network" : "offline"}/></span><div><strong>{online ? "ONLINE" : "OFFLINE"}</strong><small>{online ? "Connected" : "Disconnected"}</small></div></div><time dateTime={now.toISOString()}><strong>{now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</strong><span>{now.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}</span></time></section>
+      <section className="medical-header__card connection-card" aria-label="เครือข่าย วันและเวลา"><div className={`medical-header__network ${online ? "is-online" : "is-offline"}`}><span className="network-icon" aria-hidden="true"><StatusIcon name={online ? "network" : "offline"}/></span><div><strong>{online ? "ONLINE" : "OFFLINE"}</strong><small>{online ? "Browser connected" : "Browser disconnected"}</small></div></div><KioskClock/></section>
     </header>
-    <section className="cabinet-stage" aria-label="ผังตู้ยาสำหรับอ้างอิงตำแหน่งจริง"><header><div><strong>ผังตู้ยา</strong><span>อ้างอิงตำแหน่งยาจากตู้จริง · {kiosk.code}</span></div><div className="cabinet-stage__actions"><span className={attentionCount ? "cabinet-stage__attention" : "cabinet-stage__ready"}><StatusIcon name={attentionCount ? "warning" : "check"}/>{attentionCount ? `ต้องตรวจสอบ ${attentionCount} คิว` : "พร้อมใช้งาน"}</span>{machineQueue.length > 0 && <button type="button" className="cabinet-stage__queue-btn" onClick={() => setStatusOpen(true)}>📋 สถานะคิว ({machineQueue.length})</button>}<button type="button" className="cabinet-stage__emergency-btn" onClick={() => { setEmergencyCardToken(""); setEmergencyOpen(true); }} aria-label="เปิดเบิกยาฉุกเฉิน" title="เบิกยาฉุกเฉิน"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.2 2 5.8 13h5.4L10.8 22l7.4-12h-5.4l.4-8Z"/></svg></button></div></header>{notice && <div className="queue-toast" role="status"><StatusIcon name="check"/>{notice}</div>}<ShelfGrid slots={slots} kioskCode={kiosk.code} variant="overview" requestedSlotIds={requestedSlotIds}/>{prescription && <div className="request-location-banner" role="status"><strong>{prescription.prescriptionId}</strong><span>{prescription.items.length} รายการยา · ตำแหน่งที่ Sticker ร้องขอแสดงด้วยเครื่องหมาย ★</span></div>}</section>
+    <section className="cabinet-stage" aria-label="ผังตู้ยาสำหรับอ้างอิงตำแหน่งจริง"><header><div><strong>ผังตู้ยา</strong><span>อ้างอิงตำแหน่งยาจากตู้จริง · {kiosk.code}</span></div><div className="cabinet-stage__actions"><span className={systemAttention ? "cabinet-stage__attention" : "cabinet-stage__ready"}><StatusIcon name={systemAttention ? "warning" : "check"}/>{hardwareStatus === "unavailable" ? "Hardware ไม่พร้อม" : attentionCount ? `ต้องตรวจสอบ ${attentionCount} คิว` : hardwareStatus === "checking" ? "กำลังตรวจสอบ" : "พร้อมใช้งาน"}</span>{machineQueue.length > 0 && <button type="button" className="cabinet-stage__queue-btn" onClick={() => setStatusOpen(true)}>📋 สถานะคิว ({machineQueue.length})</button>}<button type="button" className="cabinet-stage__emergency-btn" onClick={() => { setEmergencyCardToken(""); setEmergencyOpen(true); }} aria-label="เปิดเบิกยาฉุกเฉิน" title="เบิกยาฉุกเฉิน"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.2 2 5.8 13h5.4L10.8 22l7.4-12h-5.4l.4-8Z"/></svg></button></div></header>{notice && <div className="queue-toast" role="status"><StatusIcon name="check"/>{notice}</div>}<ShelfGrid slots={slots} kioskCode={kiosk.code} variant="overview" requestedSlotIds={requestedSlotIds}/>{prescription && <div className="request-location-banner" role="status"><strong>{prescription.prescriptionId}</strong><span>{prescription.items.length} รายการยา · ตำแหน่งที่ Sticker ร้องขอแสดงด้วยเครื่องหมาย ★</span></div>}</section>
     <section className="withdraw-dock"><section className="withdraw-context">
       {["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) ? <div className="sticker-scanner" aria-live="polite"><span className="step-number">1</span><div><h1><span>SCAN QR LABEL</span>สแกน Sticker เบิกยา</h1><p>นำ Sticker เบิกยาไว้เหนือเครื่องสแกน</p></div><div className="sticker-scanner__frame">{workflow === "validating_sticker" ? <><span className="spinner"/><strong>กำลังตรวจสอบ Sticker กับระบบ...</strong></> : <><DecorativeQr/><strong>วาง Sticker ที่จุดสแกน</strong><small>ระบบจะอ่านข้อมูลอัตโนมัติ</small><span className="scanner-ready-pill"><StatusIcon name="check"/>เครื่องสแกนพร้อมใช้งาน</span></>}</div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}</div>
-      : <div className="request-review request-review--compact"><header><div><span>รายการเบิกยาที่ตรวจสอบแล้ว</span><strong>{prescription?.prescriptionId}</strong></div><span className="status-badge status-badge--success">✓ Backend ยืนยันรายการ</span></header><div className="patient-context"><span>ผู้ป่วยที่กำลังทำรายการ</span><strong>{prescription?.patientName}</strong><b>HN {prescription?.hn}</b><small>หอผู้ป่วย {prescription?.wardId}</small></div><div className="cart-ready-summary"><div><strong>{prescription?.items.length || 0} รายการยา</strong><span>เปิดตะกร้าเพื่อตรวจสอบตำแหน่ง จำนวน และความพร้อมก่อนยืนยันตัวตน</span></div><button type="button" onClick={() => setCartOpen(true)}>เปิดตะกร้ารายการยา</button></div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}{workflow === "submission_uncertain" && <button type="button" className="reconcile-button" onClick={() => prescription && void reconcile(prescription.id)}>ตรวจสอบสถานะอีกครั้ง</button>}</div>}
+      : <div className="request-review request-review--compact"><header><div><span>รายการเบิกยาที่ตรวจสอบแล้ว</span><strong>{prescription?.prescriptionId}</strong></div><span className="status-badge status-badge--success">✓ Backend ยืนยันรายการ</span></header><div className="patient-context"><span>ผู้ป่วยที่กำลังทำรายการ</span><strong>{prescription?.patientName}</strong><b>HN {prescription?.hn}</b><small>หอผู้ป่วย {prescription?.wardId}</small></div><div className="cart-ready-summary"><div><strong>{prescription?.items.length || 0} รายการยา</strong><span>เปิดตะกร้าเพื่อตรวจสอบตำแหน่ง จำนวน และความพร้อมก่อนยืนยันตัวตน</span></div><button type="button" onClick={() => setCartOpen(true)}>เปิดตะกร้ารายการยา</button></div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}{workflow === "submission_uncertain" && <button type="button" className="reconcile-button" onClick={() => preparedTransaction && void reconcile(preparedTransaction.dispenseId)}>ตรวจสอบสถานะอีกครั้ง</button>}</div>}
     </section><div className="dock-steps"><header className="identity-step-heading"><span className="step-number !text-white" style={{ fontSize: "x-large" }}>2</span><div><strong>ขั้นตอนการเบิกยา</strong><span>สแกนและทำตามลำดับ</span></div></header><ol className="withdraw-steps withdraw-steps--compact" aria-label={`ขั้นตอนที่ ${step} จาก 3`}>{["สแกน Sticker", "ตรวจสอบรายการ", "ยืนยันตัวตน"].map((label, index) => <li key={label} className={index + 1 === step ? "is-current" : index + 1 < step ? "is-done" : ""}><b>{index + 1}</b><span>{label}</span></li>)}</ol></div>
-    <footer className="withdraw-footer"><section className="footer-system-status" aria-label="สถานะความพร้อมของเครื่อง"><span className="queue-safety-card__icon" aria-hidden="true"><StatusIcon name="check"/></span><span><b>ระบบพร้อมทำงาน</b><small>HARDWARE STATUS</small></span></section><small className="footer-hardware-meta">Hardware พร้อม · APP v0.1.0 · {kiosk.code}</small>
+    <footer className="withdraw-footer"><section className="footer-system-status" aria-label="สถานะความพร้อมของเครื่อง"><span className="queue-safety-card__icon" aria-hidden="true"><StatusIcon name={hardwareStatus === "ready" ? "check" : "warning"}/></span><span><b>{hardwareStatus === "ready" ? "ระบบพร้อมทำงาน" : hardwareStatus === "checking" ? "กำลังตรวจสอบ Hardware" : "Hardware ไม่พร้อม"}</b><small>HARDWARE STATUS · {kiosk.code}</small></span></section><small className="footer-hardware-meta">{hardwareStatus === "ready" ? "Agent ยืนยันพร้อม" : "ยังไม่ได้รับการยืนยันจาก Agent"} · APP v0.1.0 · {kiosk.code}</small>
     <section className={`withdraw-actionbar${["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) ? " withdraw-actionbar--ready" : ""}`}>
       {workflow === "request_loaded" && <><div><strong>ตะกร้ายา {prescription?.items.length || 0} รายการพร้อมตรวจสอบ</strong><span className="immediate-warning">ตู้ {kiosk.code} จองยาไว้แล้ว ตรวจสอบก่อนสแกนบัตรยืนยัน</span></div><div className="action-group"><button type="button" className="secondary" onClick={() => void cancelPrepared()}>ยกเลิกรายการ</button><button type="button" onClick={() => setCartOpen(true)}>เปิดตะกร้ายา</button></div></>}
       {["awaiting_identity", "identity_failed", "unauthorized", "verifying_identity"].includes(workflow) && <IdentityScanner busy={workflow === "verifying_identity"} onScan={verifyIdentity} onCancel={() => void cancelPrepared()}/>}
@@ -312,11 +331,10 @@ export default function WithdrawFlow() {
     {statusOpen && (
       <DispensingStatusModal
         queue={machineQueue}
-        now={now}
         onClose={() => setStatusOpen(false)}
       />
     )}
-    {emergencyOpen && <EmergencyDispenseModal kioskCode={kiosk.code} projectId={kiosk.projectId} kioskToken={auth!.token} externalCardToken={emergencyCardToken} onExternalCardConsumed={() => setEmergencyCardToken("")} onClose={() => setEmergencyOpen(false)} onDispensed={handleEmergencyDispensed}/>}
+    {emergencyOpen && <EmergencyDispenseModal kioskCode={kiosk.code} projectId={kiosk.projectId} kioskToken={kioskToken} externalCardToken={emergencyCardToken} onExternalCardConsumed={() => setEmergencyCardToken("")} onClose={() => setEmergencyOpen(false)} onDispensed={handleEmergencyDispensed}/>}
     {/* Live dispense status — only on the idle scan screen so it never covers
         the next scan/cart/identity step; the dispense keeps polling in the
         queue while hidden. Driven purely by real backend state. */}
@@ -330,6 +348,15 @@ export default function WithdrawFlow() {
 }
 function DecorativeQr() {
   return <span className="decorative-qr" aria-label="สัญลักษณ์ตำแหน่งสแกน QR ไม่ใช่ QR สำหรับสแกน">{Array.from({ length: 25 }, (_, index) => <i key={index}/>)}</span>;
+}
+
+function KioskClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <time dateTime={now.toISOString()}><strong>{now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</strong><span>{now.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}</span></time>;
 }
 
 function StatusIcon({ name }: { name: "sensor" | "check" | "warning" | "network" | "offline" }) {
@@ -349,6 +376,24 @@ function IdentityScanner({ busy, onScan, onCancel }: { busy: boolean; onScan: (t
 }
 
 function MedicationCartModal({ prescription, slots, kioskCode, onClose, onConfirm }: { prescription: Prescription; slots: Slot[]; kioskCode: string; onClose: () => void; onConfirm: () => void }) {
+  const closeHandler = useRef(onClose);
+  const dialogRef = useRef<HTMLElement>(null);
+  closeHandler.current = onClose;
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    const focusable = () => dialog ? [...dialog.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])")] : [];
+    const focusTimer = window.setTimeout(() => focusable()[0]?.focus(), 0);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeHandler.current(); return; }
+      if (event.key !== "Tab") return;
+      const nodes = focusable(); if (!nodes.length) return;
+      if (event.shiftKey && document.activeElement === nodes[0]) { event.preventDefault(); nodes[nodes.length - 1].focus(); }
+      else if (!event.shiftKey && document.activeElement === nodes[nodes.length - 1]) { event.preventDefault(); nodes[0].focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { window.clearTimeout(focusTimer); document.removeEventListener("keydown", onKey); previous?.focus(); };
+  }, []);
   const items = prescription.items.map((item, index) => {
     const slot = slots.find((candidate) => candidate.drugCode === item.drugCode);
     const position = slot ? getSlotPosition(slot) : null;
@@ -362,5 +407,5 @@ function MedicationCartModal({ prescription, slots, kioskCode, onClose, onConfir
   });
   const shortageCount = items.filter((item) => item.shortage).length;
 
-  return <div className="medication-cart-backdrop"><section className="medication-cart" role="dialog" aria-modal="true" aria-labelledby="medication-cart-title" aria-describedby="medication-cart-hint"><header><span aria-hidden="true">Rx</span><div><small>MEDICATION CART</small><h2 id="medication-cart-title">ตรวจสอบรายการยาที่จะเบิก</h2><p>{prescription.prescriptionId} · {prescription.patientName} · HN {prescription.hn}</p></div><button type="button" onClick={onClose} aria-label="ปิดตะกร้ารายการยา">×</button></header><div className="medication-cart__summary"><strong>{items.length} รายการยา</strong><span className={shortageCount ? "has-shortage" : "is-ready"}>{shortageCount ? `⚠ ต้องตรวจสอบ ${shortageCount} รายการ` : "✓ ยาพร้อมจ่ายครบทุกช่อง"}</span></div><div className="medication-cart__items">{items.map(({ key, item, slot, position, shortage }) => <article key={key} className={shortage ? "has-shortage" : "is-ready"}><div className="medication-cart__drug"><strong>{item.drugName}</strong><span>{item.drugCode}</span></div><div className="medication-cart__location"><small>ตำแหน่งยา</small><strong>{slot && position ? `ชั้น ${position.shelf} · ช่อง ${(position.shelf - 1) * 22 + position.row}` : "ไม่พบตำแหน่ง"}</strong><span>{slot ? `${kioskCode} · ${slot.code}` : "กรุณาติดต่อเภสัชกร"}</span></div><div className="medication-cart__quantity"><small>จำนวนที่เบิก</small><strong>{item.quantity}</strong><span>{slot ? `คงเหลือ ${slot.quantity}` : "ไม่มีข้อมูลคงเหลือ"}</span></div><b>{shortage ? slot ? `ไม่เพียงพอ · ขาด ${item.quantity - slot.quantity}` : "ไม่พบยาในตู้" : "พร้อมจ่าย"}</b></article>)}</div><aside id="medication-cart-hint" className={shortageCount ? "medication-cart__hint has-shortage" : "medication-cart__hint"}><strong>{shortageCount ? "ตรวจพบรายการที่ต้องตรวจสอบ" : "ขั้นตอนถัดไป"}</strong><span>{shortageCount ? "ปริมาณยาบางรายการไม่เพียงพอหรือไม่พบตำแหน่ง กรุณาตรวจสอบกับเภสัชกรก่อนดำเนินการ" : "สแกนบัตรเจ้าหน้าที่เพื่อยืนยันรายการและส่งเข้าคิวจ่ายยา"}</span></aside><footer><button type="button" className="secondary" onClick={onClose}>กลับไปตรวจสอบ</button><button type="button" onClick={onConfirm}>ไปสแกนบัตรยืนยัน</button></footer></section></div>;
+  return <div className="medication-cart-backdrop"><section ref={dialogRef} className="medication-cart" role="dialog" aria-modal="true" aria-labelledby="medication-cart-title" aria-describedby="medication-cart-hint"><header><span aria-hidden="true">Rx</span><div><small>MEDICATION CART</small><h2 id="medication-cart-title">ตรวจสอบรายการยาที่จะเบิก</h2><p>{prescription.prescriptionId} · {prescription.patientName} · HN {prescription.hn}</p></div><button type="button" onClick={onClose} aria-label="ปิดตะกร้ารายการยา">×</button></header><div className="medication-cart__summary"><strong>{items.length} รายการยา</strong><span className={shortageCount ? "has-shortage" : "is-ready"}>{shortageCount ? `⚠ ต้องตรวจสอบ ${shortageCount} รายการ` : "✓ ยาพร้อมจ่ายครบทุกช่อง"}</span></div><div className="medication-cart__items">{items.map(({ key, item, slot, position, shortage }) => <article key={key} className={shortage ? "has-shortage" : "is-ready"}><div className="medication-cart__drug"><strong>{item.drugName}</strong><span>{item.drugCode}</span></div><div className="medication-cart__location"><small>ตำแหน่งยา</small><strong>{slot && position ? `ชั้น ${position.shelf} · ช่อง ${(position.shelf - 1) * 22 + position.row}` : "ไม่พบตำแหน่ง"}</strong><span>{slot ? `${kioskCode} · ${slot.code}` : "กรุณาติดต่อเภสัชกร"}</span></div><div className="medication-cart__quantity"><small>จำนวนที่เบิก</small><strong>{item.quantity}</strong><span>{slot ? `คงเหลือ ${slot.quantity}` : "ไม่มีข้อมูลคงเหลือ"}</span></div><b>{shortage ? slot ? `ไม่เพียงพอ · ขาด ${item.quantity - slot.quantity}` : "ไม่พบยาในตู้" : "พร้อมจ่าย"}</b></article>)}</div><aside id="medication-cart-hint" className={shortageCount ? "medication-cart__hint has-shortage" : "medication-cart__hint"}><strong>{shortageCount ? "ตรวจพบรายการที่ต้องตรวจสอบ" : "ขั้นตอนถัดไป"}</strong><span>{shortageCount ? "ปริมาณยาบางรายการไม่เพียงพอหรือไม่พบตำแหน่ง กรุณาตรวจสอบกับเภสัชกรก่อนดำเนินการ" : "สแกนบัตรเจ้าหน้าที่เพื่อยืนยันรายการและส่งเข้าคิวจ่ายยา"}</span></aside><footer><button type="button" className="secondary" onClick={onClose}>กลับไปตรวจสอบ</button><button type="button" onClick={onConfirm}>ไปสแกนบัตรยืนยัน</button></footer></section></div>;
 }

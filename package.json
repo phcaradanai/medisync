@@ -19,7 +19,7 @@
     "feeder": "cd services/core && go run ./cmd/feeder",
     "test:core": "cd services/core && go test ./...",
     "test:unit": "cd services/core && go test -count=1 ./cmd/feeder/ ./internal/dispensing/ ./internal/platform/audit/ ./internal/platform/config/",
-    "test:integration": "cd services/core && go test -tags=integration -count=1 ./internal/dispensing/ ./internal/platform/audit/",
+    "test:integration": "cd services/core && go test -tags=integration -count=1 ./internal/dispensing/ ./internal/inventory/ ./internal/platform/audit/",
     "test:all": "bash scripts/test/run_all.sh",
     "seed:demo": "cd services/core && go run ./cmd/demoseed",
     "seed:demo-reset": "cd services/core && go run ./cmd/demoseed --reset",

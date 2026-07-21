@@ -15,20 +15,31 @@ import (
 // single-connection concurrency restriction.
 func concurrencyPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	pool := integrationPool(t)
-	// Clean up any leftover test data from prior runs.
-	_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.slot`)
-	return pool
+	return integrationPool(t)
 }
 
 // slotID is returned by seedSlotConcurrent and used across goroutines.
-func seedSlotConcurrent(t *testing.T, pool *pgxpool.Pool, cabinetID, code string) string {
+func seedSlotConcurrent(t *testing.T, pool *pgxpool.Pool, code string) string {
 	t.Helper()
+	projectID, _ := seedProject(t, pool)
+	kioskCode := seedKiosk(t, pool, projectID, 1)
+	t.Cleanup(func() {
+		ctx := context.Background()
+		if _, err := pool.Exec(ctx, `DELETE FROM medisync.slot WHERE project_id=$1`, projectID); err != nil {
+			t.Errorf("clean concurrent test slots: %v", err)
+		}
+		if _, err := pool.Exec(ctx, `DELETE FROM medisync.kiosks WHERE project_id=$1`, projectID); err != nil {
+			t.Errorf("clean concurrent test kiosk: %v", err)
+		}
+		if _, err := pool.Exec(ctx, `DELETE FROM medisync.projects WHERE id=$1`, projectID); err != nil {
+			t.Errorf("clean concurrent test project: %v", err)
+		}
+	})
 	var id string
 	err := pool.QueryRow(context.Background(),
-		`INSERT INTO medisync.slot (cabinet_id, code, capacity, quantity, low_threshold)
-		 VALUES ($1, $2, 10000, 0, 0)
-		 RETURNING id`, cabinetID, code).Scan(&id)
+		`INSERT INTO medisync.slot (cabinet_id, code, project_id, capacity, quantity, low_threshold)
+		 VALUES ($1, $2, $3, 10000, 0, 0)
+		 RETURNING id`, kioskCode, code, projectID).Scan(&id)
 	if err != nil {
 		t.Fatalf("seed slot: %v", err)
 	}
@@ -41,10 +52,8 @@ func seedSlotConcurrent(t *testing.T, pool *pgxpool.Pool, cabinetID, code string
 // quantity = quantity + $delta prevents lost updates at the DB level.
 func TestRefillConcurrency(t *testing.T) {
 	pool := concurrencyPool(t)
-	defer pool.Close()
 
-	cabID, code := uniqueCabinetCode(t, "CONC")
-	slotID := seedSlotConcurrent(t, pool, cabID, code)
+	slotID := seedSlotConcurrent(t, pool, uniqueSlotCode(t, "CONC"))
 	// Assign drug.
 	store := NewStore(pool, nil)
 	_, err := store.AssignDrug(context.Background(), slotID, "drug-1", "PARA-500", "Paracetamol", 10000, 10)
@@ -98,10 +107,8 @@ func TestRefillConcurrency(t *testing.T) {
 // negative deltas produce the correct net result without lost updates.
 func TestRefillConcurrencyMixedDelta(t *testing.T) {
 	pool := concurrencyPool(t)
-	defer pool.Close()
 
-	cabID, code := uniqueCabinetCode(t, "MIXD")
-	slotID := seedSlotConcurrent(t, pool, cabID, code)
+	slotID := seedSlotConcurrent(t, pool, uniqueSlotCode(t, "MIXD"))
 	store := NewStore(pool, nil)
 	_, err := store.AssignDrug(context.Background(), slotID, "drug-1", "PARA-500", "Paracetamol", 10000, 10)
 	if err != nil {
@@ -176,10 +183,8 @@ func TestRefillConcurrencyMixedDelta(t *testing.T) {
 // 200 goroutines and confirms the final quantity is exact.
 func TestRefillConcurrencyHighContention(t *testing.T) {
 	pool := concurrencyPool(t)
-	defer pool.Close()
 
-	cabID, code := uniqueCabinetCode(t, "HIGH")
-	slotID := seedSlotConcurrent(t, pool, cabID, code)
+	slotID := seedSlotConcurrent(t, pool, uniqueSlotCode(t, "HIGH"))
 	store := NewStore(pool, nil)
 	_, err := store.AssignDrug(context.Background(), slotID, "drug-1", "PARA-500", "Paracetamol", 100000, 10)
 	if err != nil {

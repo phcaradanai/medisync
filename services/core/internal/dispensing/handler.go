@@ -73,10 +73,26 @@ type DispensingStore interface {
 
 // DispensingServer is the Connect-RPC handler for DispensingService.
 type DispensingServer struct {
-	store  DispensingStore
-	pool   *pgxpool.Pool // for starting transactions on Dispense
-	parser TokenParser
-	audit  *audit.Writer
+	store           DispensingStore
+	pool            *pgxpool.Pool // for starting transactions on Dispense
+	parser          TokenParser
+	audit           *audit.Writer
+	hardwareChecker func(context.Context, string) error
+}
+
+// SetHardwareHealthChecker wires the per-kiosk vending router without making
+// the dispensing package depend on the hardware adapter package.
+func (s *DispensingServer) SetHardwareHealthChecker(checker func(context.Context, string) error) {
+	s.hardwareChecker = checker
+}
+
+func (s *DispensingServer) checkHardware(ctx context.Context, kioskCode string) error {
+	if s.hardwareChecker == nil {
+		return nil
+	}
+	checkCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	return s.hardwareChecker(checkCtx, kioskCode)
 }
 
 // NewDispensingServer creates a DispensingServer.
@@ -191,6 +207,9 @@ func (s *DispensingServer) PrepareDispense(ctx context.Context, req *connect.Req
 	if claims.Role != "KIOSK" || claims.Subject == "" {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
 	}
+	if err := s.checkHardware(ctx, claims.Subject); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("hardware for this kiosk is unavailable"))
+	}
 	msg := req.Msg
 	if msg == nil || strings.TrimSpace(msg.StickerCode) == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("sticker_code is required"))
@@ -244,6 +263,9 @@ func (s *DispensingServer) ConfirmDispense(ctx context.Context, req *connect.Req
 	}
 	if kiosk.Role != "KIOSK" || kiosk.Subject == "" {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
+	}
+	if err := s.checkHardware(ctx, kiosk.Subject); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("hardware for this kiosk is unavailable"))
 	}
 	msg := req.Msg
 	if msg == nil || msg.DispenseId == "" {
@@ -393,6 +415,29 @@ func (s *DispensingServer) ListDispenseTransactions(ctx context.Context, req *co
 		result = append(result, toProtoTransaction(record))
 	}
 	return connect.NewResponse(&dispensingv1.ListDispenseTransactionsResponse{Transactions: result, NextPageToken: next, TotalCount: total}), nil
+}
+
+func (s *DispensingServer) GetKioskHardwareStatus(ctx context.Context, req *connect.Request[dispensingv1.GetKioskHardwareStatusRequest]) (*connect.Response[dispensingv1.GetKioskHardwareStatusResponse], error) {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
+	if claims.Role != "KIOSK" || claims.Subject == "" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
+	}
+	code := claims.Subject
+	if req.Msg != nil && strings.TrimSpace(req.Msg.KioskCode) != "" && strings.TrimSpace(req.Msg.KioskCode) != code {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrDispenseWrongKiosk)
+	}
+	status := dispensingv1.KioskHardwareStatus_KIOSK_HARDWARE_STATUS_READY
+	detail := "vending agent ready"
+	if checkErr := s.checkHardware(ctx, code); checkErr != nil {
+		status = dispensingv1.KioskHardwareStatus_KIOSK_HARDWARE_STATUS_UNAVAILABLE
+		detail = "vending agent unavailable"
+	}
+	return connect.NewResponse(&dispensingv1.GetKioskHardwareStatusResponse{
+		KioskCode: code, Status: status, Detail: detail, CheckedAt: timestamppb.Now(),
+	}), nil
 }
 
 // findReadyByPrescriptionID looks up a prescription by its external ID.
@@ -595,6 +640,9 @@ func (s *DispensingServer) EmergencyDispense(ctx context.Context, req *connect.R
 	}
 	if kiosk.Role != "KIOSK" || kiosk.Subject == "" {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
+	}
+	if err := s.checkHardware(ctx, kiosk.Subject); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("hardware for this kiosk is unavailable"))
 	}
 	if code := strings.TrimSpace(msg.KioskCode); code != "" && code != kiosk.Subject {
 		return nil, connect.NewError(connect.CodePermissionDenied, ErrDispenseWrongKiosk)

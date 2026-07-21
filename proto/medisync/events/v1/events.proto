@@ -163,3 +163,33 @@ message StockLow {
   int32 quantity = 3;
   int32 threshold = 4;
 }
+
+enum PrescriptionDispenseResultStatus {
+  PRESCRIPTION_DISPENSE_RESULT_STATUS_UNSPECIFIED = 0;
+  PRESCRIPTION_DISPENSE_RESULT_STATUS_DISPENSED = 1;
+  PRESCRIPTION_DISPENSE_RESULT_STATUS_FAILED = 2;
+}
+
+message PrescriptionDispenseItemResult {
+  string drug_code = 1;
+  int32 requested_quantity = 2;
+  int32 dispensed_quantity = 3;
+  string status = 4;
+}
+
+// Subject: rx.prescription.dispense_result
+// Core emits this exactly once through the transactional outbox when a normal
+// prescription dispense reaches its hardware-confirmed terminal result.
+// prescription_id + source_system routes the result to the originating system.
+message PrescriptionDispenseResult {
+  string prescription_id = 1;
+  string source_system = 2;
+  string dispense_id = 3;
+  string kiosk_code = 4;
+  PrescriptionDispenseResultStatus status = 5;
+  repeated PrescriptionDispenseItemResult items = 6;
+  string failure_code = 7;
+  string failure_detail = 8;
+  string trace_id = 9;
+  google.protobuf.Timestamp occurred_at = 10;
+}

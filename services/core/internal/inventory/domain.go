@@ -26,6 +26,8 @@ type Slot struct {
 	Category             string
 	Manufacturer         string
 	SafetyClassification string
+	EmergencyDrug        bool
+	EmergencyMaxQuantity int32
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }

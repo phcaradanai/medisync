@@ -33,6 +33,9 @@ message Slot {
   string category = 16;
   string manufacturer = 17;
   string safety_classification = 18;
+  // Emergency eligibility is configured per physical kiosk slot.
+  bool emergency_drug = 19;
+  int32 emergency_max_quantity = 20;
 }
 
 message ListSlotsRequest {
@@ -101,10 +104,24 @@ message CreateSlotResponse {
   Slot slot = 1;
 }
 
+// Admin-only configuration addressed by immutable business codes. Database
+// row IDs are deliberately not accepted because slots/cabinets may be rebuilt.
+message UpdateSlotEmergencyConfigRequest {
+  string kiosk_code = 1;
+  string slot_code = 2;
+  bool enabled = 3;
+  int32 max_quantity = 4;
+}
+
+message UpdateSlotEmergencyConfigResponse {
+  Slot slot = 1;
+}
+
 service InventoryService {
   rpc ListSlots(ListSlotsRequest) returns (ListSlotsResponse);
   rpc CreateSlot(CreateSlotRequest) returns (CreateSlotResponse);
   rpc AssignDrug(AssignDrugRequest) returns (AssignDrugResponse);
   rpc Refill(RefillRequest) returns (RefillResponse);
   rpc AdjustStock(AdjustStockRequest) returns (AdjustStockResponse);
+  rpc UpdateSlotEmergencyConfig(UpdateSlotEmergencyConfigRequest) returns (UpdateSlotEmergencyConfigResponse);
 }

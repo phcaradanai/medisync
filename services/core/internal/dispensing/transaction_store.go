@@ -9,8 +9,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
 )
 
 type TransactionStatus string
@@ -763,7 +766,13 @@ func (s *Store) FinalizeTransactionSuccess(ctx context.Context, tx pgx.Tx, dispe
 		return nil, false, fmt.Errorf("complete prescription: state changed concurrently")
 	}
 	updated, err := getTransaction(ctx, tx, dispenseID, false)
-	return updated, true, err
+	if err != nil {
+		return nil, false, err
+	}
+	if err := insertPrescriptionResultOutbox(ctx, tx, updated); err != nil {
+		return nil, false, err
+	}
+	return updated, true, nil
 }
 
 func (s *Store) FinalizeTransactionFailure(ctx context.Context, tx pgx.Tx, dispenseID, kioskCode, reason, detail string, outcomes map[string]bool) (*TransactionRecord, bool, error) {
@@ -819,7 +828,57 @@ func (s *Store) FinalizeTransactionFailure(ctx context.Context, tx pgx.Tx, dispe
 		return nil, false, fmt.Errorf("fail prescription: state changed concurrently")
 	}
 	updated, err := getTransaction(ctx, tx, dispenseID, false)
-	return updated, true, err
+	if err != nil {
+		return nil, false, err
+	}
+	if err := insertPrescriptionResultOutbox(ctx, tx, updated); err != nil {
+		return nil, false, err
+	}
+	return updated, true, nil
+}
+
+func insertPrescriptionResultOutbox(ctx context.Context, tx pgx.Tx, record *TransactionRecord) error {
+	if record == nil {
+		return ErrDispenseNotFound
+	}
+	status := eventsv1.PrescriptionDispenseResultStatus_PRESCRIPTION_DISPENSE_RESULT_STATUS_FAILED
+	occurredAt := record.FailedAt
+	if record.Status == TransactionDispensed {
+		status = eventsv1.PrescriptionDispenseResultStatus_PRESCRIPTION_DISPENSE_RESULT_STATUS_DISPENSED
+		occurredAt = record.CompletedAt
+	}
+	event := &eventsv1.PrescriptionDispenseResult{
+		PrescriptionId: record.PrescriptionRef,
+		SourceSystem:   record.SourceSystem,
+		DispenseId:     record.ID,
+		KioskCode:      record.KioskCode,
+		Status:         status,
+		FailureCode:    record.FailureCode,
+		FailureDetail:  record.FailureDetail,
+		TraceId:        record.TraceID,
+	}
+	if occurredAt != nil {
+		event.OccurredAt = timestamppb.New(*occurredAt)
+	}
+	for _, item := range record.Items {
+		event.Items = append(event.Items, &eventsv1.PrescriptionDispenseItemResult{
+			DrugCode:          item.DrugCode,
+			RequestedQuantity: item.RequestedQuantity,
+			DispensedQuantity: item.DispensedQuantity,
+			Status:            item.Status,
+		})
+	}
+	payload, err := protojson.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("marshal prescription dispense result: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO medisync.outbox (subject, payload, project_id, created_by)
+		 VALUES ($1, $2, $3, 'system')`,
+		natsx.SubjectPrescriptionDispenseResult, payload, nullableString(record.ProjectID)); err != nil {
+		return fmt.Errorf("insert prescription dispense result outbox: %w", err)
+	}
+	return nil
 }
 
 func consumeAllocation(ctx context.Context, tx pgx.Tx, allocation *AllocationRecord) error {

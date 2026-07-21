@@ -4,10 +4,14 @@ import { createClient } from "@connectrpc/connect";
 import {
   DispenseTransactionStatus,
   DispensingService,
+  EmergencyDispenseStatus,
+  ListEmergencyDispenseTransactionsRequestSchema,
   ListDispenseTransactionsRequestSchema,
   type DispenseTransaction,
+  type EmergencyDispenseTransaction,
 } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
 import { transport } from "../../transport";
+import { useModalFocus } from "../../hooks/useModalFocus";
 import {
   expiryValueToDate,
   getExpiryState,
@@ -43,6 +47,7 @@ export interface SlotHistoryRow {
   succeeded: boolean;
   detail: string;
   occurredAt?: DispenseTransaction["createdAt"];
+  transactionType: "prescription" | "emergency";
 }
 
 const dispensingClient = createClient(DispensingService, transport);
@@ -136,6 +141,7 @@ export function buildSlotHistory(
           ? "จ่ายยาสำเร็จ"
           : failureDetail || transaction.failureDetail || "จ่ายยาไม่สำเร็จ",
         occurredAt,
+        transactionType: "prescription" as const,
       }];
     })
     .sort(
@@ -143,6 +149,26 @@ export function buildSlotHistory(
         timestampMilliseconds(b.occurredAt) - timestampMilliseconds(a.occurredAt),
     )
     .slice(0, HISTORY_LIMIT);
+}
+
+export function buildEmergencySlotHistory(
+  transactions: readonly EmergencyDispenseTransaction[],
+): SlotHistoryRow[] {
+  return transactions.map((transaction) => {
+    const succeeded = transaction.status === EmergencyDispenseStatus.DISPENSED;
+    return {
+      id: transaction.dispenseId,
+      prescriptionId: `ฉุกเฉิน · HN ${transaction.hn}`,
+      operator: transaction.operatorDisplayName || transaction.employeeCode || "—",
+      slotLabel: transaction.slotCode || "—",
+      lotLabel: "—",
+      quantity: succeeded ? transaction.dispensedQuantity : transaction.requestedQuantity,
+      succeeded,
+      detail: succeeded ? "จ่ายยาฉุกเฉินสำเร็จ" : transaction.failureDetail || "จ่ายยาฉุกเฉินไม่สำเร็จ",
+      occurredAt: transaction.completedAt || transaction.failedAt || transaction.updatedAt || transaction.createdAt,
+      transactionType: "emergency",
+    };
+  });
 }
 
 function normalizeHistoryKey(value?: string): string {
@@ -244,7 +270,7 @@ export default function SlotDetailModal({
   const [selectedLot, setSelectedLot] = useState(0);
   const [history, setHistory] = useState<SlotHistoryRow[]>([]);
   const [historyState, setHistoryState] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const closeRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useModalFocus<HTMLDivElement>(onClose);
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
   const activeLot = lots[selectedLot] ?? lots[0];
@@ -262,15 +288,6 @@ export default function SlotDetailModal({
   );
 
   useEffect(() => {
-    closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  useEffect(() => {
     let active = true;
     if (!kioskCode || !slot.drugCode) {
       setHistory([]);
@@ -282,8 +299,8 @@ export default function SlotDetailModal({
 
     setHistory([]);
     setHistoryState("loading");
-    void dispensingClient
-      .listDispenseTransactions(
+    void Promise.all([
+      dispensingClient.listDispenseTransactions(
         create(ListDispenseTransactionsRequestSchema, {
           kioskCode,
           drugCode: slot.drugCode,
@@ -295,10 +312,22 @@ export default function SlotDetailModal({
           ],
           pageSize: HISTORY_LIMIT,
         }),
-      )
-      .then((response) => {
+      ),
+      dispensingClient.listEmergencyDispenseTransactions(
+        create(ListEmergencyDispenseTransactionsRequestSchema, {
+          kioskCode,
+          drugCode: slot.drugCode,
+          statuses: [EmergencyDispenseStatus.DISPENSED, EmergencyDispenseStatus.FAILED],
+          pageSize: HISTORY_LIMIT,
+        }),
+      ),
+    ])
+      .then(([normalResponse, emergencyResponse]) => {
         if (!active) return;
-        setHistory(buildSlotHistory(response.transactions, slot));
+        setHistory([
+          ...buildSlotHistory(normalResponse.transactions, slot),
+          ...buildEmergencySlotHistory(emergencyResponse.transactions),
+        ].sort((a, b) => timestampMilliseconds(b.occurredAt) - timestampMilliseconds(a.occurredAt)).slice(0, HISTORY_LIMIT));
         setHistoryState("ready");
       })
       .catch(() => {
@@ -334,12 +363,11 @@ export default function SlotDetailModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="slot-detail">
+      <div ref={dialogRef} className="slot-detail">
         <button
           type="button"
           className="slot-detail__close"
           aria-label="ปิดหน้าต่างรายละเอียดช่องยา"
-          ref={closeRef}
           onClick={onClose}
         >
           ✕
@@ -671,7 +699,7 @@ export default function SlotDetailModal({
                   </div>
                   <strong className="slot-history__quantity">{row.quantity} ชิ้น</strong>
                   <span className={`slot-history__status-label slot-history__status-label--${row.succeeded ? "success" : "fail"}`}>
-                    {row.succeeded ? "สำเร็จ" : "ไม่สำเร็จ"}
+                    {row.succeeded ? "สำเร็จ" : "ไม่สำเร็จ"}{row.transactionType === "emergency" ? " · ฉุกเฉิน" : ""}
                   </span>
                 </article>
               );

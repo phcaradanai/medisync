@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import type { Prescription } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 export type QueueState = "queued" | "dispensing" | "completed" | "failed" | "unknown";
 
@@ -16,7 +17,7 @@ export interface QueueTransaction {
 
 export interface DispensingStatusModalProps {
   queue: readonly QueueTransaction[];
-  now: Date;
+  now?: Date;
   onClose: () => void;
 }
 
@@ -55,7 +56,17 @@ export default function DispensingStatusModal({
   now,
   onClose,
 }: DispensingStatusModalProps) {
-  const closeRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useModalFocus<HTMLDivElement>(onClose);
+  const [liveNow, setLiveNow] = useState(() => now ?? new Date());
+
+  useEffect(() => {
+    if (now) {
+      setLiveNow(now);
+      return;
+    }
+    const timer = window.setInterval(() => setLiveNow(new Date()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [now]);
 
   // Separate dispensing item from waiting items
   const dispensing = queue.find((q) => q.state === "dispensing");
@@ -65,15 +76,6 @@ export default function DispensingStatusModal({
   const currentStep = dispensing ? 2 : 1;
   const totalItems = queue.reduce((sum, q) => sum + q.prescription.items.length, 0);
   const eta = estimateCompletion(currentStep, totalItems);
-
-  useEffect(() => {
-    closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   return (
     <div
@@ -85,7 +87,7 @@ export default function DispensingStatusModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="dispense-status-modal">
+      <div ref={dialogRef} className="dispense-status-modal">
         {/* Header */}
         <header className="dispense-status-modal__header">
           <div className="dispense-status-modal__header-icon" aria-hidden="true">
@@ -105,7 +107,6 @@ export default function DispensingStatusModal({
             type="button"
             className="dispense-status-modal__close"
             aria-label="ปิดหน้าต่างสถานะการเบิกยา"
-            ref={closeRef}
             onClick={onClose}
           >
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
@@ -317,7 +318,7 @@ export default function DispensingStatusModal({
               <path d="M12 16v-4M12 8h.01" />
             </svg>
             <span>
-              ข้อมูลอัปเดตล่าสุด: {now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })} น.
+              ข้อมูลอัปเดตล่าสุด: {liveNow.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })} น.
             </span>
           </div>
           <button

@@ -14,6 +14,7 @@ import {
 } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
 import { CardLoginRequestSchema, IdentityService } from "@medisync/proto/medisync/identity/v1/identity_pb";
 import { transport } from "../../transport.ts";
+import { useModalFocus } from "../../hooks/useModalFocus.ts";
 
 const client = createClient(DispensingService, transport);
 const identityClient = createClient(IdentityService, transport);
@@ -71,6 +72,7 @@ function cardErrorMessage(error: unknown): string {
 }
 
 export default function EmergencyDispenseModal({ kioskCode, projectId, kioskToken, externalCardToken, onExternalCardConsumed, onClose, onDispensed }: Props) {
+  const dialogRef = useModalFocus<HTMLElement>(onClose);
   const [drugs, setDrugs] = useState<EmergencyDrug[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -246,7 +248,7 @@ export default function EmergencyDispenseModal({ kioskCode, projectId, kioskToke
   };
 
   return <div className="emergency-modal-backdrop">
-    <section className="emergency-modal" role="dialog" aria-modal="true" aria-labelledby="emergency-modal-title">
+    <section ref={dialogRef} className="emergency-modal" role="dialog" aria-modal="true" aria-labelledby="emergency-modal-title">
       <header className="emergency-modal__header">
         <span className="emergency-modal__symbol"><Icon name="emergency"/></span>
         <div><small>EMERGENCY WITHDRAWAL</small><h2 id="emergency-modal-title">เบิกยาฉุกเฉิน</h2><p>สำหรับรายการที่ไม่มี Prescription จึงไม่มี Sticker เบิกยาให้สแกน</p></div>

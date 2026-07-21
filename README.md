@@ -4,7 +4,7 @@ Hospital medication dispensing platform: automated vending cabinet + kiosk UI + 
 
 ## What it does
 
-A prescription flows from the hospital → `rx.prescription.created` on JetStream. Ward staff authenticate at the kiosk, confirm withdrawal. The cabinet dispenses medication (via `vending-3d-ctl-agent`), a sticker prints (via `print_ops`), stock is decremented, and every step is audited.
+A prescription flows from the hospital → `rx.prescription.created` on JetStream. At one code-scoped kiosk, staff scan its Sticker, review reserved stock, authenticate, and queue that cabinet's `vending-3d-ctl-agent`. Hardware truth updates stock and audit, and `rx.prescription.dispense_result` returns the terminal result to the originating producer. Emergency withdrawals without a Prescription use a separate transaction flow.
 
 ## Event Chain
 
@@ -12,7 +12,7 @@ A prescription flows from the hospital → `rx.prescription.created` on JetStrea
 rx.prescription.created → READY → Dispense RPC → DISPENSING
   → vending consumer → vending agent → dispense.completed
     → completion consumer → DISPENSED + stock.changed + print.requested
-      → printing consumer → print_ops → sticker
+      → transactional outbox → rx.prescription.dispense_result
 ```
 
 ## Documents
@@ -86,7 +86,7 @@ npm run seed:demo        # drugs, slots, kiosk for testing
 | Surface | URL | Login |
 |---|---|---|
 | Admin | http://localhost:5176 | `admin` / `medisync-local-admin-2026` |
-| Kiosk | http://localhost:5175 | Code: `DEMO-K1` PIN: `123456` (after `seed:demo`) |
+| Kiosk | http://localhost:5175 | Code: `00010001` PIN: `123456` (after `seed:demo`) |
 | Core API | http://localhost:8080 | Connect-RPC |
 
 ## Admin Features
@@ -94,16 +94,18 @@ npm run seed:demo        # drugs, slots, kiosk for testing
 | Page | What you can do |
 |---|---|
 | **Drugs** | CRUD drug catalog, search by code/name, activate/deactivate |
-| **Inventory** | Slot management — assign drugs, refill stock, adjust quantities |
+| **Inventory** | Slot management — assign drugs, refill/adjust stock, configure emergency eligibility and limit by kiosk/slot code |
 | **Users** | User management — create/edit, roles (admin/pharmacist/nurse/refiller), ward scopes |
 | **Kiosks** | Register kiosk terminals, PIN management, activate/deactivate |
 | **Cabinets** | Register physical vending machines |
+| **Dispense Transactions** | Separate Prescription/Emergency reports, filters, allocation details, and CSV export |
 
 ## Kiosk Features
 
 | Mode | Flow |
 |---|---|
-| **Withdraw** | Login → prescription list → confirm → dispense status (live polling) → done |
+| **Withdraw** | Login → hardware check for this kiosk → scan Sticker → review cart → scan staff card → tracked hardware result |
+| **Emergency** | HN + staff card/employee code → select configured emergency drug in this kiosk → separate tracked transaction |
 | **Refill** | Toggle refill mode → low stock / all slots → enter qty → confirm → done |
 
 ## Scripts Reference
@@ -132,8 +134,8 @@ npm run seed:demo        # drugs, slots, kiosk for testing
 | Suite | Result |
 |---|---|
 | Go: identity, catalog, inventory, dispensing, vending, printing, cabinet, platform | All pass |
-| Admin (TS): login + drugs | 17/17 |
-| Kiosk (TS): login + withdraw | 25/25 |
+| Admin (TS): login + drugs + emergency inventory configuration + dispense reports | 13/13 |
+| Kiosk (TS): login + withdraw + emergency + queue/history | 44/44 |
 
 ## Milestone Status
 

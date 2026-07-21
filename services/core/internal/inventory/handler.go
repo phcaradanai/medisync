@@ -55,10 +55,11 @@ type TokenParser interface {
 type SlotStore interface {
 	ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool, pageSize int32, pageToken string) ([]*Slot, string, int64, error)
 	GetByID(ctx context.Context, id string) (*Slot, error)
-	CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold int32, expiryDate *time.Time) (*Slot, error)
+	CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold, shelf, rowNum int32, expiryDate *time.Time) (*Slot, error)
 	AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugName string, capacity, lowThreshold int32) (*Slot, error)
 	Refill(ctx context.Context, id string, delta int32, expiryDate *time.Time) (*Slot, error)
 	AdjustStock(ctx context.Context, id string, newQuantity int32) (*Slot, error)
+	UpdateEmergencyConfig(ctx context.Context, kioskCode, slotCode, projectID string, enabled bool, maxQuantity int32) (*Slot, error)
 }
 
 var _ inventoryv1connect.InventoryServiceHandler = (*InventoryServer)(nil)
@@ -161,6 +162,15 @@ func (s *InventoryServer) CreateSlot(ctx context.Context, req *connect.Request[i
 	if msg.LowThreshold <= 0 {
 		msg.LowThreshold = 10
 	}
+	if msg.Shelf == 0 {
+		msg.Shelf = 1
+	}
+	if msg.RowNum == 0 {
+		msg.RowNum = 1
+	}
+	if msg.Shelf < 1 || msg.Shelf > 5 || msg.RowNum < 1 || msg.RowNum > 22 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("shelf must be 1-5 and row_num must be 1-22"))
+	}
 
 	projectID := claims.GetProjectID()
 	if projectID == "" {
@@ -170,7 +180,7 @@ func (s *InventoryServer) CreateSlot(ctx context.Context, req *connect.Request[i
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project_id is required"))
 	}
 
-	slot, err := s.store.CreateSlot(ctx, msg.CabinetId, msg.Code, msg.DisplayName, projectID, msg.Capacity, msg.LowThreshold, fromProtoTimestamp(msg.ExpiryDate))
+	slot, err := s.store.CreateSlot(ctx, msg.CabinetId, msg.Code, msg.DisplayName, projectID, msg.Capacity, msg.LowThreshold, msg.Shelf, msg.RowNum, fromProtoTimestamp(msg.ExpiryDate))
 	if err != nil {
 		if errors.Is(err, ErrDuplicateSlot) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, ErrDuplicateSlot)
@@ -340,6 +350,40 @@ func (s *InventoryServer) AdjustStock(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&inventoryv1.AdjustStockResponse{Slot: toProtoSlot(slot)}), nil
 }
 
+func (s *InventoryServer) UpdateSlotEmergencyConfig(ctx context.Context, req *connect.Request[inventoryv1.UpdateSlotEmergencyConfigRequest]) (*connect.Response[inventoryv1.UpdateSlotEmergencyConfigResponse], error) {
+	claims, cerr := s.authenticate(req.Header())
+	if cerr != nil {
+		return nil, cerr
+	}
+	if claims.GetRole() != "ADMIN" {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrNotAdmin)
+	}
+	msg := req.Msg
+	if msg == nil || strings.TrimSpace(msg.KioskCode) == "" || strings.TrimSpace(msg.SlotCode) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("kiosk_code and slot_code are required"))
+	}
+	if msg.Enabled && msg.MaxQuantity <= 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("max_quantity must be positive when emergency dispense is enabled"))
+	}
+	maxQuantity := msg.MaxQuantity
+	if maxQuantity <= 0 {
+		maxQuantity = 1
+	}
+	slot, err := s.store.UpdateEmergencyConfig(ctx, strings.TrimSpace(msg.KioskCode), strings.TrimSpace(msg.SlotCode), claims.GetProjectID(), msg.Enabled, maxQuantity)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update emergency config: %w", err))
+	}
+	if slot == nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrSlotNotFound)
+	}
+	s.writeAudit(ctx, audit.Entry{
+		Actor: claims.GetSubject(), Action: "slot.emergency_config_updated", Entity: "slot",
+		EntityID: slot.ID, ProjectID: claims.GetProjectID(),
+		Detail: map[string]any{"kiosk_code": slot.CabinetID, "slot_code": slot.Code, "enabled": slot.EmergencyDrug, "max_quantity": slot.EmergencyMaxQuantity},
+	})
+	return connect.NewResponse(&inventoryv1.UpdateSlotEmergencyConfigResponse{Slot: toProtoSlot(slot)}), nil
+}
+
 func authorizeKioskSlot(claims TokenClaimser, slot *Slot) *connect.Error {
 	if claims.GetRole() != "KIOSK" {
 		return nil
@@ -389,7 +433,7 @@ func toProtoSlot(slot *Slot) *inventoryv1.Slot {
 	if slot.ExpiryDate != nil {
 		expiryDate = timestamppb.New(*slot.ExpiryDate)
 	}
-	return &inventoryv1.Slot{Id: slot.ID, CabinetId: slot.CabinetID, Code: slot.Code, DisplayName: slot.DisplayName, DrugId: slot.DrugID, DrugCode: slot.DrugCode, DrugName: slot.DrugName, Capacity: slot.Capacity, Quantity: slot.Quantity, LowThreshold: slot.LowThreshold, ProjectId: slot.ProjectID, UpdatedAt: ua, ExpiryDate: expiryDate, Category: slot.Category, Manufacturer: slot.Manufacturer, SafetyClassification: slot.SafetyClassification}
+	return &inventoryv1.Slot{Id: slot.ID, CabinetId: slot.CabinetID, Code: slot.Code, DisplayName: slot.DisplayName, DrugId: slot.DrugID, DrugCode: slot.DrugCode, DrugName: slot.DrugName, Capacity: slot.Capacity, Quantity: slot.Quantity, LowThreshold: slot.LowThreshold, ProjectId: slot.ProjectID, UpdatedAt: ua, ExpiryDate: expiryDate, Shelf: slot.Shelf, RowNum: slot.RowNum, Category: slot.Category, Manufacturer: slot.Manufacturer, SafetyClassification: slot.SafetyClassification, EmergencyDrug: slot.EmergencyDrug, EmergencyMaxQuantity: slot.EmergencyMaxQuantity}
 }
 
 func fromProtoTimestamp(ts *timestamppb.Timestamp) *time.Time {

@@ -72,7 +72,7 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 		t.Fatalf("commit queue: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.outbox WHERE created_by=$1`, operatorID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.outbox WHERE created_by=$1 OR payload->>'dispenseId'=$2`, operatorID, dispenseID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.dispense_transaction WHERE id=$1`, dispenseID)
 	})
 
@@ -188,6 +188,20 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 	}
 	if txStatus != "DISPENSED" || !hardwareSuccess || reserved != 0 {
 		t.Errorf("transaction status=%s hardware_success=%v reserved=%d", txStatus, hardwareSuccess, reserved)
+	}
+	var resultPayload []byte
+	if err := pool.QueryRow(ctx,
+		`SELECT payload FROM medisync.outbox WHERE subject=$1 AND payload->>'dispenseId'=$2`,
+		natsx.SubjectPrescriptionDispenseResult, dispenseID,
+	).Scan(&resultPayload); err != nil {
+		t.Fatalf("read prescription dispense result outbox: %v", err)
+	}
+	var result eventsv1.PrescriptionDispenseResult
+	if err := protojson.Unmarshal(resultPayload, &result); err != nil {
+		t.Fatalf("unmarshal prescription dispense result: %v", err)
+	}
+	if result.PrescriptionId != prescriptionID || result.SourceSystem == "" || result.KioskCode != kioskCode || result.Status != eventsv1.PrescriptionDispenseResultStatus_PRESCRIPTION_DISPENSE_RESULT_STATUS_DISPENSED {
+		t.Fatalf("prescription dispense result=%+v", &result)
 	}
 
 	slotID := record.Items[0].Allocations[0].SlotID

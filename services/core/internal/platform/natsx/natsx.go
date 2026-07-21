@@ -15,10 +15,14 @@ const (
 	// StreamRX buffers inbound prescriptions from the hospital feeder.
 	// Work-queue retention: exactly one consumer group drains it.
 	StreamRX = "RX"
+	// StreamRXResults retains terminal prescription results so multiple source
+	// systems can use independent durable consumers without competing.
+	StreamRXResults = "RX_RESULTS"
 	// StreamMedisync carries all internal domain events, DLQ included.
 	StreamMedisync = "MEDISYNC"
 
 	SubjectPrescriptionCreated = "rx.prescription.created"
+	SubjectPrescriptionDispenseResult = "rx.prescription.dispense_result"
 	SubjectDispenseRequested     = "medisync.dispense.requested"
 	SubjectDispenseCompleted     = "medisync.dispense.completed"
 	SubjectDispenseFailed        = "medisync.dispense.failed"
@@ -56,12 +60,23 @@ func Connect(ctx context.Context, url string, log *slog.Logger) (*nats.Conn, err
 func EnsureStreams(ctx context.Context, js jetstream.JetStream) error {
 	_, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:      StreamRX,
-		Subjects:  []string{"rx.>"},
+		Subjects:  []string{SubjectPrescriptionCreated},
 		Retention: jetstream.WorkQueuePolicy,
 		Storage:   jetstream.FileStorage,
 	})
 	if err != nil {
 		return fmt.Errorf("ensure stream %s: %w", StreamRX, err)
+	}
+
+	_, err = js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:      StreamRXResults,
+		Subjects:  []string{SubjectPrescriptionDispenseResult},
+		Retention: jetstream.LimitsPolicy,
+		MaxAge:    30 * 24 * time.Hour,
+		Storage:   jetstream.FileStorage,
+	})
+	if err != nil {
+		return fmt.Errorf("ensure stream %s: %w", StreamRXResults, err)
 	}
 
 	_, err = js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{

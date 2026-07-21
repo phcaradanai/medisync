@@ -367,6 +367,33 @@
   padding: 14px 20px 16px;
   flex-wrap: wrap;
 }
+.md-date-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--md-border);
+  border-radius: 6px;
+  background: var(--md-surface);
+  color: var(--md-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.md-date-filter:focus-within {
+  border-color: var(--md-blue);
+  box-shadow: 0 0 0 2px rgba(30, 102, 245, 0.15);
+}
+.md-date-filter input {
+  min-width: 120px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--md-text);
+  font: inherit;
+}
 .md-search {
   position: relative;
   flex: 1;

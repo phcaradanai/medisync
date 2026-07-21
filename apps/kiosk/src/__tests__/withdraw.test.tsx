@@ -2,19 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { DispenseTransactionStatus, EmergencyDispenseStatus, EmergencyOperatorAuthMethod, PrescriptionState } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
+import { DispenseTransactionStatus, EmergencyDispenseStatus, EmergencyOperatorAuthMethod, KioskHardwareStatus, PrescriptionState } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
 
 vi.mock("../transport.ts", () => ({ transport: Symbol("transport") }));
 vi.mock("@connectrpc/connect-web", () => ({ createConnectTransport: () => Symbol("staff-transport") }));
 const logout = vi.fn();
 vi.mock("../auth.tsx", () => ({ useAuth: () => ({ state: { kiosk: { id: "k1", code: "00010001", displayName: "Demo Cabinet", projectId: "project-1" }, token: "kiosk-jwt" }, logout }) }));
 
-const { listSlots, cardLogin, prepareDispense, confirmDispense, cancelDispense, getDispenseTransaction, listDispenseTransactions, listEmergencyDrugs, emergencyDispense, getEmergencyDispenseTransaction } = vi.hoisted(() => ({
-  listSlots: vi.fn(), cardLogin: vi.fn(), prepareDispense: vi.fn(), confirmDispense: vi.fn(), cancelDispense: vi.fn(), getDispenseTransaction: vi.fn(), listDispenseTransactions: vi.fn(), listEmergencyDrugs: vi.fn(), emergencyDispense: vi.fn(), getEmergencyDispenseTransaction: vi.fn(),
+const { listSlots, cardLogin, prepareDispense, confirmDispense, cancelDispense, getDispenseTransaction, getKioskHardwareStatus, listDispenseTransactions, listEmergencyDispenseTransactions, listEmergencyDrugs, emergencyDispense, getEmergencyDispenseTransaction } = vi.hoisted(() => ({
+  listSlots: vi.fn(), cardLogin: vi.fn(), prepareDispense: vi.fn(), confirmDispense: vi.fn(), cancelDispense: vi.fn(), getDispenseTransaction: vi.fn(), getKioskHardwareStatus: vi.fn(), listDispenseTransactions: vi.fn(), listEmergencyDispenseTransactions: vi.fn(), listEmergencyDrugs: vi.fn(), emergencyDispense: vi.fn(), getEmergencyDispenseTransaction: vi.fn(),
 }));
 vi.mock("@connectrpc/connect", async (original) => {
   const actual = await original<typeof import("@connectrpc/connect")>();
-  return { ...actual, createClient: () => ({ listSlots, cardLogin, prepareDispense, confirmDispense, cancelDispense, getDispenseTransaction, listDispenseTransactions, listEmergencyDrugs, emergencyDispense, getEmergencyDispenseTransaction }) };
+  return { ...actual, createClient: () => ({ listSlots, cardLogin, prepareDispense, confirmDispense, cancelDispense, getDispenseTransaction, getKioskHardwareStatus, listDispenseTransactions, listEmergencyDispenseTransactions, listEmergencyDrugs, emergencyDispense, getEmergencyDispenseTransaction }) };
 });
 
 import WithdrawFlow from "../features/withdraw/WithdrawFlow";
@@ -84,6 +84,8 @@ describe("sticker-driven withdrawal", () => {
     localStorage.clear();
     listSlots.mockResolvedValue({ slots: [slot] });
     listDispenseTransactions.mockResolvedValue({ transactions: [], totalCount: 0n });
+    listEmergencyDispenseTransactions.mockResolvedValue({ transactions: [], totalCount: 0n });
+    getKioskHardwareStatus.mockResolvedValue({ status: KioskHardwareStatus.READY });
     listEmergencyDrugs.mockResolvedValue({ drugs: [{ slotCode: "S01", drugCode: "PARA", drugName: "Paracetamol", drugType: "tablet", quantity: 10, maxDispense: 2 }], totalCount: 1n });
     emergencyDispense.mockResolvedValue({ transaction: emergencyTransaction });
     prepareDispense.mockResolvedValue({ prescription, transaction });
@@ -247,6 +249,23 @@ describe("sticker-driven withdrawal", () => {
     expect(confirmDispense).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the prepared transaction at identity when this kiosk hardware is unavailable", async () => {
+    const user = userEvent.setup();
+    render(<WithdrawFlow />);
+    await scanRequest(user);
+    await user.click(screen.getByRole("button", { name: "ไปสแกนบัตรยืนยัน" }));
+    cardLogin.mockResolvedValue({ accessToken: "staff-jwt", user: { id: "u1", displayName: "เจ้าหน้าที่ ก", active: true, role: 1, wardIds: [], projectId: "project-1" } });
+    confirmDispense.mockRejectedValue(new ConnectError("hardware unavailable", Code.Unavailable));
+
+    await user.type(screen.getByLabelText("รหัสบัตรเจ้าหน้าที่"), "card-token");
+    await user.click(screen.getByRole("button", { name: "ยืนยันตัวตนและส่งเข้าคิว" }));
+
+    expect(await screen.findByText(/Hardware ตู้ 00010001 ไม่พร้อม/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "ยืนยันตัวตนและส่งเข้าคิว" })).toBeDefined();
+    expect(getDispenseTransaction).not.toHaveBeenCalled();
+    expect(localStorage.getItem("medisync.active-withdrawals.v1.00010001")).toBe("[]");
+  });
+
   it("queues separate stickers with a separate identity authorization for each request", async () => {
     const user = userEvent.setup();
     prepareDispense.mockImplementation(({ stickerCode }: { stickerCode: string }) => Promise.resolve(stickerCode === "DEMO-RX-002" ? { prescription: prescriptionB, transaction: transactionB } : { prescription, transaction }));
@@ -275,7 +294,7 @@ describe("sticker-driven withdrawal", () => {
   });
 
   it("recovers an accepted transaction and its verified operator after refresh", async () => {
-    localStorage.setItem("medisync.active-withdrawals.v1", JSON.stringify([{ id: "dispense-1", requestId: "DEMO-RX-001", operator: "เจ้าหน้าที่ ก", acceptedAt: 1234 }]));
+    localStorage.setItem("medisync.active-withdrawals.v1.00010001", JSON.stringify([{ id: "dispense-1", requestId: "DEMO-RX-001", operator: "เจ้าหน้าที่ ก", acceptedAt: 1234 }]));
     getDispenseTransaction.mockResolvedValue({ transaction: { ...transaction, operatorDisplayName: "เจ้าหน้าที่ ก", status: DispenseTransactionStatus.DISPENSING } });
     render(<WithdrawFlow />);
     await waitFor(() => expect(getDispenseTransaction).toHaveBeenCalledWith(expect.objectContaining({ dispenseId: "dispense-1" })));
@@ -283,12 +302,12 @@ describe("sticker-driven withdrawal", () => {
   });
 
   it("does not keep the queue button at one after a recovered transaction is already complete", async () => {
-    localStorage.setItem("medisync.active-withdrawals.v1", JSON.stringify([{ id: "dispense-1", requestId: "DEMO-RX-001", operator: "เจ้าหน้าที่ ก", acceptedAt: 1234 }]));
+    localStorage.setItem("medisync.active-withdrawals.v1.00010001", JSON.stringify([{ id: "dispense-1", requestId: "DEMO-RX-001", operator: "เจ้าหน้าที่ ก", acceptedAt: 1234 }]));
     getDispenseTransaction.mockResolvedValue({ transaction: { ...transaction, operatorDisplayName: "เจ้าหน้าที่ ก", status: DispenseTransactionStatus.DISPENSED } });
 
     render(<WithdrawFlow />);
 
-    await waitFor(() => expect(localStorage.getItem("medisync.active-withdrawals.v1")).toBe("[]"));
+    await waitFor(() => expect(localStorage.getItem("medisync.active-withdrawals.v1.00010001")).toBe("[]"));
     expect(screen.queryByRole("button", { name: /สถานะคิว/ })).toBeNull();
   });
 

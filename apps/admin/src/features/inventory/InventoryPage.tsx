@@ -7,6 +7,7 @@ import {
   RefillRequestSchema,
   AdjustStockRequestSchema,
   CreateSlotRequestSchema,
+  UpdateSlotEmergencyConfigRequestSchema,
 } from "@medisync/proto/medisync/inventory/v1/inventory_pb";
 import type { Slot } from "@medisync/proto/medisync/inventory/v1/inventory_pb";
 import type { Drug } from "@medisync/proto/medisync/catalog/v1/catalog_pb";
@@ -63,12 +64,15 @@ export function InventoryPage() {
   const [showAssign, setShowAssign] = useState(false);
   const [showRefill, setShowRefill] = useState(false);
   const [showAdjust, setShowAdjust] = useState(false);
+  const [showEmergency, setShowEmergency] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [assignForm, setAssignForm] = useState<AssignForm>(emptyAssign);
   const [slotForm, setSlotForm] = useState<CreateSlotForm>(emptySlotForm);
   const [refillQty, setRefillQty] = useState(0);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState("");
+  const [emergencyEnabled, setEmergencyEnabled] = useState(false);
+  const [emergencyMaxQuantity, setEmergencyMaxQuantity] = useState(1);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [drugFilter, setDrugFilter] = useState("");
@@ -224,11 +228,35 @@ export function InventoryPage() {
 
   const cabinetCode = (code: string) => kiosks.find(k => k.code === code)?.code || code || "—";
 
-  const toggleEmergency = useCallback((slot: Slot) => {
-    // Update local state and call backend
-    setSlots(prev => prev.map(s => s.id === slot.id ? { ...s, emergencyDrug: !(s as any).emergencyDrug } as any : s));
-    // TODO: add UpdateSlotEmergency RPC when available
-  }, []);
+  function openEmergency(slot: Slot) {
+    setSelectedSlot(slot);
+    setEmergencyEnabled(slot.emergencyDrug);
+    setEmergencyMaxQuantity(Math.max(1, slot.emergencyMaxQuantity || 1));
+    setFormError(null);
+    setShowEmergency(true);
+  }
+
+  async function handleEmergencyConfig(e: FormEvent) {
+    e.preventDefault();
+    if (!selectedSlot) return;
+    if (emergencyEnabled && emergencyMaxQuantity <= 0) {
+      setFormError("Maximum emergency quantity must be positive");
+      return;
+    }
+    setSaving(true); setFormError(null);
+    try {
+      await inventoryClient.updateSlotEmergencyConfig(create(UpdateSlotEmergencyConfigRequestSchema, {
+        kioskCode: selectedSlot.cabinetId,
+        slotCode: selectedSlot.code,
+        enabled: emergencyEnabled,
+        maxQuantity: Math.max(1, emergencyMaxQuantity),
+      }));
+      setShowEmergency(false);
+      await fetchAll();
+    } catch (e: unknown) {
+      setFormError(e instanceof Error ? e.message : "Update emergency configuration failed");
+    } finally { setSaving(false); }
+  }
 
   // ── Render ─────────────────────────────────────────────────────
 
@@ -275,7 +303,9 @@ export function InventoryPage() {
                   <td><span className={s.quantity <= s.lowThreshold ? "badge badge-error" : ""}>{s.quantity}</span>{s.quantity <= s.lowThreshold && s.quantity > 0 && <span className="badge badge-warning" style={{ marginLeft: 4 }}>Low</span>}</td>
                   <td className="text-muted">{s.expiryDate ? new Date(Number(s.expiryDate.seconds) * 1000).toLocaleDateString() : "—"}</td>
                   <td>
-                    <input type="checkbox" checked={(s as any).emergencyDrug || false} onChange={() => toggleEmergency(s)} title="Emergency drug access" style={{ width: 18, height: 18, cursor: "pointer" }} />
+                    <button type="button" className={`btn-sm ${s.emergencyDrug ? "btn-primary" : "btn-ghost"}`} onClick={() => openEmergency(s)} disabled={!s.drugId} title="ตั้งค่าการเบิกฉุกเฉิน">
+                      {s.emergencyDrug ? `เปิด · สูงสุด ${s.emergencyMaxQuantity}` : "ปิด"}
+                    </button>
                   </td>
                   <td>
                     <div className="inline-actions">
@@ -410,6 +440,25 @@ export function InventoryPage() {
             <div className="form-group"><label>New Quantity</label><input type="number" min={0} value={adjustQty} onChange={(e) => setAdjustQty(parseInt(e.target.value) || 0)} autoFocus /></div>
             <div className="form-group"><label>Reason *</label><input type="text" value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="e.g. Physical count mismatch…" required /></div>
             <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setShowAdjust(false)}>Cancel</button><button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Adjust Stock"}</button></div>
+          </form>
+        </div>
+      )}
+
+      {showEmergency && selectedSlot && (
+        <div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowEmergency(false); }}>
+          <form className="modal" onSubmit={handleEmergencyConfig}>
+            <h2>Emergency Withdrawal — {selectedSlot.cabinetId} / {selectedSlot.code}</h2>
+            <p className="text-muted">{selectedSlot.drugCode} — {selectedSlot.drugName}</p>
+            {formError && <div className="login-error">{formError}</div>}
+            <div className="form-group">
+              <label><input type="checkbox" checked={emergencyEnabled} onChange={(e) => setEmergencyEnabled(e.target.checked)} /> อนุญาตให้เบิกยานี้ใน Emergency flow</label>
+            </div>
+            <div className="form-group">
+              <label htmlFor="emergency-max-quantity">จำนวนสูงสุดต่อ transaction</label>
+              <input id="emergency-max-quantity" type="number" min={1} max={Math.max(1, selectedSlot.quantity)} value={emergencyMaxQuantity || ""} onChange={(e) => setEmergencyMaxQuantity(parseInt(e.target.value) || 0)} disabled={!emergencyEnabled} required={emergencyEnabled} />
+            </div>
+            <p className="text-muted">บันทึกโดยอ้างอิง kiosk code และ slot code โดยตรง ไม่ผูกกับเลข row ID ที่อาจเปลี่ยนได้</p>
+            <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setShowEmergency(false)}>Cancel</button><button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Save Emergency Config"}</button></div>
           </form>
         </div>
       )}

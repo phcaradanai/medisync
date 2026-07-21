@@ -47,6 +47,9 @@ const (
 	// InventoryServiceAdjustStockProcedure is the fully-qualified name of the InventoryService's
 	// AdjustStock RPC.
 	InventoryServiceAdjustStockProcedure = "/medisync.inventory.v1.InventoryService/AdjustStock"
+	// InventoryServiceUpdateSlotEmergencyConfigProcedure is the fully-qualified name of the
+	// InventoryService's UpdateSlotEmergencyConfig RPC.
+	InventoryServiceUpdateSlotEmergencyConfigProcedure = "/medisync.inventory.v1.InventoryService/UpdateSlotEmergencyConfig"
 )
 
 // InventoryServiceClient is a client for the medisync.inventory.v1.InventoryService service.
@@ -56,6 +59,7 @@ type InventoryServiceClient interface {
 	AssignDrug(context.Context, *connect.Request[v1.AssignDrugRequest]) (*connect.Response[v1.AssignDrugResponse], error)
 	Refill(context.Context, *connect.Request[v1.RefillRequest]) (*connect.Response[v1.RefillResponse], error)
 	AdjustStock(context.Context, *connect.Request[v1.AdjustStockRequest]) (*connect.Response[v1.AdjustStockResponse], error)
+	UpdateSlotEmergencyConfig(context.Context, *connect.Request[v1.UpdateSlotEmergencyConfigRequest]) (*connect.Response[v1.UpdateSlotEmergencyConfigResponse], error)
 }
 
 // NewInventoryServiceClient constructs a client for the medisync.inventory.v1.InventoryService
@@ -99,16 +103,23 @@ func NewInventoryServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(inventoryServiceMethods.ByName("AdjustStock")),
 			connect.WithClientOptions(opts...),
 		),
+		updateSlotEmergencyConfig: connect.NewClient[v1.UpdateSlotEmergencyConfigRequest, v1.UpdateSlotEmergencyConfigResponse](
+			httpClient,
+			baseURL+InventoryServiceUpdateSlotEmergencyConfigProcedure,
+			connect.WithSchema(inventoryServiceMethods.ByName("UpdateSlotEmergencyConfig")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // inventoryServiceClient implements InventoryServiceClient.
 type inventoryServiceClient struct {
-	listSlots   *connect.Client[v1.ListSlotsRequest, v1.ListSlotsResponse]
-	createSlot  *connect.Client[v1.CreateSlotRequest, v1.CreateSlotResponse]
-	assignDrug  *connect.Client[v1.AssignDrugRequest, v1.AssignDrugResponse]
-	refill      *connect.Client[v1.RefillRequest, v1.RefillResponse]
-	adjustStock *connect.Client[v1.AdjustStockRequest, v1.AdjustStockResponse]
+	listSlots                 *connect.Client[v1.ListSlotsRequest, v1.ListSlotsResponse]
+	createSlot                *connect.Client[v1.CreateSlotRequest, v1.CreateSlotResponse]
+	assignDrug                *connect.Client[v1.AssignDrugRequest, v1.AssignDrugResponse]
+	refill                    *connect.Client[v1.RefillRequest, v1.RefillResponse]
+	adjustStock               *connect.Client[v1.AdjustStockRequest, v1.AdjustStockResponse]
+	updateSlotEmergencyConfig *connect.Client[v1.UpdateSlotEmergencyConfigRequest, v1.UpdateSlotEmergencyConfigResponse]
 }
 
 // ListSlots calls medisync.inventory.v1.InventoryService.ListSlots.
@@ -136,6 +147,11 @@ func (c *inventoryServiceClient) AdjustStock(ctx context.Context, req *connect.R
 	return c.adjustStock.CallUnary(ctx, req)
 }
 
+// UpdateSlotEmergencyConfig calls medisync.inventory.v1.InventoryService.UpdateSlotEmergencyConfig.
+func (c *inventoryServiceClient) UpdateSlotEmergencyConfig(ctx context.Context, req *connect.Request[v1.UpdateSlotEmergencyConfigRequest]) (*connect.Response[v1.UpdateSlotEmergencyConfigResponse], error) {
+	return c.updateSlotEmergencyConfig.CallUnary(ctx, req)
+}
+
 // InventoryServiceHandler is an implementation of the medisync.inventory.v1.InventoryService
 // service.
 type InventoryServiceHandler interface {
@@ -144,6 +160,7 @@ type InventoryServiceHandler interface {
 	AssignDrug(context.Context, *connect.Request[v1.AssignDrugRequest]) (*connect.Response[v1.AssignDrugResponse], error)
 	Refill(context.Context, *connect.Request[v1.RefillRequest]) (*connect.Response[v1.RefillResponse], error)
 	AdjustStock(context.Context, *connect.Request[v1.AdjustStockRequest]) (*connect.Response[v1.AdjustStockResponse], error)
+	UpdateSlotEmergencyConfig(context.Context, *connect.Request[v1.UpdateSlotEmergencyConfigRequest]) (*connect.Response[v1.UpdateSlotEmergencyConfigResponse], error)
 }
 
 // NewInventoryServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -183,6 +200,12 @@ func NewInventoryServiceHandler(svc InventoryServiceHandler, opts ...connect.Han
 		connect.WithSchema(inventoryServiceMethods.ByName("AdjustStock")),
 		connect.WithHandlerOptions(opts...),
 	)
+	inventoryServiceUpdateSlotEmergencyConfigHandler := connect.NewUnaryHandler(
+		InventoryServiceUpdateSlotEmergencyConfigProcedure,
+		svc.UpdateSlotEmergencyConfig,
+		connect.WithSchema(inventoryServiceMethods.ByName("UpdateSlotEmergencyConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/medisync.inventory.v1.InventoryService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case InventoryServiceListSlotsProcedure:
@@ -195,6 +218,8 @@ func NewInventoryServiceHandler(svc InventoryServiceHandler, opts ...connect.Han
 			inventoryServiceRefillHandler.ServeHTTP(w, r)
 		case InventoryServiceAdjustStockProcedure:
 			inventoryServiceAdjustStockHandler.ServeHTTP(w, r)
+		case InventoryServiceUpdateSlotEmergencyConfigProcedure:
+			inventoryServiceUpdateSlotEmergencyConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -222,4 +247,8 @@ func (UnimplementedInventoryServiceHandler) Refill(context.Context, *connect.Req
 
 func (UnimplementedInventoryServiceHandler) AdjustStock(context.Context, *connect.Request[v1.AdjustStockRequest]) (*connect.Response[v1.AdjustStockResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.inventory.v1.InventoryService.AdjustStock is not implemented"))
+}
+
+func (UnimplementedInventoryServiceHandler) UpdateSlotEmergencyConfig(context.Context, *connect.Request[v1.UpdateSlotEmergencyConfigRequest]) (*connect.Response[v1.UpdateSlotEmergencyConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.inventory.v1.InventoryService.UpdateSlotEmergencyConfig is not implemented"))
 }
