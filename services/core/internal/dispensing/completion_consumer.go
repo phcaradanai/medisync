@@ -10,8 +10,6 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/adm-chura3inter/medisync/services/core/internal/inventory"
-
 	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
@@ -121,130 +119,41 @@ func (c *CompletionConsumer) handleCompleted(ctx context.Context, msg jetstream.
 		_ = msg.Term()
 		return nil
 	}
-
-	c.log.Info("dispense.completed: finishing prescription",
-		"prescription_id", event.PrescriptionId,
-		"dispense_id", event.DispenseId,
-	)
-
-	// Find the prescription by its external ID, then transition by internal ID.
-	pr, err := c.store.GetByPrescriptionID(ctx, event.PrescriptionId, "")
-	if err != nil {
-		return fmt.Errorf("lookup prescription %s: %w", event.PrescriptionId, err)
-	}
-	if pr == nil {
-		c.log.Warn("dispense.completed: prescription not found",
-			"prescription_id", event.PrescriptionId)
+	if event.DispenseId == "" || event.KioskCode == "" || len(event.Results) == 0 {
+		c.log.Warn("dispense.completed: missing routed transaction fields, rejecting")
+		c.publishDLQ(ctx, msg)
+		_ = msg.Term()
 		return nil
 	}
 
-	// Transition the prescription state in a transaction.
+	outcomes := make(map[string]bool, len(event.Results))
+	for _, result := range event.Results {
+		outcomes[result.AllocationId] = result.Success
+	}
 	tx, err := c.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
+		return fmt.Errorf("begin completion: %w", err)
 	}
-	defer tx.Rollback(ctx)
-
-	updated, err := c.store.TransitionState(ctx, tx, pr.ID, StateDispensing, StateDispensed, nil)
+	defer tx.Rollback(ctx) //nolint:errcheck
+	record, applied, err := c.store.FinalizeTransactionSuccess(ctx, tx, event.DispenseId, event.KioskCode, event.HardwareResponse, outcomes)
 	if err != nil {
-		return fmt.Errorf("transition DISPENSING→DISPENSED for %s: %w", event.PrescriptionId, err)
+		return fmt.Errorf("finalize dispense success: %w", err)
 	}
-
-	if updated == nil {
-		c.log.Warn("dispense.completed: prescription not found or wrong state",
-			"prescription_id", event.PrescriptionId)
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit completion: %w", err)
+	}
+	if !applied {
 		return nil
 	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transition: %w", err)
-	}
-
-	// Decrement stock using FIFO (earliest expiry first).
-	if len(pr.Items) > 0 {
-		for _, item := range pr.Items {
-			if item.DrugCode == "" || item.Quantity <= 0 { continue }
-
-			// Query batches for this drug across all slots, ordered by expiry.
-			rows, err := c.pool.Query(ctx,
-				`SELECT b.id, b.slot_id, s.code, b.lot_number, b.expiry_date, b.quantity
-				   FROM medisync.slot_batch b
-				   JOIN medisync.slot s ON s.id = b.slot_id
-				  WHERE s.drug_code = $1 AND b.quantity > 0
-				  ORDER BY b.expiry_date ASC NULLS LAST`, item.DrugCode)
-			if err != nil {
-				c.log.Warn("FIFO batch lookup failed", "drug_code", item.DrugCode, "error", err.Error())
-				continue
-			}
-
-			var batches []inventory.SlotBatch
-			for rows.Next() {
-				var b inventory.SlotBatch
-				if err := rows.Scan(&b.ID, &b.SlotID, &b.SlotCode, &b.LotNumber, &b.ExpiryDate, &b.Quantity); err != nil {
-					continue
-				}
-				batches = append(batches, b)
-			}
-			rows.Close()
-
-			// FIFO allocation
-			allocs, remaining := inventory.AllocateFIFO(batches, item.Quantity)
-			if remaining > 0 {
-				c.log.Warn("FIFO: insufficient stock",
-					"drug_code", item.DrugCode,
-					"requested", item.Quantity,
-					"available", item.Quantity-remaining)
-			}
-
-			// Apply allocations
-			for _, a := range allocs {
-				tag, err := c.pool.Exec(ctx,
-					`UPDATE medisync.slot_batch SET quantity = quantity - $1, updated_at = now()
-					  WHERE id = $2 AND quantity >= $1`, a.TakeQty, a.BatchID)
-				if err != nil || tag.RowsAffected() == 0 {
-					c.log.Warn("FIFO batch decrement failed", "batch_id", a.BatchID, "error", err)
-					continue
-				}
-				c.pool.Exec(ctx, `UPDATE medisync.slot SET quantity = quantity - $1, updated_at = now() WHERE id = (SELECT slot_id FROM medisync.slot_batch WHERE id = $2)`, a.TakeQty, a.BatchID)
-				c.log.Info("FIFO dispensed",
-					"drug_code", item.DrugCode,
-					"slot", a.SlotCode,
-					"batch", a.BatchID[:8],
-					"lot", a.LotNumber,
-					"qty", a.TakeQty)
-			}
-		}
-	}
-
-	c.writeAudit(updated.ID, "dispense.completed", "{}")
-
-	// Publish stock.changed event.
+	c.writeTransactionAudit(record, "dispense.completed", map[string]any{"kiosk_code": event.KioskCode, "hardware_response": event.HardwareResponse})
+	c.publishStockChanges(ctx, record)
 	if c.js != nil {
-		stockEv := &eventsv1.StockChanged{
-			SlotCode:      event.SlotCode,
-			Delta:         -event.Quantity,
-			Reason:        eventsv1.StockChangeReason_STOCK_CHANGE_REASON_DISPENSE,
-			TraceId:       event.TraceId,
-		}
-		stockPayload, _ := protojson.Marshal(stockEv)
-		if _, err := c.js.Publish(ctx, natsx.SubjectStockChanged, stockPayload); err != nil {
-			c.log.Warn("dispense.completed: failed to publish stock.changed",
-				"prescription_id", event.PrescriptionId, "error", err.Error())
-		}
-
-		// Trigger sticker printing.
-		printEv := &eventsv1.PrintRequested{
-			PrintId:        event.DispenseId,
-			PrescriptionId: event.PrescriptionId,
-			TraceId:        event.TraceId,
-		}
+		printEv := &eventsv1.PrintRequested{PrintId: event.DispenseId, PrescriptionId: event.PrescriptionId, TraceId: event.TraceId, ProjectId: record.ProjectID}
 		printPayload, _ := protojson.Marshal(printEv)
 		if _, err := c.js.Publish(ctx, natsx.SubjectPrintRequested, printPayload); err != nil {
-			c.log.Warn("dispense.completed: failed to publish print.requested",
-				"prescription_id", event.PrescriptionId, "error", err.Error())
+			c.log.Warn("publish print.requested failed", "error", err.Error())
 		}
 	}
-
 	return nil
 }
 
@@ -256,62 +165,65 @@ func (c *CompletionConsumer) handleFailed(ctx context.Context, msg jetstream.Msg
 		_ = msg.Term()
 		return nil
 	}
+	if event.DispenseId == "" || event.KioskCode == "" {
+		c.log.Warn("dispense.failed: missing routed transaction fields, rejecting")
+		c.publishDLQ(ctx, msg)
+		_ = msg.Term()
+		return nil
+	}
 
 	c.log.Warn("dispense.failed: marking prescription failed",
 		"prescription_id", event.PrescriptionId,
 		"reason", event.Reason,
 	)
 
-	// Find the prescription by its external ID, then transition by internal ID.
-	pr, err := c.store.GetByPrescriptionID(ctx, event.PrescriptionId, "")
-	if err != nil {
-		return fmt.Errorf("lookup prescription %s: %w", event.PrescriptionId, err)
+	outcomes := make(map[string]bool, len(event.Results))
+	for _, result := range event.Results {
+		outcomes[result.AllocationId] = result.Success
 	}
-	if pr == nil {
-		c.log.Warn("dispense.failed: prescription not found",
-			"prescription_id", event.PrescriptionId)
-		return nil
-	}
-
-	// Transition the prescription state in a transaction.
 	tx, err := c.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
+		return fmt.Errorf("begin failure: %w", err)
 	}
-	defer tx.Rollback(ctx)
-
-	updated, err := c.store.TransitionState(ctx, tx, pr.ID, StateDispensing, StateFailed, nil)
+	defer tx.Rollback(ctx) //nolint:errcheck
+	record, applied, err := c.store.FinalizeTransactionFailure(ctx, tx, event.DispenseId, event.KioskCode, event.Reason, event.Detail, outcomes)
 	if err != nil {
-		return fmt.Errorf("transition DISPENSING→FAILED for %s: %w", event.PrescriptionId, err)
+		return fmt.Errorf("finalize dispense failure: %w", err)
 	}
-
-	if updated == nil {
-		c.log.Warn("dispense.failed: prescription not found or wrong state",
-			"prescription_id", event.PrescriptionId)
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit failure: %w", err)
+	}
+	if !applied {
 		return nil
 	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transition: %w", err)
-	}
-
-	c.writeAudit(updated.ID, "dispense.failed",
-		fmt.Sprintf(`{"reason":"%s","detail":"%s"}`, event.Reason, event.Detail))
-
+	c.writeTransactionAudit(record, "dispense.failed", map[string]any{"kiosk_code": event.KioskCode, "reason": event.Reason, "detail": event.Detail})
+	c.publishStockChanges(ctx, record)
 	return nil
 }
 
-func (c *CompletionConsumer) writeAudit(entityID, action, detail string) {
-	if c.audit == nil {
+func (c *CompletionConsumer) writeTransactionAudit(record *TransactionRecord, action string, detail any) {
+	if c.audit == nil || record == nil {
 		return
 	}
-	_ = c.audit.Write(context.Background(), audit.Entry{
-		Entity:   "dispensing",
-		Action:   action,
-		EntityID: entityID,
-		Actor:    "system",
-		Detail:   detail,
-	})
+	_ = c.audit.Write(context.Background(), audit.Entry{TraceID: record.TraceID, Entity: "dispense_transaction", Action: action, EntityID: record.ID, ProjectID: record.ProjectID, Actor: "system", Detail: detail})
+}
+
+func (c *CompletionConsumer) publishStockChanges(ctx context.Context, record *TransactionRecord) {
+	if c.js == nil || record == nil {
+		return
+	}
+	for _, item := range record.Items {
+		for _, allocation := range item.Allocations {
+			if allocation.DispensedQuantity <= 0 {
+				continue
+			}
+			event := &eventsv1.StockChanged{SlotCode: allocation.SlotCode, DrugCode: item.DrugCode, Delta: -allocation.DispensedQuantity, Reason: eventsv1.StockChangeReason_STOCK_CHANGE_REASON_DISPENSE, TraceId: record.TraceID, KioskCode: record.KioskCode, DispenseId: record.ID}
+			payload, _ := protojson.Marshal(event)
+			if _, err := c.js.Publish(ctx, natsx.SubjectStockChanged, payload); err != nil {
+				c.log.Warn("publish stock.changed failed", "error", err.Error())
+			}
+		}
+	}
 }
 
 func (c *CompletionConsumer) publishDLQ(ctx context.Context, msg jetstream.Msg) {

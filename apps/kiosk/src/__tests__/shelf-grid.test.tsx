@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ShelfGrid, { getSlotPosition } from "../features/catalog/ShelfGrid";
+import { buildSlotHistory } from "../features/catalog/SlotDetailModal";
 
 const slots = [
   { id: "slot-1", code: "S01", drugCode: "PARA", drugName: "Paracetamol 500 mg", quantity: 20, capacity: 30, lowThreshold: 5, category: "ยาแก้ปวด", manufacturer: "Demo Pharma", safetyClassification: "LASA" },
@@ -33,6 +34,7 @@ describe("hybrid cabinet navigation", () => {
     expect(detailSlot.className).toContain("slot-cell");
     expect(screen.getByRole("dialog", { name: /รายละเอียดช่องยา S31/ })).toBeDefined();
     expect(screen.getByRole("region", { name: "ช่องทั้งหมดของยาชนิดเดียวกัน" })).toBeDefined();
+    expect(screen.getByRole("region", { name: "ประวัติการจ่ายยาชนิดนี้ในตู้นี้" })).toBeDefined();
     expect(screen.getByRole("button", { name: /S31 คงเหลือ 2 ชิ้น ช่องที่กำลังแสดง/ })).toBeDefined();
     expect(emptySlot.className).toContain("slot-cell--empty");
     expect(detailSlot.querySelector(".slot-cell__position")?.textContent).toBe("S31");
@@ -54,5 +56,80 @@ describe("hybrid cabinet navigation", () => {
 
     await user.click(screen.getByRole("button", { name: /^S02 คงเหลือ 12 ชิ้น$/ }));
     expect(screen.getByRole("dialog", { name: /รายละเอียดช่องยา S02/ })).toBeDefined();
+  });
+
+  it("builds cabinet history only from the selected drug", () => {
+    const history = buildSlotHistory([
+      {
+        dispenseId: "dispense-success",
+        prescriptionId: "RX-100",
+        operatorDisplayName: "เภสัชกร หนึ่ง",
+        completedAt: { seconds: 200n, nanos: 0 },
+        items: [{
+          drugCode: "AMOX",
+          allocations: [{
+            slotId: "slot-31",
+            slotCode: "S31",
+            lotNumber: "LOT-A",
+            quantity: 2,
+            dispensedQuantity: 2,
+            status: "DISPENSED",
+            hardwareSuccess: true,
+          }],
+        }],
+      },
+      {
+        dispenseId: "dispense-failed",
+        prescriptionId: "RX-099",
+        failedAt: { seconds: 100n, nanos: 0 },
+        failureDetail: "ช่องค้าง",
+        items: [{
+          drugCode: "AMOX",
+          allocations: [{
+            slotId: "slot-31",
+            slotCode: "S31",
+            lotNumber: "LOT-B",
+            quantity: 1,
+            dispensedQuantity: 0,
+            status: "FAILED",
+            hardwareSuccess: false,
+            hardwareDetail: "ช่องค้าง",
+          }],
+        }],
+      },
+      {
+        dispenseId: "dispense-other-drug",
+        prescriptionId: "RX-OTHER",
+        completedAt: { seconds: 300n, nanos: 0 },
+        items: [{
+          drugCode: "OTHER-DRUG",
+          allocations: [{
+            slotId: "slot-31",
+            slotCode: "S31",
+            quantity: 1,
+            dispensedQuantity: 0,
+            status: "FAILED",
+            hardwareSuccess: false,
+          }],
+        }],
+      },
+    ] as never, slots[2]);
+
+    expect(history).toHaveLength(2);
+    expect(history[0]).toMatchObject({
+      id: "dispense-success",
+      prescriptionId: "RX-100",
+      lotLabel: "LOT-A",
+      slotLabel: "S31",
+      quantity: 2,
+      succeeded: true,
+    });
+    expect(history[1]).toMatchObject({
+      id: "dispense-failed",
+      lotLabel: "LOT-B",
+      quantity: 1,
+      succeeded: false,
+      detail: "ช่องค้าง",
+    });
   });
 });

@@ -87,6 +87,27 @@ func TestIssueAndParse(t *testing.T) {
 	}
 }
 
+func TestStaffAndKioskTokensCannotBeInterchanged(t *testing.T) {
+	secret := strings.Repeat("t", 64)
+	clock := fixedClock{t: time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)}
+	mgr, _ := NewJWTManager(secret, time.Hour, clock)
+
+	staffToken, _, err := mgr.Issue(&User{ID: "staff-1", Role: RolePharmacist})
+	if err != nil {
+		t.Fatalf("issue staff: %v", err)
+	}
+	kioskToken, _, err := mgr.IssueKiosk(&Kiosk{Code: "00010001", ProjectID: "project-1"})
+	if err != nil {
+		t.Fatalf("issue kiosk: %v", err)
+	}
+	if _, err := mgr.ParseKiosk(staffToken); err == nil {
+		t.Fatal("staff token must not authenticate as a kiosk")
+	}
+	if _, err := mgr.Parse(kioskToken); err == nil {
+		t.Fatal("kiosk token must not authenticate as staff")
+	}
+}
+
 func TestParseExpiredToken(t *testing.T) {
 	secret := strings.Repeat("k", 64)
 	now := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)

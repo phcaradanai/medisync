@@ -30,6 +30,9 @@ message PrescriptionCreated {
   repeated PrescriptionItem items = 6;
   google.protobuf.Timestamp issued_at = 7;
   string trace_id = 8;
+  // Immutable 4-digit business code of the destination project. Producers
+  // must not send a database UUID or a kiosk row ID.
+  string project_code = 9;
 }
 
 // Subject: medisync.dispense.requested
@@ -39,6 +42,28 @@ message DispenseRequested {
   string slot_code = 3;
   int32 quantity = 4;
   string trace_id = 5;
+  string kiosk_code = 6;
+  repeated DispenseAllocation allocations = 7;
+  string project_id = 8;
+}
+
+message DispenseAllocation {
+  string allocation_id = 1;
+  string item_id = 2;
+  string drug_code = 3;
+  string slot_code = 4;
+  string batch_id = 5;
+  int32 quantity = 6;
+  int32 door_no = 7;
+  int32 hardware_layer = 8;
+  int32 channel_start = 9;
+  int32 channel_end = 10;
+}
+
+message DispenseAllocationResult {
+  string allocation_id = 1;
+  bool success = 2;
+  string detail = 3;
 }
 
 // Subject: medisync.dispense.completed
@@ -50,6 +75,9 @@ message DispenseCompleted {
   int32 quantity = 4;
   google.protobuf.Timestamp completed_at = 5;
   string trace_id = 6;
+  string kiosk_code = 7;
+  string hardware_response = 8;
+  repeated DispenseAllocationResult results = 9;
 }
 
 // Subject: medisync.dispense.failed
@@ -62,6 +90,8 @@ message DispenseFailed {
   // Raw detail from the vending agent for diagnostics.
   string detail = 5;
   string trace_id = 6;
+  string kiosk_code = 7;
+  repeated DispenseAllocationResult results = 8;
 }
 
 // Subject: medisync.print.requested
@@ -90,6 +120,9 @@ message FulfillmentRequested {
   string fulfillment_id = 1;
   string prescription_id = 2;
   string trace_id = 3;
+  string kiosk_code = 4;
+  repeated DispenseAllocation allocations = 5;
+  string project_id = 6;
 }
 
 // Subject: medisync.fulfillment.completed
@@ -100,6 +133,7 @@ message FulfillmentCompleted {
   bool success = 3;
   string detail = 4;
   string trace_id = 5;
+  string kiosk_code = 6;
 }
 
 enum StockChangeReason {
@@ -117,6 +151,8 @@ message StockChanged {
   int32 quantity_after = 4;
   StockChangeReason reason = 5;
   string trace_id = 6;
+  string kiosk_code = 7;
+  string dispense_id = 8;
 }
 
 // Subject: medisync.stock.low

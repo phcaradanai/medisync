@@ -122,8 +122,8 @@ func (s *KioskServer) CreateKiosk(
 	}
 
 	msg := req.Msg
-	if msg == nil || msg.Code == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, ErrKioskCodeRequired)
+	if msg == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("request is required"))
 	}
 	if msg.Pin == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrKioskPinRequired)
@@ -143,7 +143,6 @@ func (s *KioskServer) CreateKiosk(
 	}
 
 	k := &Kiosk{
-		Code:        msg.Code,
 		DisplayName: msg.DisplayName,
 		Name:        msg.Name,
 		PinHash:     pinHash,
@@ -366,7 +365,7 @@ func (s *KioskServer) KioskValidate(
 		return nil, connect.NewError(connect.CodeUnauthenticated, ErrInvalidKioskCode)
 	}
 
-	k, err := s.store.GetByID(ctx, claims.Subject)
+	k, err := s.store.GetByCode(ctx, claims.Subject)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}

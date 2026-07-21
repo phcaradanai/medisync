@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/events/v1/events.proto.
  */
 export const file_medisync_events_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("Ch9tZWRpc3luYy9ldmVudHMvdjEvZXZlbnRzLnByb3RvEhJtZWRpc3luYy5ldmVudHMudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIu4BChNQcmVzY3JpcHRpb25DcmVhdGVkEhcKD3ByZXNjcmlwdGlvbl9pZBgBIAEoCRIVCg1zb3VyY2Vfc3lzdGVtGAIgASgJEgoKAmhuGAMgASgJEhQKDHBhdGllbnRfbmFtZRgEIAEoCRIPCgd3YXJkX2lkGAUgASgJEjMKBWl0ZW1zGAYgAygLMiQubWVkaXN5bmMuZXZlbnRzLnYxLlByZXNjcmlwdGlvbkl0ZW0SLQoJaXNzdWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCgh0cmFjZV9pZBgIIAEoCSJ4ChFEaXNwZW5zZVJlcXVlc3RlZBITCgtkaXNwZW5zZV9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEQoJc2xvdF9jb2RlGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEhAKCHRyYWNlX2lkGAUgASgJIqoBChFEaXNwZW5zZUNvbXBsZXRlZBITCgtkaXNwZW5zZV9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEQoJc2xvdF9jb2RlGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEjAKDGNvbXBsZXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIdHJhY2VfaWQYBiABKAkigwEKDkRpc3BlbnNlRmFpbGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSDgoGcmVhc29uGAQgASgJEg4KBmRldGFpbBgFIAEoCRIQCgh0cmFjZV9pZBgGIAEoCSJhCg5QcmludFJlcXVlc3RlZBIQCghwcmludF9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSEAoIdHJhY2VfaWQYAyABKAkSEgoKcHJvamVjdF9pZBgEIAEoCSKCAQoOUHJpbnRDb21wbGV0ZWQSEAoIcHJpbnRfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEg8KB3N1Y2Nlc3MYAyABKAgSDgoGZGV0YWlsGAQgASgJEhAKCHRyYWNlX2lkGAUgASgJEhIKCnByb2plY3RfaWQYBiABKAkiWQoURnVsZmlsbG1lbnRSZXF1ZXN0ZWQSFgoOZnVsZmlsbG1lbnRfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhAKCHRyYWNlX2lkGAMgASgJInoKFEZ1bGZpbGxtZW50Q29tcGxldGVkEhYKDmZ1bGZpbGxtZW50X2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIPCgdzdWNjZXNzGAMgASgIEg4KBmRldGFpbBgEIAEoCRIQCgh0cmFjZV9pZBgFIAEoCSKkAQoMU3RvY2tDaGFuZ2VkEhEKCXNsb3RfY29kZRgBIAEoCRIRCglkcnVnX2NvZGUYAiABKAkSDQoFZGVsdGEYAyABKAUSFgoOcXVhbnRpdHlfYWZ0ZXIYBCABKAUSNQoGcmVhc29uGAUgASgOMiUubWVkaXN5bmMuZXZlbnRzLnYxLlN0b2NrQ2hhbmdlUmVhc29uEhAKCHRyYWNlX2lkGAYgASgJIlUKCFN0b2NrTG93EhEKCXNsb3RfY29kZRgBIAEoCRIRCglkcnVnX2NvZGUYAiABKAkSEAoIcXVhbnRpdHkYAyABKAUSEQoJdGhyZXNob2xkGAQgASgFKpoBChFTdG9ja0NoYW5nZVJlYXNvbhIjCh9TVE9DS19DSEFOR0VfUkVBU09OX1VOU1BFQ0lGSUVEEAASIAocU1RPQ0tfQ0hBTkdFX1JFQVNPTl9ESVNQRU5TRRABEh4KGlNUT0NLX0NIQU5HRV9SRUFTT05fUkVGSUxMEAISHgoaU1RPQ0tfQ0hBTkdFX1JFQVNPTl9BREpVU1QQA0JcWlpnaXRodWIuY29tL2FkbS1jaHVyYTNpbnRlci9tZWRpc3luYy9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi9tZWRpc3luYy9ldmVudHMvdjE7ZXZlbnRzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("Ch9tZWRpc3luYy9ldmVudHMvdjEvZXZlbnRzLnByb3RvEhJtZWRpc3luYy5ldmVudHMudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIoQCChNQcmVzY3JpcHRpb25DcmVhdGVkEhcKD3ByZXNjcmlwdGlvbl9pZBgBIAEoCRIVCg1zb3VyY2Vfc3lzdGVtGAIgASgJEgoKAmhuGAMgASgJEhQKDHBhdGllbnRfbmFtZRgEIAEoCRIPCgd3YXJkX2lkGAUgASgJEjMKBWl0ZW1zGAYgAygLMiQubWVkaXN5bmMuZXZlbnRzLnYxLlByZXNjcmlwdGlvbkl0ZW0SLQoJaXNzdWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCgh0cmFjZV9pZBgIIAEoCRIUCgxwcm9qZWN0X2NvZGUYCSABKAki3QEKEURpc3BlbnNlUmVxdWVzdGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSEAoIcXVhbnRpdHkYBCABKAUSEAoIdHJhY2VfaWQYBSABKAkSEgoKa2lvc2tfY29kZRgGIAEoCRI7CgthbGxvY2F0aW9ucxgHIAMoCzImLm1lZGlzeW5jLmV2ZW50cy52MS5EaXNwZW5zZUFsbG9jYXRpb24SEgoKcHJvamVjdF9pZBgIIAEoCSLbAQoSRGlzcGVuc2VBbGxvY2F0aW9uEhUKDWFsbG9jYXRpb25faWQYASABKAkSDwoHaXRlbV9pZBgCIAEoCRIRCglkcnVnX2NvZGUYAyABKAkSEQoJc2xvdF9jb2RlGAQgASgJEhAKCGJhdGNoX2lkGAUgASgJEhAKCHF1YW50aXR5GAYgASgFEg8KB2Rvb3Jfbm8YByABKAUSFgoOaGFyZHdhcmVfbGF5ZXIYCCABKAUSFQoNY2hhbm5lbF9zdGFydBgJIAEoBRITCgtjaGFubmVsX2VuZBgKIAEoBSJSChhEaXNwZW5zZUFsbG9jYXRpb25SZXN1bHQSFQoNYWxsb2NhdGlvbl9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEg4KBmRldGFpbBgDIAEoCSKYAgoRRGlzcGVuc2VDb21wbGV0ZWQSEwoLZGlzcGVuc2VfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhEKCXNsb3RfY29kZRgDIAEoCRIQCghxdWFudGl0eRgEIAEoBRIwCgxjb21wbGV0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhAKCHRyYWNlX2lkGAYgASgJEhIKCmtpb3NrX2NvZGUYByABKAkSGQoRaGFyZHdhcmVfcmVzcG9uc2UYCCABKAkSPQoHcmVzdWx0cxgJIAMoCzIsLm1lZGlzeW5jLmV2ZW50cy52MS5EaXNwZW5zZUFsbG9jYXRpb25SZXN1bHQi1gEKDkRpc3BlbnNlRmFpbGVkEhMKC2Rpc3BlbnNlX2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIRCglzbG90X2NvZGUYAyABKAkSDgoGcmVhc29uGAQgASgJEg4KBmRldGFpbBgFIAEoCRIQCgh0cmFjZV9pZBgGIAEoCRISCgpraW9za19jb2RlGAcgASgJEj0KB3Jlc3VsdHMYCCADKAsyLC5tZWRpc3luYy5ldmVudHMudjEuRGlzcGVuc2VBbGxvY2F0aW9uUmVzdWx0ImEKDlByaW50UmVxdWVzdGVkEhAKCHByaW50X2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIQCgh0cmFjZV9pZBgDIAEoCRISCgpwcm9qZWN0X2lkGAQgASgJIoIBCg5QcmludENvbXBsZXRlZBIQCghwcmludF9pZBgBIAEoCRIXCg9wcmVzY3JpcHRpb25faWQYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZkZXRhaWwYBCABKAkSEAoIdHJhY2VfaWQYBSABKAkSEgoKcHJvamVjdF9pZBgGIAEoCSK+AQoURnVsZmlsbG1lbnRSZXF1ZXN0ZWQSFgoOZnVsZmlsbG1lbnRfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhAKCHRyYWNlX2lkGAMgASgJEhIKCmtpb3NrX2NvZGUYBCABKAkSOwoLYWxsb2NhdGlvbnMYBSADKAsyJi5tZWRpc3luYy5ldmVudHMudjEuRGlzcGVuc2VBbGxvY2F0aW9uEhIKCnByb2plY3RfaWQYBiABKAkijgEKFEZ1bGZpbGxtZW50Q29tcGxldGVkEhYKDmZ1bGZpbGxtZW50X2lkGAEgASgJEhcKD3ByZXNjcmlwdGlvbl9pZBgCIAEoCRIPCgdzdWNjZXNzGAMgASgIEg4KBmRldGFpbBgEIAEoCRIQCgh0cmFjZV9pZBgFIAEoCRISCgpraW9za19jb2RlGAYgASgJIs0BCgxTdG9ja0NoYW5nZWQSEQoJc2xvdF9jb2RlGAEgASgJEhEKCWRydWdfY29kZRgCIAEoCRINCgVkZWx0YRgDIAEoBRIWCg5xdWFudGl0eV9hZnRlchgEIAEoBRI1CgZyZWFzb24YBSABKA4yJS5tZWRpc3luYy5ldmVudHMudjEuU3RvY2tDaGFuZ2VSZWFzb24SEAoIdHJhY2VfaWQYBiABKAkSEgoKa2lvc2tfY29kZRgHIAEoCRITCgtkaXNwZW5zZV9pZBgIIAEoCSJVCghTdG9ja0xvdxIRCglzbG90X2NvZGUYASABKAkSEQoJZHJ1Z19jb2RlGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhEKCXRocmVzaG9sZBgEIAEoBSqaAQoRU3RvY2tDaGFuZ2VSZWFzb24SIwofU1RPQ0tfQ0hBTkdFX1JFQVNPTl9VTlNQRUNJRklFRBAAEiAKHFNUT0NLX0NIQU5HRV9SRUFTT05fRElTUEVOU0UQARIeChpTVE9DS19DSEFOR0VfUkVBU09OX1JFRklMTBACEh4KGlNUT0NLX0NIQU5HRV9SRUFTT05fQURKVVNUEANCXFpaZ2l0aHViLmNvbS9hZG0tY2h1cmEzaW50ZXIvbWVkaXN5bmMvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vbWVkaXN5bmMvZXZlbnRzL3YxO2V2ZW50c3YxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.events.v1.PrescriptionItem
@@ -93,6 +93,14 @@ export type PrescriptionCreated = Message<"medisync.events.v1.PrescriptionCreate
    * @generated from field: string trace_id = 8;
    */
   traceId: string;
+
+  /**
+   * Immutable 4-digit business code of the destination project. Producers
+   * must not send a database UUID or a kiosk row ID.
+   *
+   * @generated from field: string project_code = 9;
+   */
+  projectCode: string;
 };
 
 /**
@@ -132,6 +140,21 @@ export type DispenseRequested = Message<"medisync.events.v1.DispenseRequested"> 
    * @generated from field: string trace_id = 5;
    */
   traceId: string;
+
+  /**
+   * @generated from field: string kiosk_code = 6;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: repeated medisync.events.v1.DispenseAllocation allocations = 7;
+   */
+  allocations: DispenseAllocation[];
+
+  /**
+   * @generated from field: string project_id = 8;
+   */
+  projectId: string;
 };
 
 /**
@@ -140,6 +163,95 @@ export type DispenseRequested = Message<"medisync.events.v1.DispenseRequested"> 
  */
 export const DispenseRequestedSchema: GenMessage<DispenseRequested> = /*@__PURE__*/
   messageDesc(file_medisync_events_v1_events, 2);
+
+/**
+ * @generated from message medisync.events.v1.DispenseAllocation
+ */
+export type DispenseAllocation = Message<"medisync.events.v1.DispenseAllocation"> & {
+  /**
+   * @generated from field: string allocation_id = 1;
+   */
+  allocationId: string;
+
+  /**
+   * @generated from field: string item_id = 2;
+   */
+  itemId: string;
+
+  /**
+   * @generated from field: string drug_code = 3;
+   */
+  drugCode: string;
+
+  /**
+   * @generated from field: string slot_code = 4;
+   */
+  slotCode: string;
+
+  /**
+   * @generated from field: string batch_id = 5;
+   */
+  batchId: string;
+
+  /**
+   * @generated from field: int32 quantity = 6;
+   */
+  quantity: number;
+
+  /**
+   * @generated from field: int32 door_no = 7;
+   */
+  doorNo: number;
+
+  /**
+   * @generated from field: int32 hardware_layer = 8;
+   */
+  hardwareLayer: number;
+
+  /**
+   * @generated from field: int32 channel_start = 9;
+   */
+  channelStart: number;
+
+  /**
+   * @generated from field: int32 channel_end = 10;
+   */
+  channelEnd: number;
+};
+
+/**
+ * Describes the message medisync.events.v1.DispenseAllocation.
+ * Use `create(DispenseAllocationSchema)` to create a new message.
+ */
+export const DispenseAllocationSchema: GenMessage<DispenseAllocation> = /*@__PURE__*/
+  messageDesc(file_medisync_events_v1_events, 3);
+
+/**
+ * @generated from message medisync.events.v1.DispenseAllocationResult
+ */
+export type DispenseAllocationResult = Message<"medisync.events.v1.DispenseAllocationResult"> & {
+  /**
+   * @generated from field: string allocation_id = 1;
+   */
+  allocationId: string;
+
+  /**
+   * @generated from field: bool success = 2;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: string detail = 3;
+   */
+  detail: string;
+};
+
+/**
+ * Describes the message medisync.events.v1.DispenseAllocationResult.
+ * Use `create(DispenseAllocationResultSchema)` to create a new message.
+ */
+export const DispenseAllocationResultSchema: GenMessage<DispenseAllocationResult> = /*@__PURE__*/
+  messageDesc(file_medisync_events_v1_events, 4);
 
 /**
  * Subject: medisync.dispense.completed
@@ -177,6 +289,21 @@ export type DispenseCompleted = Message<"medisync.events.v1.DispenseCompleted"> 
    * @generated from field: string trace_id = 6;
    */
   traceId: string;
+
+  /**
+   * @generated from field: string kiosk_code = 7;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: string hardware_response = 8;
+   */
+  hardwareResponse: string;
+
+  /**
+   * @generated from field: repeated medisync.events.v1.DispenseAllocationResult results = 9;
+   */
+  results: DispenseAllocationResult[];
 };
 
 /**
@@ -184,7 +311,7 @@ export type DispenseCompleted = Message<"medisync.events.v1.DispenseCompleted"> 
  * Use `create(DispenseCompletedSchema)` to create a new message.
  */
 export const DispenseCompletedSchema: GenMessage<DispenseCompleted> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 3);
+  messageDesc(file_medisync_events_v1_events, 5);
 
 /**
  * Subject: medisync.dispense.failed
@@ -225,6 +352,16 @@ export type DispenseFailed = Message<"medisync.events.v1.DispenseFailed"> & {
    * @generated from field: string trace_id = 6;
    */
   traceId: string;
+
+  /**
+   * @generated from field: string kiosk_code = 7;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: repeated medisync.events.v1.DispenseAllocationResult results = 8;
+   */
+  results: DispenseAllocationResult[];
 };
 
 /**
@@ -232,7 +369,7 @@ export type DispenseFailed = Message<"medisync.events.v1.DispenseFailed"> & {
  * Use `create(DispenseFailedSchema)` to create a new message.
  */
 export const DispenseFailedSchema: GenMessage<DispenseFailed> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 4);
+  messageDesc(file_medisync_events_v1_events, 6);
 
 /**
  * Subject: medisync.print.requested
@@ -266,7 +403,7 @@ export type PrintRequested = Message<"medisync.events.v1.PrintRequested"> & {
  * Use `create(PrintRequestedSchema)` to create a new message.
  */
 export const PrintRequestedSchema: GenMessage<PrintRequested> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 5);
+  messageDesc(file_medisync_events_v1_events, 7);
 
 /**
  * Subject: medisync.print.completed
@@ -311,7 +448,7 @@ export type PrintCompleted = Message<"medisync.events.v1.PrintCompleted"> & {
  * Use `create(PrintCompletedSchema)` to create a new message.
  */
 export const PrintCompletedSchema: GenMessage<PrintCompleted> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 6);
+  messageDesc(file_medisync_events_v1_events, 8);
 
 /**
  * Subject: medisync.fulfillment.requested
@@ -335,6 +472,21 @@ export type FulfillmentRequested = Message<"medisync.events.v1.FulfillmentReques
    * @generated from field: string trace_id = 3;
    */
   traceId: string;
+
+  /**
+   * @generated from field: string kiosk_code = 4;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: repeated medisync.events.v1.DispenseAllocation allocations = 5;
+   */
+  allocations: DispenseAllocation[];
+
+  /**
+   * @generated from field: string project_id = 6;
+   */
+  projectId: string;
 };
 
 /**
@@ -342,7 +494,7 @@ export type FulfillmentRequested = Message<"medisync.events.v1.FulfillmentReques
  * Use `create(FulfillmentRequestedSchema)` to create a new message.
  */
 export const FulfillmentRequestedSchema: GenMessage<FulfillmentRequested> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 7);
+  messageDesc(file_medisync_events_v1_events, 9);
 
 /**
  * Subject: medisync.fulfillment.completed
@@ -375,6 +527,11 @@ export type FulfillmentCompleted = Message<"medisync.events.v1.FulfillmentComple
    * @generated from field: string trace_id = 5;
    */
   traceId: string;
+
+  /**
+   * @generated from field: string kiosk_code = 6;
+   */
+  kioskCode: string;
 };
 
 /**
@@ -382,7 +539,7 @@ export type FulfillmentCompleted = Message<"medisync.events.v1.FulfillmentComple
  * Use `create(FulfillmentCompletedSchema)` to create a new message.
  */
 export const FulfillmentCompletedSchema: GenMessage<FulfillmentCompleted> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 8);
+  messageDesc(file_medisync_events_v1_events, 10);
 
 /**
  * Subject: medisync.stock.changed
@@ -419,6 +576,16 @@ export type StockChanged = Message<"medisync.events.v1.StockChanged"> & {
    * @generated from field: string trace_id = 6;
    */
   traceId: string;
+
+  /**
+   * @generated from field: string kiosk_code = 7;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: string dispense_id = 8;
+   */
+  dispenseId: string;
 };
 
 /**
@@ -426,7 +593,7 @@ export type StockChanged = Message<"medisync.events.v1.StockChanged"> & {
  * Use `create(StockChangedSchema)` to create a new message.
  */
 export const StockChangedSchema: GenMessage<StockChanged> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 9);
+  messageDesc(file_medisync_events_v1_events, 11);
 
 /**
  * Subject: medisync.stock.low
@@ -460,7 +627,7 @@ export type StockLow = Message<"medisync.events.v1.StockLow"> & {
  * Use `create(StockLowSchema)` to create a new message.
  */
 export const StockLowSchema: GenMessage<StockLow> = /*@__PURE__*/
-  messageDesc(file_medisync_events_v1_events, 10);
+  messageDesc(file_medisync_events_v1_events, 12);
 
 /**
  * @generated from enum medisync.events.v1.StockChangeReason

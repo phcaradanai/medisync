@@ -15,6 +15,9 @@ import {
 import {
   KioskService,
 } from "@medisync/proto/medisync/kiosk/v1/kiosk_pb";
+import {
+  DispensingService,
+} from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
 
 // ── Transport ──────────────────────────────────────────────────────
 
@@ -68,6 +71,8 @@ export const catalogClient = createClient(CatalogService, getTransport());
 export const inventoryClient = createClient(InventoryService, getTransport());
 
 export const kioskClient = createClient(KioskService, getTransport());
+
+export const dispensingClient = createClient(DispensingService, getTransport());
 
 // Re-export types that pages use.
 export type {

@@ -330,13 +330,13 @@ func scanUser(row pgx.Row) (*User, error) {
 // ── Project CRUD ──────────────────────────────────────────────────
 
 // CreateProject inserts a new project.
-func (s *Store) CreateProject(ctx context.Context, name, slug, code string) (*Project, error) {
+func (s *Store) CreateProject(ctx context.Context, name, slug, _ string) (*Project, error) {
 	var p Project
 	var createdAt, updatedAt time.Time
 	err := s.db.QueryRow(ctx,
-		`INSERT INTO medisync.projects (name, slug, code) VALUES ($1, $2, $3)
+		`INSERT INTO medisync.projects (name, slug) VALUES ($1, $2)
 		 RETURNING id, name, slug, code, active, created_at, updated_at`,
-		name, slug, code).Scan(&p.ID, &p.Name, &p.Slug, &p.Code, &p.Active, &createdAt, &updatedAt)
+		name, slug).Scan(&p.ID, &p.Name, &p.Slug, &p.Code, &p.Active, &createdAt, &updatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create project: %w", err)
 	}

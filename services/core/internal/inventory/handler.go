@@ -117,6 +117,12 @@ func (s *InventoryServer) ListSlots(ctx context.Context, req *connect.Request[in
 			pageToken = msg.Pagination.PageToken
 		}
 	}
+	if claims.GetRole() == "KIOSK" {
+		if cabinetID != "" && cabinetID != claims.GetSubject() {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk may only read its own cabinet code"))
+		}
+		cabinetID = claims.GetSubject()
+	}
 	slots, nextToken, totalCount, err := s.store.ListSlots(
 		ctx, cabinetID, claims.GetProjectID(), lowOnly, pageSize, pageToken,
 	)
@@ -142,6 +148,9 @@ func (s *InventoryServer) CreateSlot(ctx context.Context, req *connect.Request[i
 	msg := req.Msg
 	if msg == nil || msg.CabinetId == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrSlotIDRequired)
+	}
+	if claims.GetRole() == "KIOSK" && msg.CabinetId != claims.GetSubject() {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk may only create slots in its own cabinet"))
 	}
 	if msg.Code == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("slot code is required"))
@@ -196,6 +205,18 @@ func (s *InventoryServer) AssignDrug(ctx context.Context, req *connect.Request[i
 	if msg.Capacity <= 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrCapacityRequired)
 	}
+	if claims.GetRole() == "KIOSK" {
+		existing, err := s.store.GetByID(ctx, msg.SlotId)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get slot: %w", err))
+		}
+		if existing == nil {
+			return nil, connect.NewError(connect.CodeNotFound, ErrSlotNotFound)
+		}
+		if cerr := authorizeKioskSlot(claims, existing); cerr != nil {
+			return nil, cerr
+		}
+	}
 	slot, err := s.store.AssignDrug(ctx, msg.SlotId, msg.DrugId, "", "", msg.Capacity, msg.LowThreshold)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("assign drug: %w", err))
@@ -225,6 +246,18 @@ func (s *InventoryServer) Refill(ctx context.Context, req *connect.Request[inven
 	}
 	if msg.QuantityAdded == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrQuantityPositive)
+	}
+	if claims.GetRole() == "KIOSK" {
+		existing, err := s.store.GetByID(ctx, msg.SlotId)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get slot: %w", err))
+		}
+		if existing == nil {
+			return nil, connect.NewError(connect.CodeNotFound, ErrSlotNotFound)
+		}
+		if cerr := authorizeKioskSlot(claims, existing); cerr != nil {
+			return nil, cerr
+		}
 	}
 	slot, err := s.store.Refill(ctx, msg.SlotId, msg.QuantityAdded, fromProtoTimestamp(msg.ExpiryDate))
 	if err != nil {
@@ -279,6 +312,9 @@ func (s *InventoryServer) AdjustStock(ctx context.Context, req *connect.Request[
 	if old == nil {
 		return nil, connect.NewError(connect.CodeNotFound, ErrSlotNotFound)
 	}
+	if cerr := authorizeKioskSlot(claims, old); cerr != nil {
+		return nil, cerr
+	}
 	slot, err := s.store.AdjustStock(ctx, msg.SlotId, msg.NewQuantity)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("adjust: %w", err))
@@ -302,6 +338,16 @@ func (s *InventoryServer) AdjustStock(ctx context.Context, req *connect.Request[
 		s.publishStockLow(ctx, slot)
 	}
 	return connect.NewResponse(&inventoryv1.AdjustStockResponse{Slot: toProtoSlot(slot)}), nil
+}
+
+func authorizeKioskSlot(claims TokenClaimser, slot *Slot) *connect.Error {
+	if claims.GetRole() != "KIOSK" {
+		return nil
+	}
+	if slot.CabinetID != claims.GetSubject() || slot.ProjectID != claims.GetProjectID() {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("slot belongs to another kiosk"))
+	}
+	return nil
 }
 
 func (s *InventoryServer) publishStockChanged(ctx context.Context, slot *Slot, delta int32, reason eventsv1.StockChangeReason, traceID string) {

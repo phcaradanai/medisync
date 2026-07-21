@@ -58,6 +58,7 @@ type Item struct {
 type Prescription struct {
 	PrescriptionID string
 	SourceSystem   string
+	ProjectID      string
 	HN             string
 	PatientName    string
 	WardID         string

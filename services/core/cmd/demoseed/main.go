@@ -25,7 +25,7 @@ import (
 const (
 	demoPrefix    = "DEMO-"
 	demoSource    = "demo-seed"
-	demoKioskCode = "DEMO-K1"
+	demoKioskName = "Demo Cabinet K1"
 	demoKioskPIN  = "123456"
 	demoWard      = "WARD-3A"
 )
@@ -129,30 +129,24 @@ func main() {
 	}
 
 	fmt.Printf("Seeding project: %s\n", projectID)
-	if err := seed(ctx, pool, projectID); err != nil {
+	kioskCode, err := seed(ctx, pool, projectID)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "seed: %v\n", err)
 		os.Exit(1)
 	}
 
-	printCredentials(projectID)
+	printCredentials(projectID, kioskCode)
 }
 
 func clearDemoData(ctx context.Context, pool *pgxpool.Pool) error {
-	// Resolve the demo kiosk UUID so we can clean up its slots.
-	var kioskID string
-	err := pool.QueryRow(ctx, `SELECT id FROM medisync.kiosks WHERE code = $1`, demoKioskCode).Scan(&kioskID)
-	if err == nil && kioskID != "" {
-		// Delete slots attached to the demo kiosk.
-		if _, err := pool.Exec(ctx, `DELETE FROM medisync.slot WHERE cabinet_id = $1`, kioskID); err != nil {
-			return fmt.Errorf("delete slots: %w", err)
-		}
-	}
 	cmds := []string{
+		`DELETE FROM medisync.dispense_transaction WHERE kiosk_code IN (SELECT code FROM medisync.kiosks WHERE display_name = 'Demo Cabinet K1')`,
+		`DELETE FROM medisync.slot WHERE cabinet_id IN (SELECT code FROM medisync.kiosks WHERE display_name = 'Demo Cabinet K1')`,
 		`DELETE FROM medisync.outbox WHERE subject LIKE 'medisync.demo%'`,
 		`DELETE FROM medisync.prescription WHERE source_system = '` + demoSource + `'`,
 		`DELETE FROM medisync.drug WHERE code LIKE '` + demoPrefix + `%'`,
 		`DELETE FROM medisync.users WHERE username IN ('pharmacist','nurse','refiller')`,
-		`DELETE FROM medisync.kiosks WHERE code = '` + demoKioskCode + `'`,
+		`DELETE FROM medisync.kiosks WHERE display_name = 'Demo Cabinet K1'`,
 		`DELETE FROM medisync.audit_log WHERE entity_id LIKE '` + demoPrefix + `%'`,
 	}
 	for _, cmd := range cmds {
@@ -163,30 +157,25 @@ func clearDemoData(ctx context.Context, pool *pgxpool.Pool) error {
 	return nil
 }
 
-func seed(ctx context.Context, pool *pgxpool.Pool, projectID string) error {
+func seed(ctx context.Context, pool *pgxpool.Pool, projectID string) (string, error) {
 	if err := seedUsers(ctx, pool, projectID); err != nil {
-		return fmt.Errorf("users: %w", err)
+		return "", fmt.Errorf("users: %w", err)
 	}
-	if err := seedKiosk(ctx, pool, projectID); err != nil {
-		return fmt.Errorf("kiosk: %w", err)
-	}
-	// Fetch the kiosk UUID so slots can reference it as cabinet_id.
-	var kioskID string
-	if err := pool.QueryRow(ctx,
-		`SELECT id FROM medisync.kiosks WHERE code = $1`, demoKioskCode).Scan(&kioskID); err != nil {
-		return fmt.Errorf("resolve kiosk id: %w", err)
+	kioskCode, err := seedKiosk(ctx, pool, projectID)
+	if err != nil {
+		return "", fmt.Errorf("kiosk: %w", err)
 	}
 	drugIDs, err := seedDrugs(ctx, pool, projectID)
 	if err != nil {
-		return fmt.Errorf("drugs: %w", err)
+		return "", fmt.Errorf("drugs: %w", err)
 	}
-	if err := seedSlots(ctx, pool, kioskID, drugIDs, projectID); err != nil {
-		return fmt.Errorf("slots: %w", err)
+	if err := seedSlots(ctx, pool, kioskCode, drugIDs, projectID); err != nil {
+		return "", fmt.Errorf("slots: %w", err)
 	}
 	if err := seedPrescription(ctx, pool, projectID); err != nil {
-		return fmt.Errorf("prescription: %w", err)
+		return "", fmt.Errorf("prescription: %w", err)
 	}
-	return nil
+	return kioskCode, nil
 }
 
 func seedUsers(ctx context.Context, pool *pgxpool.Pool, projectID string) error {
@@ -211,20 +200,27 @@ func seedUsers(ctx context.Context, pool *pgxpool.Pool, projectID string) error 
 	return nil
 }
 
-func seedKiosk(ctx context.Context, pool *pgxpool.Pool, projectID string) error {
+func seedKiosk(ctx context.Context, pool *pgxpool.Pool, projectID string) (string, error) {
 	pinHash, err := identity.HashPassword(demoKioskPIN)
 	if err != nil {
-		return err
+		return "", err
 	}
-	_, err = pool.Exec(ctx,
-		`INSERT INTO medisync.kiosks (code,display_name,pin_hash,active,project_id)
-		 VALUES ($1,$2,$3,true,$4) ON CONFLICT (code) DO NOTHING`,
-		demoKioskCode, "Demo Cabinet K1", pinHash, projectID)
+	var code string
+	err = pool.QueryRow(ctx,
+		`WITH existing AS (
+		   UPDATE medisync.kiosks SET pin_hash=$1, active=true, updated_at=now()
+		    WHERE project_id=$2 AND display_name=$3 RETURNING code
+		 ), inserted AS (
+		   INSERT INTO medisync.kiosks (display_name,pin_hash,active,project_id)
+		   SELECT $3,$1,true,$2 WHERE NOT EXISTS (SELECT 1 FROM existing)
+		   RETURNING code
+		 ) SELECT code FROM existing UNION ALL SELECT code FROM inserted LIMIT 1`,
+		pinHash, projectID, demoKioskName).Scan(&code)
 	if err != nil {
-		return fmt.Errorf("insert kiosk: %w", err)
+		return "", fmt.Errorf("upsert kiosk: %w", err)
 	}
-	fmt.Printf("  kiosk %s (active) project=%s\n", demoKioskCode, projectID[:8])
-	return nil
+	fmt.Printf("  kiosk %s (active) project=%s\n", code, projectID[:8])
+	return code, nil
 }
 
 func seedDrugs(ctx context.Context, pool *pgxpool.Pool, projectID string) (map[string]string, error) {
@@ -248,8 +244,8 @@ func seedDrugs(ctx context.Context, pool *pgxpool.Pool, projectID string) (map[s
 	return ids, nil
 }
 
-func seedSlots(ctx context.Context, pool *pgxpool.Pool, kioskID string, drugIDs map[string]string, projectID string) error {
-	for _, s := range demoSlots {
+func seedSlots(ctx context.Context, pool *pgxpool.Pool, kioskCode string, drugIDs map[string]string, projectID string) error {
+	for i, s := range demoSlots {
 		drugID := drugIDs[s.DrugCode]
 		drugName := ""
 		for _, d := range demoDrugs {
@@ -258,18 +254,32 @@ func seedSlots(ctx context.Context, pool *pgxpool.Pool, kioskID string, drugIDs 
 				break
 			}
 		}
-		_, err := pool.Exec(ctx,
-			`INSERT INTO medisync.slot (cabinet_id,code,drug_id,drug_code,drug_name,capacity,quantity,low_threshold,project_id)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		var slotID string
+		err := pool.QueryRow(ctx,
+			`INSERT INTO medisync.slot
+		   (cabinet_id,code,drug_id,drug_code,drug_name,capacity,quantity,low_threshold,project_id,
+		    door_no,hardware_layer,channel_start,channel_end,reserved_quantity)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,1,$10,$11,$11,0)
 		 ON CONFLICT (cabinet_id,code) DO UPDATE SET
 		   drug_id=EXCLUDED.drug_id, drug_code=EXCLUDED.drug_code,
 		   drug_name=EXCLUDED.drug_name, capacity=EXCLUDED.capacity,
 		   quantity=EXCLUDED.quantity, low_threshold=EXCLUDED.low_threshold,
-		   project_id=EXCLUDED.project_id, updated_at=now()`,
-			kioskID, s.Code, drugID, s.DrugCode, drugName,
-			s.Capacity, s.Quantity, s.LowThreshold, projectID)
+		   project_id=EXCLUDED.project_id, door_no=EXCLUDED.door_no,
+		   hardware_layer=EXCLUDED.hardware_layer, channel_start=EXCLUDED.channel_start,
+		   channel_end=EXCLUDED.channel_end, reserved_quantity=0, updated_at=now()
+		 RETURNING id`,
+			kioskCode, s.Code, drugID, s.DrugCode, drugName,
+			s.Capacity, s.Quantity, s.LowThreshold, projectID, i+1, 1).Scan(&slotID)
 		if err != nil {
 			return fmt.Errorf("slot %q: %w", s.Code, err)
+		}
+		if _, err := pool.Exec(ctx, `DELETE FROM medisync.slot_batch WHERE slot_id=$1`, slotID); err != nil {
+			return fmt.Errorf("clear slot batches %q: %w", s.Code, err)
+		}
+		if _, err := pool.Exec(ctx,
+			`INSERT INTO medisync.slot_batch (slot_id,lot_number,quantity,reserved_quantity)
+			 VALUES ($1,$2,$3,0)`, slotID, demoPrefix+"LOT-"+s.Code, s.Quantity); err != nil {
+			return fmt.Errorf("slot batch %q: %w", s.Code, err)
 		}
 		fmt.Printf("  slot  %-5s %s (qty=%d)\n", s.Code, s.DrugCode, s.Quantity)
 	}
@@ -299,7 +309,7 @@ func seedPrescription(ctx context.Context, pool *pgxpool.Pool, projectID string)
 	return nil
 }
 
-func printCredentials(projectID string) {
+func printCredentials(projectID, kioskCode string) {
 	fmt.Println()
 	fmt.Println("══════════════════════════════════════════════════════════════")
 	fmt.Println("  DEMO CREDENTIALS — LOCAL DEVELOPMENT ONLY")
@@ -313,7 +323,7 @@ func printCredentials(projectID string) {
 	}
 	fmt.Println()
 	fmt.Println("── Kiosk ──")
-	fmt.Printf("  Code: %s   PIN: %s\n", demoKioskCode, demoKioskPIN)
+	fmt.Printf("  Code: %s   PIN: %s\n", kioskCode, demoKioskPIN)
 	fmt.Println()
 	fmt.Println("── Prescription ──")
 	fmt.Printf("  ID: DEMO-RX-001  Ward: %s  Patient: HN100001\n", demoWard)

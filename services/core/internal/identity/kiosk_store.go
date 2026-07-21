@@ -96,12 +96,18 @@ func (s *KioskPGStore) List(ctx context.Context, projectID string, pageSize int3
 	return kiosks, nextPageToken, totalCount, nil
 }
 
-// Create inserts a new kiosk. Returns ErrDuplicateKioskCode on conflict.
+// Create inserts a new kiosk. The database allocates the immutable PPPPKKKK
+// code under a lock on the owning project and returns the complete row.
 func (s *KioskPGStore) Create(ctx context.Context, k *Kiosk) error {
-	tag, err := s.db.Exec(ctx,
+	var createdAt, updatedAt time.Time
+	err := s.db.QueryRow(ctx,
 		`INSERT INTO medisync.kiosks (code, display_name, name, pin_hash, project_id)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		k.Code, k.DisplayName, k.Name, k.PinHash, k.ProjectID)
+		 VALUES ($1, $2, $3, $4, $5)
+		 RETURNING id, code, display_name, name, pin_hash, active, project_id, created_at, updated_at`,
+		"", k.DisplayName, k.Name, k.PinHash, k.ProjectID).Scan(
+		&k.ID, &k.Code, &k.DisplayName, &k.Name, &k.PinHash,
+		&k.Active, &k.ProjectID, &createdAt, &updatedAt,
+	)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -109,9 +115,8 @@ func (s *KioskPGStore) Create(ctx context.Context, k *Kiosk) error {
 		}
 		return fmt.Errorf("create kiosk: %w", err)
 	}
-	if tag.RowsAffected() == 0 {
-		return errors.New("create kiosk: no rows affected")
-	}
+	k.CreatedAt = createdAt
+	k.UpdatedAt = updatedAt
 	return nil
 }
 

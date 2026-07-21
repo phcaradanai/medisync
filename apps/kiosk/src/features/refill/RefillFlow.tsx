@@ -123,7 +123,7 @@ export default function RefillFlow() {
     setError(null);
     try {
       const res = await inventoryClient.listSlots(
-        create(ListSlotsRequestSchema, { cabinetId: "", lowOnly: false }),
+        create(ListSlotsRequestSchema, { cabinetId: kiosk.code, lowOnly: false }),
       );
       setSlots(res.slots);
       setOnline(true);
@@ -134,7 +134,7 @@ export default function RefillFlow() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [kiosk.code]);
 
   useEffect(() => {
     void fetchSlots();

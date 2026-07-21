@@ -77,14 +77,22 @@ func (s *Store) Insert(ctx context.Context, p Prescription) (bool, error) {
 
 	tag, err := s.db.Exec(ctx,
 		`INSERT INTO medisync.prescription
-		   (prescription_id, source_system, hn, patient_name, ward_id, items, state, issued_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, 'READY', $7)
+		   (prescription_id, source_system, hn, patient_name, ward_id, items, state, issued_at, project_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, 'READY', $7, $8)
 		 ON CONFLICT ON CONSTRAINT prescription_external_key DO NOTHING`,
-		p.PrescriptionID, p.SourceSystem, p.HN, p.PatientName, p.WardID, items, p.IssuedAt)
+		p.PrescriptionID, p.SourceSystem, p.HN, p.PatientName, p.WardID, items, p.IssuedAt, nullableString(p.ProjectID))
 	if err != nil {
 		return false, fmt.Errorf("insert prescription: %w", err)
 	}
 	return tag.RowsAffected() == 1, nil
+}
+
+// ProjectIDByCode resolves an external immutable project business code to the
+// internal foreign key. External feeders never need to know database UUIDs.
+func (s *Store) ProjectIDByCode(ctx context.Context, code string) (string, error) {
+	var id string
+	err := s.db.QueryRow(ctx, `SELECT id FROM medisync.projects WHERE code=$1 AND active=true`, code).Scan(&id)
+	return id, err
 }
 
 // GetByID fetches a prescription by internal UUID. Returns nil when not found.
@@ -166,7 +174,7 @@ func (s *Store) ListByWard(ctx context.Context, wardIDs []string, states []State
 	whereSQL := filterWhereSQL
 	if pageToken != "" {
 		whereSQL += fmt.Sprintf(
-			" AND created_at < (SELECT created_at FROM medisync.prescription WHERE id = $%d)",
+			" AND (created_at, id) < (SELECT created_at, id FROM medisync.prescription WHERE id = $%d)",
 			argIdx,
 		)
 		args = append(args, pageToken)

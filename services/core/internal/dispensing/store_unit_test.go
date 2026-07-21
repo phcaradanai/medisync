@@ -17,6 +17,7 @@ func newTestPrescription(id string) Prescription {
 	return Prescription{
 		PrescriptionID: id,
 		SourceSystem:   "test-his",
+		ProjectID:      "00000000-0000-0000-0000-000000000001",
 		HN:             "HN000001",
 		PatientName:    "Test Patient",
 		WardID:         "WARD-3A",
@@ -61,8 +62,8 @@ func TestStoreInsertSQLAndArgs(t *testing.T) {
 	}
 
 	// Verify argument values in order.
-	if len(call.Args) != 7 {
-		t.Fatalf("expected 7 arguments, got %d", len(call.Args))
+	if len(call.Args) != 8 {
+		t.Fatalf("expected 8 arguments, got %d", len(call.Args))
 	}
 	if call.Args[0] != "RX-SQL-001" {
 		t.Errorf("arg[0] prescription_id = %v, want RX-SQL-001", call.Args[0])
@@ -86,6 +87,9 @@ func TestStoreInsertSQLAndArgs(t *testing.T) {
 	// arg[6] is issued_at
 	if call.Args[6] == nil {
 		t.Error("arg[6] issued_at is nil, want non-nil time")
+	}
+	if call.Args[7] != "00000000-0000-0000-0000-000000000001" {
+		t.Errorf("arg[7] project_id = %v, want demo project UUID", call.Args[7])
 	}
 }
 

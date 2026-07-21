@@ -24,16 +24,17 @@ func main() {
 	url := flag.String("url", "nats://localhost:4222", "NATS server URL")
 	count := flag.Int("count", 1, "number of prescriptions to publish")
 	ward := flag.String("ward", "WARD-3A", "ward id stamped on events")
+	projectCode := flag.String("project-code", "0001", "immutable 4-digit destination project code")
 	source := flag.String("source", "mock-his", "source_system identifier")
 	fixedID := flag.String("id", "", "fixed prescription_id (for idempotency testing); default is time-based")
 	flag.Parse()
 
-	if err := run(*url, *count, *ward, *source, *fixedID); err != nil {
+	if err := run(*url, *count, *ward, *projectCode, *source, *fixedID); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(url string, count int, ward, source, fixedID string) error {
+func run(url string, count int, ward, projectCode, source, fixedID string) error {
 	nc, err := nats.Connect(url, nats.Name("medisync-mock-feeder"))
 	if err != nil {
 		return fmt.Errorf("connect nats: %w", err)
@@ -50,6 +51,7 @@ func run(url string, count int, ward, source, fixedID string) error {
 
 	for i := 0; i < count; i++ {
 		ev := sample(ward, source, i)
+		ev.ProjectCode = projectCode
 		if fixedID != "" {
 			ev.PrescriptionId = fixedID
 		}
@@ -78,6 +80,7 @@ func sample(ward, source string, i int) *eventsv1.PrescriptionCreated {
 	return &eventsv1.PrescriptionCreated{
 		PrescriptionId: id,
 		SourceSystem:   source,
+		ProjectCode:    "0001",
 		Hn:             fmt.Sprintf("HN%06d", 100000+i),
 		PatientName:    fmt.Sprintf("Test Patient %02d", i+1),
 		WardId:         ward,

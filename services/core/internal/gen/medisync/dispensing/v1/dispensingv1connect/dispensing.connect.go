@@ -42,6 +42,21 @@ const (
 	// DispensingServiceDispenseProcedure is the fully-qualified name of the DispensingService's
 	// Dispense RPC.
 	DispensingServiceDispenseProcedure = "/medisync.dispensing.v1.DispensingService/Dispense"
+	// DispensingServicePrepareDispenseProcedure is the fully-qualified name of the DispensingService's
+	// PrepareDispense RPC.
+	DispensingServicePrepareDispenseProcedure = "/medisync.dispensing.v1.DispensingService/PrepareDispense"
+	// DispensingServiceConfirmDispenseProcedure is the fully-qualified name of the DispensingService's
+	// ConfirmDispense RPC.
+	DispensingServiceConfirmDispenseProcedure = "/medisync.dispensing.v1.DispensingService/ConfirmDispense"
+	// DispensingServiceCancelDispenseProcedure is the fully-qualified name of the DispensingService's
+	// CancelDispense RPC.
+	DispensingServiceCancelDispenseProcedure = "/medisync.dispensing.v1.DispensingService/CancelDispense"
+	// DispensingServiceGetDispenseTransactionProcedure is the fully-qualified name of the
+	// DispensingService's GetDispenseTransaction RPC.
+	DispensingServiceGetDispenseTransactionProcedure = "/medisync.dispensing.v1.DispensingService/GetDispenseTransaction"
+	// DispensingServiceListDispenseTransactionsProcedure is the fully-qualified name of the
+	// DispensingService's ListDispenseTransactions RPC.
+	DispensingServiceListDispenseTransactionsProcedure = "/medisync.dispensing.v1.DispensingService/ListDispenseTransactions"
 	// DispensingServiceListEmergencyDrugsProcedure is the fully-qualified name of the
 	// DispensingService's ListEmergencyDrugs RPC.
 	DispensingServiceListEmergencyDrugsProcedure = "/medisync.dispensing.v1.DispensingService/ListEmergencyDrugs"
@@ -55,6 +70,11 @@ type DispensingServiceClient interface {
 	ListPrescriptions(context.Context, *connect.Request[v1.ListPrescriptionsRequest]) (*connect.Response[v1.ListPrescriptionsResponse], error)
 	GetPrescription(context.Context, *connect.Request[v1.GetPrescriptionRequest]) (*connect.Response[v1.GetPrescriptionResponse], error)
 	Dispense(context.Context, *connect.Request[v1.DispenseRequest]) (*connect.Response[v1.DispenseResponse], error)
+	PrepareDispense(context.Context, *connect.Request[v1.PrepareDispenseRequest]) (*connect.Response[v1.PrepareDispenseResponse], error)
+	ConfirmDispense(context.Context, *connect.Request[v1.ConfirmDispenseRequest]) (*connect.Response[v1.ConfirmDispenseResponse], error)
+	CancelDispense(context.Context, *connect.Request[v1.CancelDispenseRequest]) (*connect.Response[v1.CancelDispenseResponse], error)
+	GetDispenseTransaction(context.Context, *connect.Request[v1.GetDispenseTransactionRequest]) (*connect.Response[v1.GetDispenseTransactionResponse], error)
+	ListDispenseTransactions(context.Context, *connect.Request[v1.ListDispenseTransactionsRequest]) (*connect.Response[v1.ListDispenseTransactionsResponse], error)
 	// Emergency dispensing — sticker-less, card-verified.
 	ListEmergencyDrugs(context.Context, *connect.Request[v1.ListEmergencyDrugsRequest]) (*connect.Response[v1.ListEmergencyDrugsResponse], error)
 	EmergencyDispense(context.Context, *connect.Request[v1.EmergencyDispenseRequest]) (*connect.Response[v1.EmergencyDispenseResponse], error)
@@ -89,6 +109,36 @@ func NewDispensingServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(dispensingServiceMethods.ByName("Dispense")),
 			connect.WithClientOptions(opts...),
 		),
+		prepareDispense: connect.NewClient[v1.PrepareDispenseRequest, v1.PrepareDispenseResponse](
+			httpClient,
+			baseURL+DispensingServicePrepareDispenseProcedure,
+			connect.WithSchema(dispensingServiceMethods.ByName("PrepareDispense")),
+			connect.WithClientOptions(opts...),
+		),
+		confirmDispense: connect.NewClient[v1.ConfirmDispenseRequest, v1.ConfirmDispenseResponse](
+			httpClient,
+			baseURL+DispensingServiceConfirmDispenseProcedure,
+			connect.WithSchema(dispensingServiceMethods.ByName("ConfirmDispense")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelDispense: connect.NewClient[v1.CancelDispenseRequest, v1.CancelDispenseResponse](
+			httpClient,
+			baseURL+DispensingServiceCancelDispenseProcedure,
+			connect.WithSchema(dispensingServiceMethods.ByName("CancelDispense")),
+			connect.WithClientOptions(opts...),
+		),
+		getDispenseTransaction: connect.NewClient[v1.GetDispenseTransactionRequest, v1.GetDispenseTransactionResponse](
+			httpClient,
+			baseURL+DispensingServiceGetDispenseTransactionProcedure,
+			connect.WithSchema(dispensingServiceMethods.ByName("GetDispenseTransaction")),
+			connect.WithClientOptions(opts...),
+		),
+		listDispenseTransactions: connect.NewClient[v1.ListDispenseTransactionsRequest, v1.ListDispenseTransactionsResponse](
+			httpClient,
+			baseURL+DispensingServiceListDispenseTransactionsProcedure,
+			connect.WithSchema(dispensingServiceMethods.ByName("ListDispenseTransactions")),
+			connect.WithClientOptions(opts...),
+		),
 		listEmergencyDrugs: connect.NewClient[v1.ListEmergencyDrugsRequest, v1.ListEmergencyDrugsResponse](
 			httpClient,
 			baseURL+DispensingServiceListEmergencyDrugsProcedure,
@@ -106,11 +156,16 @@ func NewDispensingServiceClient(httpClient connect.HTTPClient, baseURL string, o
 
 // dispensingServiceClient implements DispensingServiceClient.
 type dispensingServiceClient struct {
-	listPrescriptions  *connect.Client[v1.ListPrescriptionsRequest, v1.ListPrescriptionsResponse]
-	getPrescription    *connect.Client[v1.GetPrescriptionRequest, v1.GetPrescriptionResponse]
-	dispense           *connect.Client[v1.DispenseRequest, v1.DispenseResponse]
-	listEmergencyDrugs *connect.Client[v1.ListEmergencyDrugsRequest, v1.ListEmergencyDrugsResponse]
-	emergencyDispense  *connect.Client[v1.EmergencyDispenseRequest, v1.EmergencyDispenseResponse]
+	listPrescriptions        *connect.Client[v1.ListPrescriptionsRequest, v1.ListPrescriptionsResponse]
+	getPrescription          *connect.Client[v1.GetPrescriptionRequest, v1.GetPrescriptionResponse]
+	dispense                 *connect.Client[v1.DispenseRequest, v1.DispenseResponse]
+	prepareDispense          *connect.Client[v1.PrepareDispenseRequest, v1.PrepareDispenseResponse]
+	confirmDispense          *connect.Client[v1.ConfirmDispenseRequest, v1.ConfirmDispenseResponse]
+	cancelDispense           *connect.Client[v1.CancelDispenseRequest, v1.CancelDispenseResponse]
+	getDispenseTransaction   *connect.Client[v1.GetDispenseTransactionRequest, v1.GetDispenseTransactionResponse]
+	listDispenseTransactions *connect.Client[v1.ListDispenseTransactionsRequest, v1.ListDispenseTransactionsResponse]
+	listEmergencyDrugs       *connect.Client[v1.ListEmergencyDrugsRequest, v1.ListEmergencyDrugsResponse]
+	emergencyDispense        *connect.Client[v1.EmergencyDispenseRequest, v1.EmergencyDispenseResponse]
 }
 
 // ListPrescriptions calls medisync.dispensing.v1.DispensingService.ListPrescriptions.
@@ -126,6 +181,31 @@ func (c *dispensingServiceClient) GetPrescription(ctx context.Context, req *conn
 // Dispense calls medisync.dispensing.v1.DispensingService.Dispense.
 func (c *dispensingServiceClient) Dispense(ctx context.Context, req *connect.Request[v1.DispenseRequest]) (*connect.Response[v1.DispenseResponse], error) {
 	return c.dispense.CallUnary(ctx, req)
+}
+
+// PrepareDispense calls medisync.dispensing.v1.DispensingService.PrepareDispense.
+func (c *dispensingServiceClient) PrepareDispense(ctx context.Context, req *connect.Request[v1.PrepareDispenseRequest]) (*connect.Response[v1.PrepareDispenseResponse], error) {
+	return c.prepareDispense.CallUnary(ctx, req)
+}
+
+// ConfirmDispense calls medisync.dispensing.v1.DispensingService.ConfirmDispense.
+func (c *dispensingServiceClient) ConfirmDispense(ctx context.Context, req *connect.Request[v1.ConfirmDispenseRequest]) (*connect.Response[v1.ConfirmDispenseResponse], error) {
+	return c.confirmDispense.CallUnary(ctx, req)
+}
+
+// CancelDispense calls medisync.dispensing.v1.DispensingService.CancelDispense.
+func (c *dispensingServiceClient) CancelDispense(ctx context.Context, req *connect.Request[v1.CancelDispenseRequest]) (*connect.Response[v1.CancelDispenseResponse], error) {
+	return c.cancelDispense.CallUnary(ctx, req)
+}
+
+// GetDispenseTransaction calls medisync.dispensing.v1.DispensingService.GetDispenseTransaction.
+func (c *dispensingServiceClient) GetDispenseTransaction(ctx context.Context, req *connect.Request[v1.GetDispenseTransactionRequest]) (*connect.Response[v1.GetDispenseTransactionResponse], error) {
+	return c.getDispenseTransaction.CallUnary(ctx, req)
+}
+
+// ListDispenseTransactions calls medisync.dispensing.v1.DispensingService.ListDispenseTransactions.
+func (c *dispensingServiceClient) ListDispenseTransactions(ctx context.Context, req *connect.Request[v1.ListDispenseTransactionsRequest]) (*connect.Response[v1.ListDispenseTransactionsResponse], error) {
+	return c.listDispenseTransactions.CallUnary(ctx, req)
 }
 
 // ListEmergencyDrugs calls medisync.dispensing.v1.DispensingService.ListEmergencyDrugs.
@@ -144,6 +224,11 @@ type DispensingServiceHandler interface {
 	ListPrescriptions(context.Context, *connect.Request[v1.ListPrescriptionsRequest]) (*connect.Response[v1.ListPrescriptionsResponse], error)
 	GetPrescription(context.Context, *connect.Request[v1.GetPrescriptionRequest]) (*connect.Response[v1.GetPrescriptionResponse], error)
 	Dispense(context.Context, *connect.Request[v1.DispenseRequest]) (*connect.Response[v1.DispenseResponse], error)
+	PrepareDispense(context.Context, *connect.Request[v1.PrepareDispenseRequest]) (*connect.Response[v1.PrepareDispenseResponse], error)
+	ConfirmDispense(context.Context, *connect.Request[v1.ConfirmDispenseRequest]) (*connect.Response[v1.ConfirmDispenseResponse], error)
+	CancelDispense(context.Context, *connect.Request[v1.CancelDispenseRequest]) (*connect.Response[v1.CancelDispenseResponse], error)
+	GetDispenseTransaction(context.Context, *connect.Request[v1.GetDispenseTransactionRequest]) (*connect.Response[v1.GetDispenseTransactionResponse], error)
+	ListDispenseTransactions(context.Context, *connect.Request[v1.ListDispenseTransactionsRequest]) (*connect.Response[v1.ListDispenseTransactionsResponse], error)
 	// Emergency dispensing — sticker-less, card-verified.
 	ListEmergencyDrugs(context.Context, *connect.Request[v1.ListEmergencyDrugsRequest]) (*connect.Response[v1.ListEmergencyDrugsResponse], error)
 	EmergencyDispense(context.Context, *connect.Request[v1.EmergencyDispenseRequest]) (*connect.Response[v1.EmergencyDispenseResponse], error)
@@ -174,6 +259,36 @@ func NewDispensingServiceHandler(svc DispensingServiceHandler, opts ...connect.H
 		connect.WithSchema(dispensingServiceMethods.ByName("Dispense")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dispensingServicePrepareDispenseHandler := connect.NewUnaryHandler(
+		DispensingServicePrepareDispenseProcedure,
+		svc.PrepareDispense,
+		connect.WithSchema(dispensingServiceMethods.ByName("PrepareDispense")),
+		connect.WithHandlerOptions(opts...),
+	)
+	dispensingServiceConfirmDispenseHandler := connect.NewUnaryHandler(
+		DispensingServiceConfirmDispenseProcedure,
+		svc.ConfirmDispense,
+		connect.WithSchema(dispensingServiceMethods.ByName("ConfirmDispense")),
+		connect.WithHandlerOptions(opts...),
+	)
+	dispensingServiceCancelDispenseHandler := connect.NewUnaryHandler(
+		DispensingServiceCancelDispenseProcedure,
+		svc.CancelDispense,
+		connect.WithSchema(dispensingServiceMethods.ByName("CancelDispense")),
+		connect.WithHandlerOptions(opts...),
+	)
+	dispensingServiceGetDispenseTransactionHandler := connect.NewUnaryHandler(
+		DispensingServiceGetDispenseTransactionProcedure,
+		svc.GetDispenseTransaction,
+		connect.WithSchema(dispensingServiceMethods.ByName("GetDispenseTransaction")),
+		connect.WithHandlerOptions(opts...),
+	)
+	dispensingServiceListDispenseTransactionsHandler := connect.NewUnaryHandler(
+		DispensingServiceListDispenseTransactionsProcedure,
+		svc.ListDispenseTransactions,
+		connect.WithSchema(dispensingServiceMethods.ByName("ListDispenseTransactions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	dispensingServiceListEmergencyDrugsHandler := connect.NewUnaryHandler(
 		DispensingServiceListEmergencyDrugsProcedure,
 		svc.ListEmergencyDrugs,
@@ -194,6 +309,16 @@ func NewDispensingServiceHandler(svc DispensingServiceHandler, opts ...connect.H
 			dispensingServiceGetPrescriptionHandler.ServeHTTP(w, r)
 		case DispensingServiceDispenseProcedure:
 			dispensingServiceDispenseHandler.ServeHTTP(w, r)
+		case DispensingServicePrepareDispenseProcedure:
+			dispensingServicePrepareDispenseHandler.ServeHTTP(w, r)
+		case DispensingServiceConfirmDispenseProcedure:
+			dispensingServiceConfirmDispenseHandler.ServeHTTP(w, r)
+		case DispensingServiceCancelDispenseProcedure:
+			dispensingServiceCancelDispenseHandler.ServeHTTP(w, r)
+		case DispensingServiceGetDispenseTransactionProcedure:
+			dispensingServiceGetDispenseTransactionHandler.ServeHTTP(w, r)
+		case DispensingServiceListDispenseTransactionsProcedure:
+			dispensingServiceListDispenseTransactionsHandler.ServeHTTP(w, r)
 		case DispensingServiceListEmergencyDrugsProcedure:
 			dispensingServiceListEmergencyDrugsHandler.ServeHTTP(w, r)
 		case DispensingServiceEmergencyDispenseProcedure:
@@ -217,6 +342,26 @@ func (UnimplementedDispensingServiceHandler) GetPrescription(context.Context, *c
 
 func (UnimplementedDispensingServiceHandler) Dispense(context.Context, *connect.Request[v1.DispenseRequest]) (*connect.Response[v1.DispenseResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.dispensing.v1.DispensingService.Dispense is not implemented"))
+}
+
+func (UnimplementedDispensingServiceHandler) PrepareDispense(context.Context, *connect.Request[v1.PrepareDispenseRequest]) (*connect.Response[v1.PrepareDispenseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.dispensing.v1.DispensingService.PrepareDispense is not implemented"))
+}
+
+func (UnimplementedDispensingServiceHandler) ConfirmDispense(context.Context, *connect.Request[v1.ConfirmDispenseRequest]) (*connect.Response[v1.ConfirmDispenseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.dispensing.v1.DispensingService.ConfirmDispense is not implemented"))
+}
+
+func (UnimplementedDispensingServiceHandler) CancelDispense(context.Context, *connect.Request[v1.CancelDispenseRequest]) (*connect.Response[v1.CancelDispenseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.dispensing.v1.DispensingService.CancelDispense is not implemented"))
+}
+
+func (UnimplementedDispensingServiceHandler) GetDispenseTransaction(context.Context, *connect.Request[v1.GetDispenseTransactionRequest]) (*connect.Response[v1.GetDispenseTransactionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.dispensing.v1.DispensingService.GetDispenseTransaction is not implemented"))
+}
+
+func (UnimplementedDispensingServiceHandler) ListDispenseTransactions(context.Context, *connect.Request[v1.ListDispenseTransactionsRequest]) (*connect.Response[v1.ListDispenseTransactionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("medisync.dispensing.v1.DispensingService.ListDispenseTransactions is not implemented"))
 }
 
 func (UnimplementedDispensingServiceHandler) ListEmergencyDrugs(context.Context, *connect.Request[v1.ListEmergencyDrugsRequest]) (*connect.Response[v1.ListEmergencyDrugsResponse], error) {

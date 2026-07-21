@@ -136,8 +136,8 @@
       <h2>ตั้งค่ารายการ</h2>
       <div class="row">
         <div>
-          <label>Cabinet</label>
-          <input id="cabinet" value="" placeholder="(any)" />
+          <label>Kiosk code (ปลายทาง)</label>
+          <input id="cabinet" value="00010001" inputmode="numeric" maxlength="8" />
         </div>
         <div>
           <label>Ward</label>
@@ -206,10 +206,10 @@
         หรือกด ▶ flow รวมทั้งหมด
       </p>
 
-      <h2 style="margin-top: 16px;">🎯 Kiosk UI Integration</h2>
-      <p class="hint">เปิด kiosk app จริง แล้วส่งคำสั่งเข้า UI ผ่าน postMessage</p>
+      <h2 style="margin-top: 16px;">🎯 Kiosk UI Integration <span id="kioskStatus"><span class="badge busy">กำลังตรวจ…</span></span></h2>
+      <p class="hint">คำสั่งจะส่งเฉพาะ Kiosk UI ที่ login ด้วย code เดียวกับช่อง Kiosk code เท่านั้น</p>
       <div class="actions">
-        <button class="btn-ghost" onclick="openKiosk()">🖥️ เปิด Kiosk UI</button>
+        <button class="btn-ghost" onclick="openKiosk()">🖥️ เปิด Kiosk UI (ทางลัด)</button>
         <button class="btn-warn" onclick="injectSticker()">📡 ส่ง sticker เข้า Kiosk</button>
         <button class="btn-warn" onclick="injectCard()">📡 ส่งบัตรเข้า Kiosk</button>
       </div>
@@ -217,8 +217,8 @@
         <button class="btn-primary" onclick="fullFlow()">▶ สแกน sticker → สแกนบัตร (Kiosk UI)</button>
       </div>
       <p class="hint">
-        กด 🔐 ลงทะเบียนบัตรก่อนครั้งแรก → แล้วกด 🖥️ เปิด Kiosk → กด ▶ สแกน<br>
-        Kiosk UI จะแสดง popup ยาเข้าคิว + สแกนบัตร + จ่ายยาจริง
+        กด 🔐 ลงทะเบียนบัตรก่อนครั้งแรก → เปิดหรือ reload Kiosk ที่ URL ปกติ → กด ▶ สแกน<br>
+        ไม่จำเป็นต้องเปิด Kiosk ด้วยปุ่มในหน้านี้
       </p>
 
       <div id="slots"></div>
@@ -409,31 +409,72 @@
 
   function copyId(id) { navigator.clipboard && navigator.clipboard.writeText(id); }
 
-  // ── Kiosk UI integration (postMessage) ─────────────────────────────
-  let kioskWin = null;
+  // ── Kiosk UI integration (server-side code-targeted channel) ──────
   const KIOSK_URL = "__KIOSK_URL__";
 
+  async function refreshKioskStatus() {
+    try {
+      const kioskCode = $("cabinet").value.trim();
+      const res = await fetch("/api/kiosk-status?kioskCode=" + encodeURIComponent(kioskCode));
+      const data = await res.json();
+      const count = Number(data.connected) || 0;
+      $("kioskStatus").innerHTML = count > 0
+        ? `<span class="badge ok">เชื่อมต่อ ${count} หน้า</span>`
+        : '<span class="badge err">ยังไม่เชื่อมต่อ</span>';
+    } catch {
+      $("kioskStatus").innerHTML = '<span class="badge err">ตรวจไม่ได้</span>';
+    }
+  }
+
+  refreshKioskStatus();
+  window.setInterval(refreshKioskStatus, 3000);
+
   function openKiosk() {
-    kioskWin = window.open(KIOSK_URL, "medisync-kiosk", "width=1200,height=800");
+    const kioskWin = window.open(KIOSK_URL, "medisync-kiosk", "width=1200,height=800");
     if (!kioskWin) { appendLog("⚠️ ไม่สามารถเปิดหน้าต่าง Kiosk ได้ (popup blocked?)"); return; }
     appendLog("🖥️ เปิด Kiosk UI ที่ " + KIOSK_URL);
-    appendLog("   หาก Kiosk ยังไม่ login ให้ login ด้วย DEMO-K1 / 123456 ก่อน");
+    appendLog("   หาก Kiosk ยังไม่ login ให้ login ด้วย " + $("cabinet").value.trim() + " / 123456 ก่อน");
   }
 
-  function injectSticker() {
-    if (!kioskWin || kioskWin.closed) { appendLog("⚠️ เปิด Kiosk UI ก่อน (กดปุ่ม 🖥️)"); return; }
+  async function sendKioskCommand(command, description) {
+    try {
+      const res = await fetch("/api/kiosk-command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kioskCode: $("cabinet").value.trim(), ...command }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      appendLog(`📡 ${description}`);
+      if (data.recipients > 0) {
+		appendLog(`   → ส่งถึงตู้ ${$("cabinet").value.trim()} จำนวน ${data.recipients} หน้าต่าง`);
+        refreshKioskStatus();
+        return true;
+      }
+      appendLog("⚠️ ยังไม่มี Kiosk UI เชื่อมต่อ — เปิด/reload Kiosk แล้วลองอีกครั้ง");
+      return false;
+    } catch (error) {
+      appendLog("❌ ส่งคำสั่งเข้า Kiosk ไม่ได้: " + error);
+      return false;
+    }
+  }
+
+  async function injectSticker() {
     const code = $("pid").value.trim();
     if (!code) { appendLog("⚠️ ต้องสร้าง sticker ก่อน (กด ① สร้าง sticker)"); return; }
-    kioskWin.postMessage({ type: "scan_sticker", code }, "*");
-    appendLog("📡 ส่ง scan_sticker: " + code + " เข้า Kiosk UI");
+    await sendKioskCommand(
+      { type: "scan_sticker", code },
+      "ส่ง scan_sticker ไปตู้ " + $("cabinet").value.trim() + ": " + code,
+    );
   }
 
-  function injectCard() {
-    if (!kioskWin || kioskWin.closed) { appendLog("⚠️ เปิด Kiosk UI ก่อน (กดปุ่ม 🖥️)"); return; }
+  async function injectCard() {
     const role = $("role").value;
     const cardToken = "card-" + role;
-    kioskWin.postMessage({ type: "scan_card", cardToken }, "*");
-    appendLog("📡 ส่ง scan_card: " + cardToken + " เข้า Kiosk UI");
+    await sendKioskCommand(
+      { type: "scan_card", cardToken },
+      "ส่ง scan_card ไปตู้ " + $("cabinet").value.trim() + ": " + cardToken,
+    );
   }
 
   async function setupCards() {
@@ -456,13 +497,12 @@
     appendLog("⏳ รอ 2s ให้ core ประมวลผล NATS event...");
     await sleep(2000);
 
-    // Step 2: inject sticker scan into kiosk UI
-    if (!kioskWin || kioskWin.closed) {
-      appendLog("⚠️ เปิด Kiosk UI ก่อน (กดปุ่ม 🖥️)");
-      return;
-    }
-    kioskWin.postMessage({ type: "scan_sticker", code: createRes.id }, "*");
-    appendLog("📡 ส่ง scan_sticker: " + createRes.id + " เข้า Kiosk UI");
+    // Step 2: send the sticker only to the selected kiosk code.
+    const stickerDelivered = await sendKioskCommand(
+      { type: "scan_sticker", code: createRes.id },
+      "ส่ง scan_sticker ไปตู้ " + $("cabinet").value.trim() + ": " + createRes.id,
+    );
+    if (!stickerDelivered) return;
     appendLog("   → Kiosk UI ควรแสดง popup ยา + ตำแหน่งในตู้");
 
     // Wait for user to see the popup
@@ -471,8 +511,10 @@
     // Step 3: inject card scan
     const role = $("role").value;
     const cardToken = "card-" + role;
-    kioskWin.postMessage({ type: "scan_card", cardToken }, "*");
-    appendLog("📡 ส่ง scan_card: " + cardToken + " เข้า Kiosk UI");
+    await sendKioskCommand(
+      { type: "scan_card", cardToken },
+      "ส่ง scan_card ไปตู้ " + $("cabinet").value.trim() + ": " + cardToken,
+    );
     appendLog("   → Kiosk UI ควรยืนยันตัวตน + ส่ง Dispense + แสดงคิว");
     appendLog("✅ ดูสถานะที่ Kiosk UI — ยาจะเข้าคิวและกำลังจ่าย");
   }

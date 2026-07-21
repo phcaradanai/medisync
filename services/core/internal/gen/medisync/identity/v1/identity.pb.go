@@ -1072,7 +1072,9 @@ type CreateProjectRequest struct {
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Optional; auto-generated from slug if empty.
 	Slug string `protobuf:"bytes,2,opt,name=slug,proto3" json:"slug,omitempty"`
-	// Project code — set by SYSADMIN, visible to all.
+	// Deprecated input. The server generates an immutable four-digit code.
+	//
+	// Deprecated: Marked as deprecated in medisync/identity/v1/identity.proto.
 	Code          string `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1122,6 +1124,7 @@ func (x *CreateProjectRequest) GetSlug() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in medisync/identity/v1/identity.proto.
 func (x *CreateProjectRequest) GetCode() string {
 	if x != nil {
 		return x.Code
@@ -1561,11 +1564,11 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x12\n" +
 	"\x04code\x18\a \x01(\tR\x04code\x12!\n" +
-	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"R\n" +
+	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"V\n" +
 	"\x14CreateProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x12\n" +
-	"\x04code\x18\x03 \x01(\tR\x04code\"P\n" +
+	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x16\n" +
+	"\x04code\x18\x03 \x01(\tB\x02\x18\x01R\x04code\"P\n" +
 	"\x15CreateProjectResponse\x127\n" +
 	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"p\n" +
 	"\x14UpdateProjectRequest\x12\x0e\n" +

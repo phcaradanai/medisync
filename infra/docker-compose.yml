@@ -48,9 +48,10 @@ services:
       PRINT_OPS_URL: http://print-ops:3000
       PRINT_OPS_API_KEY: ${PRINT_OPS_API_KEY:-printops-dev-apikey-2026}
       PRINT_OPS_FAKE: "false"
-      VENDING_URL: http://vending:3000
-      VENDING_API_KEY: ${VENDING_API_KEY:-}
-      VENDING_FAKE: "false"
+      VENDING_ENDPOINTS_JSON: '{"00010001":"http://vending-00010001:3303"}'
+      VENDING_API_BEARER_TOKEN: ${VENDING_API_BEARER_TOKEN:-dev-bearer-token}
+      FULFILLMENT_FAKE: ${FULFILLMENT_FAKE:-false}
+      VENDING_FAKE: ${VENDING_FAKE:-false}
     ports:
       - "8080:8080"
     depends_on:
@@ -58,6 +59,8 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
+      vending-00010001:
+        condition: service_started
 
   admin:
     build:
@@ -77,6 +80,59 @@ services:
     depends_on:
       - core
 
+  demo-seed:
+    image: medisync-kiosktester:local
+    build:
+      context: ../services/core
+      dockerfile: cmd/kiosktester/Dockerfile
+    entrypoint: ["/app/demoseed"]
+    environment:
+      DATABASE_URL: postgres://medisync:medisync@postgres:5432/medisync?sslmode=disable
+    depends_on:
+      core:
+        condition: service_healthy
+    restart: "no"
+
+  kiosktester:
+    image: medisync-kiosktester:local
+    build:
+      context: ../services/core
+      dockerfile: cmd/kiosktester/Dockerfile
+    command:
+      - -mode=serve
+      - -addr=:8899
+      - -core=http://core:8080
+      - -nats=nats://nats:4222
+      # This URL is opened by the host browser, so it must not use
+      # Docker's internal "kiosk" hostname.
+      - -kiosk-url=http://localhost:5173
+    ports:
+      - "8899:8899"
+    depends_on:
+      core:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      kiosk:
+        condition: service_started
+      demo-seed:
+        condition: service_completed_successfully
+
+  vending-00010001:
+    build:
+      context: ../../vending-3d-ctl-agent
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: "3303"
+      API_BEARER_TOKEN: ${VENDING_API_BEARER_TOKEN:-dev-bearer-token}
+      API_BEARER_REQUIRED: "true"
+    ports:
+      - "3303:3303"
+    volumes:
+      - vending-00010001-logs:/app/logs
+
 volumes:
   postgres-data:
   nats-data:
+  vending-00010001-logs:

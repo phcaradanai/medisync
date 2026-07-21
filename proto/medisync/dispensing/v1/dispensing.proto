@@ -79,10 +79,144 @@ message DispenseResponse {
   Prescription prescription = 1;
 }
 
+enum DispenseTransactionStatus {
+  DISPENSE_TRANSACTION_STATUS_UNSPECIFIED = 0;
+  DISPENSE_TRANSACTION_STATUS_AWAITING_IDENTITY = 1;
+  DISPENSE_TRANSACTION_STATUS_QUEUED = 2;
+  DISPENSE_TRANSACTION_STATUS_DISPENSING = 3;
+  DISPENSE_TRANSACTION_STATUS_DISPENSED = 4;
+  DISPENSE_TRANSACTION_STATUS_FAILED = 5;
+  DISPENSE_TRANSACTION_STATUS_CANCELLED = 6;
+  DISPENSE_TRANSACTION_STATUS_EXPIRED = 7;
+}
+
+message DispenseAllocation {
+  string id = 1;
+  string slot_code = 2;
+  string batch_id = 3;
+  string lot_number = 4;
+  google.protobuf.Timestamp expiry_date = 5;
+  int32 quantity = 6;
+  int32 dispensed_quantity = 7;
+  int32 door_no = 8;
+  int32 hardware_layer = 9;
+  int32 channel_start = 10;
+  int32 channel_end = 11;
+  string status = 12;
+  google.protobuf.Timestamp hardware_attempted_at = 13;
+  bool hardware_success = 14;
+  string hardware_detail = 15;
+  string hardware_response = 16;
+  // Stable database identity of the physical slot. slot_code remains the
+  // human-readable snapshot used in reports and hardware communication.
+  string slot_id = 17;
+}
+
+message DispenseTransactionItem {
+  string id = 1;
+  int32 sequence_no = 2;
+  string drug_code = 3;
+  string drug_name = 4;
+  int32 requested_quantity = 5;
+  int32 allocated_quantity = 6;
+  int32 dispensed_quantity = 7;
+  string status = 8;
+  repeated DispenseAllocation allocations = 9;
+}
+
+message DispenseTransaction {
+  string dispense_id = 1;
+  string prescription_id = 2;
+  string source_system = 3;
+  string kiosk_code = 4;
+  string operator_user_id = 5;
+  string operator_display_name = 6;
+  DispenseTransactionStatus status = 7;
+  string trace_id = 8;
+  string failure_code = 9;
+  string failure_detail = 10;
+  repeated DispenseTransactionItem items = 11;
+  google.protobuf.Timestamp sticker_scanned_at = 12;
+  google.protobuf.Timestamp identity_confirmed_at = 13;
+  google.protobuf.Timestamp queued_at = 14;
+  google.protobuf.Timestamp started_at = 15;
+  google.protobuf.Timestamp completed_at = 16;
+  google.protobuf.Timestamp failed_at = 17;
+  google.protobuf.Timestamp cancelled_at = 18;
+  google.protobuf.Timestamp expires_at = 19;
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Timestamp updated_at = 21;
+}
+
+// Called with the kiosk bearer token immediately after a sticker is scanned.
+// It reserves stock only from that kiosk and creates an auditable transaction.
+message PrepareDispenseRequest {
+  string sticker_code = 1;
+  string trace_id = 2;
+}
+
+message PrepareDispenseResponse {
+  DispenseTransaction transaction = 1;
+  Prescription prescription = 2;
+}
+
+// Called after staff card authentication. Authorization carries the staff JWT;
+// X-Kiosk-Authorization carries the kiosk JWT and must match transaction.kiosk_code.
+message ConfirmDispenseRequest {
+  string dispense_id = 1;
+}
+
+message ConfirmDispenseResponse {
+  DispenseTransaction transaction = 1;
+}
+
+message CancelDispenseRequest {
+  string dispense_id = 1;
+  string reason = 2;
+}
+
+message CancelDispenseResponse {
+  DispenseTransaction transaction = 1;
+}
+
+message GetDispenseTransactionRequest {
+  string dispense_id = 1;
+}
+
+message GetDispenseTransactionResponse {
+  DispenseTransaction transaction = 1;
+}
+
+message ListDispenseTransactionsRequest {
+  string kiosk_code = 1;
+  repeated DispenseTransactionStatus statuses = 2;
+  string prescription_id = 3;
+  string operator_user_id = 4;
+  google.protobuf.Timestamp created_from = 5;
+  google.protobuf.Timestamp created_to = 6;
+  int32 page_size = 7;
+  string page_token = 8;
+  // When both are supplied, the transaction must contain this exact drug in
+  // this exact slot. kiosk_code continues to scope the physical cabinet.
+  string slot_id = 9;
+  string drug_code = 10;
+}
+
+message ListDispenseTransactionsResponse {
+  repeated DispenseTransaction transactions = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
+}
+
 service DispensingService {
   rpc ListPrescriptions(ListPrescriptionsRequest) returns (ListPrescriptionsResponse);
   rpc GetPrescription(GetPrescriptionRequest) returns (GetPrescriptionResponse);
   rpc Dispense(DispenseRequest) returns (DispenseResponse);
+  rpc PrepareDispense(PrepareDispenseRequest) returns (PrepareDispenseResponse);
+  rpc ConfirmDispense(ConfirmDispenseRequest) returns (ConfirmDispenseResponse);
+  rpc CancelDispense(CancelDispenseRequest) returns (CancelDispenseResponse);
+  rpc GetDispenseTransaction(GetDispenseTransactionRequest) returns (GetDispenseTransactionResponse);
+  rpc ListDispenseTransactions(ListDispenseTransactionsRequest) returns (ListDispenseTransactionsResponse);
 
   // Emergency dispensing — sticker-less, card-verified.
   rpc ListEmergencyDrugs(ListEmergencyDrugsRequest) returns (ListEmergencyDrugsResponse);

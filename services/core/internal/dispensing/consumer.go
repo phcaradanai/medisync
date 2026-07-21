@@ -2,10 +2,12 @@ package dispensing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/nats-io/nats.go/jetstream"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -66,10 +68,21 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		c.reject(ctx, msg, reason)
 		return
 	}
+	projectID, err := c.store.ProjectIDByCode(ctx, ev.GetProjectCode())
+	if errors.Is(err, pgx.ErrNoRows) {
+		c.reject(ctx, msg, fmt.Sprintf("unknown or inactive project_code %q", ev.GetProjectCode()))
+		return
+	}
+	if err != nil {
+		c.log.Error("resolve project failed, will retry", "project_code", ev.GetProjectCode(), "error", err.Error())
+		msg.Nak()
+		return
+	}
 
 	p := Prescription{
 		PrescriptionID: ev.GetPrescriptionId(),
 		SourceSystem:   ev.GetSourceSystem(),
+		ProjectID:      projectID,
 		HN:             ev.GetHn(),
 		PatientName:    ev.GetPatientName(),
 		WardID:         ev.GetWardId(),
@@ -103,11 +116,12 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 	}
 
 	if err := c.audit.Write(ctx, audit.Entry{
-		TraceID:  ev.GetTraceId(),
-		Action:   "prescription.received",
-		Entity:   "prescription",
-		EntityID: p.PrescriptionID,
-		Detail:   map[string]any{"ward_id": p.WardID, "items": len(p.Items), "source_system": p.SourceSystem},
+		TraceID:   ev.GetTraceId(),
+		ProjectID: projectID,
+		Action:    "prescription.received",
+		Entity:    "prescription",
+		EntityID:  p.PrescriptionID,
+		Detail:    map[string]any{"ward_id": p.WardID, "items": len(p.Items), "source_system": p.SourceSystem},
 	}); err != nil {
 		// Audit is mandatory: without it the event is not fully processed.
 		c.log.Error("audit write failed, will retry", "prescription_id", p.PrescriptionID, "error", err.Error())
@@ -117,6 +131,7 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 
 	c.log.Info("prescription received",
 		"prescription_id", p.PrescriptionID,
+		"project_code", ev.GetProjectCode(),
 		"ward_id", p.WardID,
 		"items", len(p.Items),
 		"trace_id", ev.GetTraceId())
@@ -151,6 +166,8 @@ func validate(ev *eventsv1.PrescriptionCreated) string {
 		return "missing prescription_id"
 	case ev.GetSourceSystem() == "":
 		return "missing source_system"
+	case !validProjectCode(ev.GetProjectCode()):
+		return "project_code must be exactly 4 non-zero digits"
 	case len(ev.GetItems()) == 0:
 		return "prescription has no items"
 	}
@@ -163,4 +180,16 @@ func validate(ev *eventsv1.PrescriptionCreated) string {
 		}
 	}
 	return ""
+}
+
+func validProjectCode(code string) bool {
+	if len(code) != 4 || code == "0000" {
+		return false
+	}
+	for _, ch := range code {
+		if ch < '0' || ch > '9' {
+			return false
+		}
+	}
+	return true
 }

@@ -2,6 +2,7 @@ package vending
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -21,20 +22,31 @@ const consumerDurable = "core-fulfillment"
 // Consumer subscribes to medisync.fulfillment.requested, calls the vending
 // agent, and publishes medisync.fulfillment.completed.
 type Consumer struct {
-	js     jetstream.JetStream
-	client Client
-	audit  *audit.Writer
-	log    *slog.Logger
+	js      jetstream.JetStream
+	router  Router
+	tracker TransactionTracker
+	audit   *audit.Writer
+	log     *slog.Logger
+}
+
+type TransactionTracker interface {
+	TransactionExecutionStatus(ctx context.Context, dispenseID, kioskCode string) (string, error)
+	MarkTransactionStarted(ctx context.Context, dispenseID, kioskCode string) error
+	LoadHardwareResults(ctx context.Context, dispenseID, kioskCode string) (map[string]*eventsv1.DispenseAllocationResult, error)
+	MarkHardwareAttempt(ctx context.Context, dispenseID, kioskCode, allocationID string) error
+	RecordHardwareResult(ctx context.Context, dispenseID, kioskCode string, result *eventsv1.DispenseAllocationResult, responseJSON string) error
 }
 
 // NewConsumer creates a fulfillment consumer.
 func NewConsumer(js jetstream.JetStream, client Client, aw *audit.Writer, log *slog.Logger) *Consumer {
 	return &Consumer{
-		js:     js,
-		client: client,
-		audit:  aw,
-		log:    log.With("component", "fulfillment.consumer"),
+		js: js, router: singleClientRouter{client: client}, audit: aw,
+		log: log.With("component", "fulfillment.consumer"),
 	}
+}
+
+func NewRoutedConsumer(js jetstream.JetStream, router Router, tracker TransactionTracker, aw *audit.Writer, log *slog.Logger) *Consumer {
+	return &Consumer{js: js, router: router, tracker: tracker, audit: aw, log: log.With("component", "fulfillment.consumer")}
 }
 
 // Start creates a durable JetStream consumer and begins processing.
@@ -75,86 +87,131 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 	fulfillmentID := ev.GetFulfillmentId()
 	prescriptionID := ev.GetPrescriptionId()
 	traceID := ev.GetTraceId()
+	kioskCode := ev.GetKioskCode()
 
-	if fulfillmentID == "" || prescriptionID == "" {
-		c.reject(ctx, msg, "fulfillment_id and prescription_id are required")
+	if fulfillmentID == "" || prescriptionID == "" || kioskCode == "" || len(ev.Allocations) == 0 {
+		c.reject(ctx, msg, "fulfillment_id, prescription_id, kiosk_code, and allocations are required")
 		return
 	}
 
 	c.log.Info("fulfillment requested",
 		"fulfillment_id", fulfillmentID,
 		"prescription_id", prescriptionID,
+		"kiosk_code", kioskCode,
 		"trace_id", traceID,
 	)
-
-	// Health check before attempting dispense.
-	if err := c.client.Health(ctx); err != nil {
-		c.log.Warn("vending agent unhealthy, will retry",
-			"fulfillment_id", fulfillmentID,
-			"error", err.Error(),
-		)
-		msg.Nak()
-		return
-	}
-
-	// Build a minimal dispense request. In M3 the consumer does not
-	// resolve slots—it uses fake defaults. Production will resolve
-	// slots from the inventory module.
-	vendingReq := DispenseRequest{
-		Prescription: prescriptionID,
-		DoorNo:       1,
-		Items: []DispenseItem{
-			{Layer: 1, ChannelStart: 1, ChannelEnd: 1, Quantity: 1},
-		},
-	}
-
-	resp, err := c.client.Dispense(ctx, vendingReq)
-	if err != nil {
-		c.log.Error("vending agent call failed",
-			"fulfillment_id", fulfillmentID,
-			"error", err.Error(),
-		)
-		// Publish fulfillment.completed with success=false on permanent failure.
-		c.writeAudit(fulfillmentID, traceID, "fulfillment.failed",
-			fmt.Sprintf("agent_unreachable: %s", err.Error()))
-		if pubErr := c.publishCompleted(ctx, fulfillmentID, prescriptionID, traceID, false,
-			fmt.Sprintf("agent_unreachable: %s", err.Error())); pubErr != nil {
-			c.log.Error("publish fulfillment.completed failed, will retry",
-				"fulfillment_id", fulfillmentID,
-				"error", pubErr.Error(),
-			)
+	recorded := make(map[string]*eventsv1.DispenseAllocationResult)
+	if c.tracker != nil {
+		status, err := c.tracker.TransactionExecutionStatus(ctx, fulfillmentID, kioskCode)
+		if err != nil {
+			c.log.Error("load transaction execution status failed", "dispense_id", fulfillmentID, "error", err.Error())
 			msg.Nak()
 			return
 		}
-		msg.Ack()
-		return
+		if status == "DISPENSED" || status == "FAILED" || status == "CANCELLED" || status == "EXPIRED" {
+			msg.Ack()
+			return
+		}
+		if err := c.tracker.MarkTransactionStarted(ctx, fulfillmentID, kioskCode); err != nil {
+			c.log.Error("mark transaction started failed", "dispense_id", fulfillmentID, "error", err.Error())
+			msg.Nak()
+			return
+		}
+		loaded, loadErr := c.tracker.LoadHardwareResults(ctx, fulfillmentID, kioskCode)
+		if loadErr != nil {
+			c.log.Error("load durable hardware results failed", "dispense_id", fulfillmentID, "error", loadErr.Error())
+			msg.Nak()
+			return
+		}
+		recorded = loaded
 	}
 
-	if resp.OK != 1 || resp.Data.Status != "success" {
-		reason := "hw_failed"
-		detail := fmt.Sprintf("status=%q", resp.Data.Status)
-		for _, s := range resp.Data.Steps {
-			if !s.Success {
-				reason = fmt.Sprintf("hw_step_%s", s.Phase)
-				detail = fmt.Sprintf("step %q failed", s.Phase)
-				break
+	needsHardware := false
+	for _, allocation := range ev.Allocations {
+		if recorded[allocation.AllocationId] == nil {
+			needsHardware = true
+			break
+		}
+	}
+	var client Client
+	if needsHardware {
+		var err error
+		client, err = c.router.ClientFor(kioskCode)
+		if err != nil {
+			c.publishFailureAndAck(ctx, msg, ev, "routing_not_configured", err.Error(), nil)
+			return
+		}
+		// Health is checked only when a physical command remains. Redelivery of
+		// a fully recorded outcome can be published even if the agent went away.
+		if err := client.Health(ctx); err != nil {
+			c.publishFailureAndAck(ctx, msg, ev, "agent_unreachable", err.Error(), nil)
+			return
+		}
+	}
+
+	results := make([]*eventsv1.DispenseAllocationResult, 0, len(ev.Allocations))
+	hardwareResponses := make([]any, 0, len(ev.Allocations))
+	failed := false
+	failureReason, failureDetail := "", ""
+	for _, allocation := range ev.Allocations {
+		if prior := recorded[allocation.AllocationId]; prior != nil {
+			results = append(results, prior)
+			if !prior.Success {
+				failed, failureReason, failureDetail = true, "hardware_failed", prior.Detail
+			}
+			continue
+		}
+		if failed {
+			results = append(results, &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: false, Detail: "not attempted after prior hardware failure"})
+			continue
+		}
+		request := DispenseRequest{
+			Prescription: fmt.Sprintf("%s:%s", prescriptionID, allocation.AllocationId),
+			DoorNo:       int(allocation.DoorNo),
+			Items:        []DispenseItem{{Layer: int(allocation.HardwareLayer), ChannelStart: int(allocation.ChannelStart), ChannelEnd: int(allocation.ChannelEnd), Quantity: int(allocation.Quantity)}},
+		}
+		if c.tracker != nil {
+			if err := c.tracker.MarkHardwareAttempt(ctx, fulfillmentID, kioskCode, allocation.AllocationId); err != nil {
+				c.log.Error("persist hardware attempt failed before command", "dispense_id", fulfillmentID, "allocation_id", allocation.AllocationId, "error", err.Error())
+				msg.Nak()
+				return
 			}
 		}
-		c.log.Warn("fulfillment dispense failed",
-			"fulfillment_id", fulfillmentID,
-			"reason", reason,
-		)
-		c.writeAudit(fulfillmentID, traceID, "fulfillment.failed",
-			fmt.Sprintf("reason=%s detail=%s", reason, detail))
-		if pubErr := c.publishCompleted(ctx, fulfillmentID, prescriptionID, traceID, false, detail); pubErr != nil {
-			c.log.Error("publish fulfillment.completed failed, will retry",
-				"fulfillment_id", fulfillmentID,
-				"error", pubErr.Error(),
-			)
+		response, dispenseErr := client.Dispense(ctx, request)
+		if dispenseErr != nil {
+			failed, failureReason, failureDetail = true, "agent_error", dispenseErr.Error()
+			result := &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: false, Detail: dispenseErr.Error()}
+			results = append(results, result)
+			if err := c.recordHardwareResult(ctx, fulfillmentID, kioskCode, result, `{}`); err != nil {
+				msg.Nak()
+				return
+			}
+			continue
+		}
+		hardwareResponses = append(hardwareResponses, response)
+		allocationResponse, _ := json.Marshal(response)
+		success := response.OK == 1 && response.Data.Status == "success"
+		detail := response.Data.Status
+		if !success {
+			failed, failureReason, failureDetail = true, "hardware_failed", fmt.Sprintf("allocation %s status=%q", allocation.AllocationId, response.Data.Status)
+			for _, step := range response.Data.Steps {
+				if !step.Success {
+					failureReason = "hardware_step_" + step.Phase
+					detail = "step " + step.Phase + " failed"
+					break
+				}
+			}
+		}
+		result := &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: success, Detail: detail}
+		results = append(results, result)
+		if err := c.recordHardwareResult(ctx, fulfillmentID, kioskCode, result, string(allocationResponse)); err != nil {
 			msg.Nak()
 			return
 		}
-		msg.Ack()
+	}
+	responseJSON, _ := json.Marshal(hardwareResponses)
+	if failed {
+		c.publishFailureAndAck(ctx, msg, ev, failureReason, failureDetail, results)
 		return
 	}
 
@@ -163,7 +220,7 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		"fulfillment_id", fulfillmentID,
 	)
 	c.writeAudit(fulfillmentID, traceID, "fulfillment.completed", "success")
-	if pubErr := c.publishCompleted(ctx, fulfillmentID, prescriptionID, traceID, true, "dispensed"); pubErr != nil {
+	if pubErr := c.publishCompleted(ctx, fulfillmentID, prescriptionID, kioskCode, traceID, string(responseJSON), results); pubErr != nil {
 		c.log.Error("publish fulfillment.completed failed, will retry",
 			"fulfillment_id", fulfillmentID,
 			"error", pubErr.Error(),
@@ -175,17 +232,29 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 	msg.Ack()
 }
 
-func (c *Consumer) publishCompleted(ctx context.Context, fulfillmentID, prescriptionID, traceID string, success bool, detail string) error {
+func (c *Consumer) recordHardwareResult(ctx context.Context, dispenseID, kioskCode string, result *eventsv1.DispenseAllocationResult, responseJSON string) error {
+	if c.tracker == nil {
+		return nil
+	}
+	if err := c.tracker.RecordHardwareResult(ctx, dispenseID, kioskCode, result, responseJSON); err != nil {
+		c.log.Error("persist hardware result failed", "dispense_id", dispenseID, "allocation_id", result.AllocationId, "error", err.Error())
+		return err
+	}
+	return nil
+}
+
+func (c *Consumer) publishCompleted(ctx context.Context, fulfillmentID, prescriptionID, kioskCode, traceID, hardwareResponse string, results []*eventsv1.DispenseAllocationResult) error {
 	if c.js == nil {
 		return fmt.Errorf("no jetstream context")
 	}
 	completed := &eventsv1.DispenseCompleted{
-		DispenseId:     fulfillmentID,
-		PrescriptionId: prescriptionID,
-		TraceId:        traceID,
-	}
-	if success {
-		completed.CompletedAt = timestamppb.Now()
+		DispenseId:       fulfillmentID,
+		PrescriptionId:   prescriptionID,
+		TraceId:          traceID,
+		KioskCode:        kioskCode,
+		HardwareResponse: hardwareResponse,
+		Results:          results,
+		CompletedAt:      timestamppb.Now(),
 	}
 	payload, err := protojson.Marshal(completed)
 	if err != nil {
@@ -198,10 +267,30 @@ func (c *Consumer) publishCompleted(ctx context.Context, fulfillmentID, prescrip
 	c.log.Info("fulfillment completed published",
 		"fulfillment_id", fulfillmentID,
 		"prescription_id", prescriptionID,
-		"success", success,
+		"success", true,
 		"trace_id", traceID,
 	)
 	return nil
+}
+
+func (c *Consumer) publishFailureAndAck(ctx context.Context, msg jetstream.Msg, ev eventsv1.FulfillmentRequested, reason, detail string, results []*eventsv1.DispenseAllocationResult) {
+	c.writeAudit(ev.FulfillmentId, ev.TraceId, "fulfillment.failed", fmt.Sprintf("reason=%s detail=%s", reason, detail))
+	if c.js == nil {
+		c.log.Error("publish dispense.failed failed, will retry", "dispense_id", ev.FulfillmentId, "error", "no jetstream context")
+		_ = msg.Nak()
+		return
+	}
+	failed := &eventsv1.DispenseFailed{DispenseId: ev.FulfillmentId, PrescriptionId: ev.PrescriptionId, TraceId: ev.TraceId, KioskCode: ev.KioskCode, Reason: reason, Detail: detail, Results: results}
+	payload, err := protojson.Marshal(failed)
+	if err == nil {
+		_, err = c.js.Publish(ctx, natsx.SubjectDispenseFailed, payload)
+	}
+	if err != nil {
+		c.log.Error("publish dispense.failed failed, will retry", "dispense_id", ev.FulfillmentId, "error", err.Error())
+		_ = msg.Nak()
+		return
+	}
+	_ = msg.Ack()
 }
 
 // reject routes a poison message to the DLQ and terminates it.
@@ -221,12 +310,14 @@ func (c *Consumer) reject(ctx context.Context, msg jetstream.Msg, reason string)
 		return
 	}
 
-	if err := c.audit.Write(ctx, audit.Entry{
-		Action: "fulfillment.rejected",
-		Entity: "fulfillment",
-		Detail: map[string]any{"reason": reason, "dlq_subject": dlqSubject},
-	}); err != nil {
-		c.log.Error("audit write failed for rejection", "error", err.Error())
+	if c.audit != nil {
+		if err := c.audit.Write(ctx, audit.Entry{
+			Action: "fulfillment.rejected",
+			Entity: "fulfillment",
+			Detail: map[string]any{"reason": reason, "dlq_subject": dlqSubject},
+		}); err != nil {
+			c.log.Error("audit write failed for rejection", "error", err.Error())
+		}
 	}
 	msg.Term()
 }

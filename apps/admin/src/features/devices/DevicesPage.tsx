@@ -80,7 +80,6 @@ export function DevicesPage() {
 
   async function saveKiosk(e: FormEvent) {
     e.preventDefault(); setFormError(null);
-    if (!kioForm.code.trim()) { setFormError("กรุณากรอกรหัสตู้ยา"); return; }
     if (!kioForm.displayName.trim()) { setFormError("กรุณากรอกชื่อที่แสดง"); return; }
     if (!editingId) {
       if (!kioForm.projectId) { setFormError("กรุณาเลือกโครงการ"); return; }
@@ -98,7 +97,7 @@ export function DevicesPage() {
         }
       } else {
         const res = await kioskClient.createKiosk(create(CreateKioskRequestSchema, {
-          code: kioForm.code.trim(), displayName: kioForm.displayName.trim(), name: kioForm.name.trim(), pin: kioForm.pin, projectId: kioForm.projectId,
+          displayName: kioForm.displayName.trim(), name: kioForm.name.trim(), pin: kioForm.pin, projectId: kioForm.projectId,
         }));
         if (res.kiosk?.pin) { setPinResult(res.kiosk.pin); setEditingId(res.kiosk.id); setSaving(false); await load(); return; }
       }
@@ -160,8 +159,8 @@ export function DevicesPage() {
         {pinBanner}
         <DrawerSection num="01" icon={Icon.cabinet} title="ข้อมูลตู้ยา" refEl={kioRefs[0]}>
           <div className="md-grid2">
-            <Field label="รหัสตู้ยา" required lead={<Icon.hash size={18} />}>
-              <input value={kioForm.code} onChange={(e) => setKio("code", e.target.value)} placeholder="CAB-A01" disabled={!!editingId} />
+            <Field label="รหัสตู้ยา (ระบบกำหนด)" lead={<Icon.hash size={18} />}>
+              <input value={kioForm.code} placeholder={editingId ? "" : "สร้างจากโครงการ เช่น 00010001"} disabled />
             </Field>
             <Field label="ชื่อตู้ยา" lead={<span style={{ fontWeight: 700 }}>T</span>}>
               <input value={kioForm.name} onChange={(e) => setKio("name", e.target.value)} placeholder="ตู้ยาหอผู้ป่วย A" />

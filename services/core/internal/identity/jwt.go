@@ -21,6 +21,7 @@ func (realClock) Now() time.Time { return time.Now() }
 // TokenClaims carries the identity JWT payload.
 type TokenClaims struct {
 	jwt.RegisteredClaims
+	TokenType string   `json:"token_type"`
 	Role      string   `json:"role"`
 	ProjectID string   `json:"project_id"`
 	WardIDs   []string `json:"ward_ids"`
@@ -29,6 +30,7 @@ type TokenClaims struct {
 // KioskTokenClaims carries the kiosk JWT payload.
 type KioskTokenClaims struct {
 	jwt.RegisteredClaims
+	TokenType   string `json:"token_type"`
 	Code        string `json:"code"`
 	DisplayName string `json:"display_name"`
 	ProjectID   string `json:"project_id"`
@@ -72,6 +74,7 @@ func (m *JWTManager) Issue(user *User) (string, time.Time, error) {
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 		},
+		TokenType: "STAFF",
 		Role:      string(user.Role),
 		ProjectID: user.ProjectIDStr(),
 		WardIDs:   user.WardIDs,
@@ -108,7 +111,7 @@ func (m *JWTManager) Parse(tokenString string) (*TokenClaims, error) {
 	}
 
 	claims, ok := token.Claims.(*TokenClaims)
-	if !ok || !token.Valid {
+	if !ok || !token.Valid || claims.TokenType != "STAFF" {
 		return nil, errors.New("invalid token")
 	}
 
@@ -122,10 +125,13 @@ func (m *JWTManager) IssueKiosk(k *Kiosk) (string, time.Time, error) {
 
 	claims := KioskTokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   k.ID,
+			// The immutable business code is the terminal identity. UUID ids are
+			// intentionally excluded from routing and authorization decisions.
+			Subject:   k.Code,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 		},
+		TokenType:   "KIOSK",
 		Code:        k.Code,
 		DisplayName: k.DisplayName,
 		ProjectID:   k.ProjectID,
@@ -162,7 +168,7 @@ func (m *JWTManager) ParseKiosk(tokenString string) (*KioskTokenClaims, error) {
 	}
 
 	claims, ok := token.Claims.(*KioskTokenClaims)
-	if !ok || !token.Valid {
+	if !ok || !token.Valid || claims.TokenType != "KIOSK" || claims.Code == "" || claims.Subject != claims.Code {
 		return nil, errors.New("invalid kiosk token")
 	}
 

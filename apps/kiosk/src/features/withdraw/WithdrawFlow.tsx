@@ -2,11 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError, createClient, type Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { DispensingService, DispenseRequestSchema, GetPrescriptionRequestSchema, ListPrescriptionsRequestSchema, PrescriptionState, type Prescription } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
+import {
+  CancelDispenseRequestSchema,
+  ConfirmDispenseRequestSchema,
+  DispensingService,
+  DispenseTransactionStatus,
+  GetDispenseTransactionRequestSchema,
+  PrepareDispenseRequestSchema,
+  PrescriptionSchema,
+  type DispenseTransaction,
+  type Prescription,
+} from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
 import { IdentityService, CardLoginRequestSchema, type User } from "@medisync/proto/medisync/identity/v1/identity_pb";
 import { InventoryService, ListSlotsRequestSchema, type Slot } from "@medisync/proto/medisync/inventory/v1/inventory_pb";
 import { transport } from "../../transport.ts";
 import { useAuth } from "../../auth.tsx";
+import { parseKioskTesterCommand, subscribeToKioskTester, type KioskTesterCommand } from "../../kiosktesterBridge.ts";
 import ShelfGrid, { getSlotPosition } from "../catalog/ShelfGrid.tsx";
 import DispensingStatusModal from "../dispensing/DispensingStatusModal.tsx";
 import DispenseProcessingOverlay from "../dispensing/DispenseProcessingOverlay.tsx";
@@ -20,25 +31,34 @@ const dispensingClient = createClient(DispensingService, transport);
 const identityClient = createClient(IdentityService, transport);
 const inventoryClient = createClient(InventoryService, transport);
 const ACTIVE_QUEUE_KEY = "medisync.active-withdrawals.v1";
-const ALL_STATES = [PrescriptionState.RECEIVED, PrescriptionState.READY, PrescriptionState.DISPENSING, PrescriptionState.DISPENSED, PrescriptionState.FAILED, PrescriptionState.CANCELLED, PrescriptionState.EXPIRED];
 
-function staffDispensingClient(token: string) {
-  const staffAuth: Interceptor = (next) => (req) => { req.header.set("Authorization", `Bearer ${token}`); return next(req); };
+function staffDispensingClient(token: string, kioskToken: string) {
+  const staffAuth: Interceptor = (next) => (req) => {
+    req.header.set("Authorization", `Bearer ${token}`);
+    req.header.set("X-Kiosk-Authorization", `Bearer ${kioskToken}`);
+    return next(req);
+  };
   return createClient(DispensingService, createConnectTransport({ baseUrl: "/", interceptors: [staffAuth] }));
 }
 function stateStep(state: ScannerState) { return ["awaiting_scan", "validating_sticker", "scan_failed"].includes(state) ? 1 : state === "request_loaded" ? 2 : 3; }
-function prescriptionError(rx: Prescription) {
-  switch (rx.state) {
-    case PrescriptionState.READY: return null;
-    case PrescriptionState.EXPIRED: return "Sticker นี้หมดอายุแล้ว กรุณาติดต่อหอผู้ป่วย";
-    case PrescriptionState.DISPENSED: return "รายการนี้เบิกยาเสร็จแล้ว ไม่สามารถเบิกซ้ำได้";
-    case PrescriptionState.CANCELLED: return "รายการนี้ถูกยกเลิกแล้ว กรุณาติดต่อหอผู้ป่วย";
-    case PrescriptionState.DISPENSING: return "รายการนี้ถูกส่งเข้าคิวแล้ว";
-    case PrescriptionState.FAILED: return "รายการนี้เคยดำเนินการและต้องตรวจสอบผลกับเภสัชกร";
-    default: return "รายการนี้ยังไม่พร้อมเบิกยา";
-  }
+function queueState(tx: DispenseTransaction): QueueState {
+  if (tx.status === DispenseTransactionStatus.DISPENSED) return "completed";
+  if ([DispenseTransactionStatus.FAILED, DispenseTransactionStatus.CANCELLED, DispenseTransactionStatus.EXPIRED].includes(tx.status)) return "failed";
+  if (tx.status === DispenseTransactionStatus.DISPENSING) return "dispensing";
+  if (tx.status === DispenseTransactionStatus.QUEUED) return "queued";
+  return "unknown";
 }
-function queueState(rx: Prescription): QueueState { return rx.state === PrescriptionState.DISPENSED ? "completed" : rx.state === PrescriptionState.FAILED ? "failed" : rx.state === PrescriptionState.DISPENSING ? "dispensing" : "unknown"; }
+function prescriptionFromTransaction(tx: DispenseTransaction): Prescription {
+  return create(PrescriptionSchema, {
+    prescriptionId: tx.prescriptionId,
+    failureReason: tx.failureDetail,
+    items: tx.items.map((item) => ({
+      drugCode: item.drugCode,
+      drugName: item.drugName,
+      quantity: item.requestedQuantity,
+    })),
+  });
+}
 function loadQueueSummaries(): PersistedQueueSummary[] { try { return JSON.parse(localStorage.getItem(ACTIVE_QUEUE_KEY) || "[]") as PersistedQueueSummary[]; } catch { return []; } }
 
 export default function WithdrawFlow() {
@@ -46,6 +66,7 @@ export default function WithdrawFlow() {
   const kiosk = auth!.kiosk;
   const [workflow, setWorkflow] = useState<ScannerState>("awaiting_scan");
   const [prescription, setPrescription] = useState<Prescription | null>(null);
+  const [preparedTransaction, setPreparedTransaction] = useState<DispenseTransaction | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [queue, setQueue] = useState<QueueTransaction[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -75,20 +96,20 @@ export default function WithdrawFlow() {
     };
   }, []);
 
-  useEffect(() => { inventoryClient.listSlots(create(ListSlotsRequestSchema, { cabinetId: "", lowOnly: false })).then((res) => setSlots(res.slots)).catch(() => setMessage("ไม่สามารถโหลดผังช่องยาได้")); }, []);
+  useEffect(() => { inventoryClient.listSlots(create(ListSlotsRequestSchema, { cabinetId: kiosk.code, lowOnly: false })).then((res) => setSlots(res.slots)).catch(() => setMessage("ไม่สามารถโหลดผังช่องยาได้")); }, [kiosk.code]);
 
   const reconcile = useCallback(async (id: string) => {
     try {
-      const res = await dispensingClient.getPrescription(create(GetPrescriptionRequestSchema, { id }));
-      if (!res.prescription) return null;
-      const rx = res.prescription;
+      const res = await dispensingClient.getDispenseTransaction(create(GetDispenseTransactionRequestSchema, { dispenseId: id }));
+      if (!res.transaction) return null;
+      const tx = res.transaction;
       setQueue((items) => {
         const existing = items.find((item) => item.id === id);
         const restored = persistedQueue.current.get(id);
-        const next: QueueTransaction = { id, requestId: rx.prescriptionId, prescription: rx, operator: existing?.operator || restored?.operator || "เจ้าหน้าที่ที่ยืนยันแล้ว", acceptedAt: existing?.acceptedAt || restored?.acceptedAt || Date.now(), state: queueState(rx) };
+        const next: QueueTransaction = { id, requestId: tx.prescriptionId, prescription: existing?.prescription || prescriptionFromTransaction(tx), operator: tx.operatorDisplayName || existing?.operator || restored?.operator || "เจ้าหน้าที่ที่ยืนยันแล้ว", acceptedAt: existing?.acceptedAt || restored?.acceptedAt || Date.now(), state: queueState(tx), message: tx.failureDetail };
         return existing ? items.map((item) => item.id === id ? next : item) : [next, ...items];
       });
-      return rx;
+      return tx;
     } catch {
       setQueue((items) => items.map((item) => item.id === id ? { ...item, reconnecting: true, state: item.state === "unknown" ? "unknown" : item.state } : item));
       return null;
@@ -110,10 +131,27 @@ export default function WithdrawFlow() {
 
   const resetScanner = useCallback((announcement = "") => {
     requestGeneration.current += 1;
-    setWorkflow("awaiting_scan"); setPrescription(null); setMessage(""); setCartOpen(false);
+    setWorkflow("awaiting_scan"); setPrescription(null); setPreparedTransaction(null); setMessage(""); setCartOpen(false);
     scannerBuffer.current = ""; scanLock.current = false; identityLock.current = false; submitLock.current = false;
     if (announcement) { setNotice(announcement); window.setTimeout(() => setNotice(""), 7000); }
   }, []);
+
+  const cancelPrepared = useCallback(async () => {
+    if (!preparedTransaction) {
+      resetScanner();
+      return;
+    }
+    setMessage("กำลังคืนรายการยาที่จองไว้...");
+    try {
+      await dispensingClient.cancelDispense(create(CancelDispenseRequestSchema, {
+        dispenseId: preparedTransaction.dispenseId,
+        reason: "cancelled at kiosk before identity confirmation",
+      }));
+      resetScanner("ยกเลิกรายการและคืนจำนวนยาที่จองไว้แล้ว");
+    } catch {
+      setMessage("ยกเลิกรายการไม่ได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่");
+    }
+  }, [preparedTransaction, resetScanner]);
 
   const validateSticker = useCallback(async (raw: string) => {
     const code = raw.trim(); if (!code || scanLock.current) return;
@@ -121,14 +159,15 @@ export default function WithdrawFlow() {
     const duplicate = queue.find((item) => item.requestId === code || item.id === code);
     if (duplicate) { setWorkflow("scan_failed"); setMessage(`รายการนี้ถูกส่งเข้าคิวแล้ว · สถานะ ${duplicate.state}`); scanLock.current = false; return; }
     try {
-      const res = await dispensingClient.listPrescriptions(create(ListPrescriptionsRequestSchema, { wardId: "", states: ALL_STATES, pageSize: 100 }));
-      const matched = res.prescriptions.find((rx) => rx.prescriptionId === code || rx.id === code);
-      if (!matched) throw new Error("not_found");
-      const invalid = prescriptionError(matched);
-      if (invalid) { setMessage(invalid); setWorkflow("scan_failed"); return; }
-      setPrescription(matched); setWorkflow("request_loaded"); setCartOpen(true);
+      const res = await dispensingClient.prepareDispense(create(PrepareDispenseRequestSchema, { stickerCode: code, traceId: crypto.randomUUID() }));
+      if (!res.prescription || !res.transaction) throw new Error("not_found");
+      setPrescription(res.prescription); setPreparedTransaction(res.transaction); setWorkflow("request_loaded"); setCartOpen(true);
     } catch (error) {
-      setMessage(error instanceof Error && error.message === "not_found" ? "ไม่พบรายการเบิกยาจาก Sticker นี้ กรุณาตรวจสอบแล้วสแกนใหม่" : "ไม่สามารถตรวจสอบ Sticker กับระบบได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่"); setWorkflow("scan_failed");
+      const ce = ConnectError.from(error);
+      if (ce.code === Code.NotFound) setMessage("ไม่พบรายการ READY จาก Sticker นี้ หรือรายการถูกใช้ไปแล้ว");
+      else if (ce.code === Code.FailedPrecondition) setMessage("ยาในตู้นี้ไม่พอหรือรายการยังไม่พร้อม กรุณาติดต่อเภสัชกร");
+      else setMessage("ไม่สามารถตรวจสอบ Sticker กับระบบได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่");
+      setWorkflow("scan_failed");
     } finally { scanLock.current = false; }
   }, [queue]);
 
@@ -142,34 +181,37 @@ export default function WithdrawFlow() {
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
   }, [workflow, validateSticker]);
 
-  const submitAfterIdentity = useCallback(async (token: string, user: User, request: Prescription, generation: number) => {
+  const submitAfterIdentity = useCallback(async (token: string, user: User, request: Prescription, prepared: DispenseTransaction, generation: number) => {
     if (submitLock.current || generation !== requestGeneration.current) return;
     submitLock.current = true; setWorkflow("submitting_to_hardware"); setMessage("");
     try {
-      const res = await staffDispensingClient(token).dispense(create(DispenseRequestSchema, { prescriptionId: request.prescriptionId, traceId: request.id || crypto.randomUUID() }));
-      if (!res.prescription || res.prescription.state !== PrescriptionState.DISPENSING) throw new Error("uncertain");
-      const accepted = res.prescription;
-      setQueue((items) => [{ id: accepted.id, requestId: accepted.prescriptionId, prescription: accepted, operator: user.displayName, acceptedAt: Date.now(), state: "queued" }, ...items.filter((item) => item.id !== accepted.id)]);
-      setActiveTxnId(accepted.id);
-      resetScanner(`ส่งรายการ ${accepted.prescriptionId} เข้าคิวสำเร็จ · ไม่สามารถยกเลิกได้ · สามารถสแกนรายการถัดไปได้`);
+      const res = await staffDispensingClient(token, auth!.token).confirmDispense(create(ConfirmDispenseRequestSchema, { dispenseId: prepared.dispenseId }));
+      if (!res.transaction || res.transaction.status !== DispenseTransactionStatus.QUEUED) throw new Error("uncertain");
+      const accepted = res.transaction;
+      setPreparedTransaction(null);
+      setQueue((items) => [{ id: accepted.dispenseId, requestId: accepted.prescriptionId, prescription: request, operator: accepted.operatorDisplayName || user.displayName, acceptedAt: Date.now(), state: "queued" }, ...items.filter((item) => item.id !== accepted.dispenseId)]);
+      setActiveTxnId(accepted.dispenseId);
+      resetScanner(`ส่งรายการ ${accepted.prescriptionId} เข้าคิวตู้ ${accepted.kioskCode} สำเร็จ · สามารถสแกนรายการถัดไปได้`);
     } catch (error) {
       const ce = ConnectError.from(error);
       if (ce.code === Code.PermissionDenied || ce.code === Code.NotFound) { identityLock.current = false; submitLock.current = false; setWorkflow("unauthorized"); setMessage("ระบบไม่อนุญาตให้เบิกรายการนี้ และไม่ได้ส่งคำสั่งไปยังเครื่อง"); return; }
       setWorkflow("submission_uncertain"); setMessage("ยังยืนยันผลการส่งคำสั่งไม่ได้ ระบบกำลังตรวจสอบรายการเดิม ห้ามสแกนหรือส่งซ้ำ");
-      setQueue((items) => items.some((item) => item.id === request.id) ? items : [{ id: request.id, requestId: request.prescriptionId, prescription: request, operator: user.displayName, acceptedAt: Date.now(), state: "unknown", reconnecting: true }, ...items]);
-      const reconciled = await reconcile(request.id);
-      if (reconciled?.state === PrescriptionState.DISPENSING) {
-        setQueue((items) => items.map((item) => item.id === reconciled.id ? { ...item, operator: user.displayName } : item));
-        setActiveTxnId(reconciled.id);
-        resetScanner(`ตรวจสอบแล้ว: รายการ ${reconciled.prescriptionId} ถูกส่งเข้าคิว · ไม่สามารถยกเลิกได้`);
+      setQueue((items) => items.some((item) => item.id === prepared.dispenseId) ? items : [{ id: prepared.dispenseId, requestId: request.prescriptionId, prescription: request, operator: user.displayName, acceptedAt: Date.now(), state: "unknown", reconnecting: true }, ...items]);
+      const reconciled = await reconcile(prepared.dispenseId);
+      if (reconciled && [DispenseTransactionStatus.QUEUED, DispenseTransactionStatus.DISPENSING].includes(reconciled.status)) {
+        setPreparedTransaction(null);
+        setQueue((items) => items.map((item) => item.id === reconciled.dispenseId ? { ...item, operator: user.displayName } : item));
+        setActiveTxnId(reconciled.dispenseId);
+        resetScanner(`ตรวจสอบแล้ว: รายการ ${reconciled.prescriptionId} ถูกส่งเข้าคิวตู้ ${reconciled.kioskCode}`);
       }
     }
-  }, [reconcile, resetScanner]);
+  }, [auth, reconcile, resetScanner]);
 
   const verifyIdentity = useCallback(async (rawToken: string) => {
     const token = rawToken.trim();
     const request = prescription;
-    if (!token || !request || identityLock.current || submitLock.current) return;
+    const prepared = preparedTransaction;
+    if (!token || !request || !prepared || identityLock.current || submitLock.current) return;
     identityLock.current = true;
     const generation = requestGeneration.current;
     setWorkflow("verifying_identity"); setMessage("");
@@ -178,13 +220,13 @@ export default function WithdrawFlow() {
       if (generation !== requestGeneration.current) return;
       if (!res.user || !res.accessToken || !res.user.active) throw new Error("invalid_identity");
       if (!(res.user.role === 1 || res.user.wardIds.includes(request.wardId))) { identityLock.current = false; setWorkflow("unauthorized"); setMessage("ผู้ใช้นี้ไม่มีสิทธิ์เบิกรายการของหอผู้ป่วยนี้ กรุณาใช้บัตรเจ้าหน้าที่ที่ได้รับอนุญาต"); return; }
-      await submitAfterIdentity(res.accessToken, res.user, request, generation);
+      await submitAfterIdentity(res.accessToken, res.user, request, prepared, generation);
     } catch (error) {
       identityLock.current = false;
       if (generation !== requestGeneration.current || submitLock.current) return;
       setWorkflow("identity_failed"); setMessage("ไม่สามารถอ่านหรือยืนยันบัตรเจ้าหน้าที่ได้ กรุณาลองใหม่");
     }
-  }, [kiosk.projectId, prescription, submitAfterIdentity]);
+  }, [kiosk.projectId, prescription, preparedTransaction, submitAfterIdentity]);
 
   useEffect(() => {
     if (!["awaiting_identity", "identity_failed", "unauthorized"].includes(workflow)) return;
@@ -196,25 +238,35 @@ export default function WithdrawFlow() {
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
   }, [workflow, verifyIdentity]);
 
-  // ── kiosktester integration: receive simulated scans via postMessage ──
-  // The kiosktester console (port 8901) opens this kiosk in a new tab/window
-  // and postMessage {type:"scan_sticker", code:"RX-..."} or
-  // {type:"scan_card", cardToken:"card-pharmacist"} to drive the real UI.
+  // ── kiosktester integration ────────────────────────────────────────
+  // The SSE bridge works for a kiosk opened independently in any tab or
+  // browser. postMessage remains as a compatibility path for older testers.
   useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      const data = event.data;
-      if (!data || typeof data.type !== "string") return;
-      if (data.type === "scan_sticker" && typeof data.code === "string") {
-        void validateSticker(data.code);
-      } else if (data.type === "scan_card" && typeof data.cardToken === "string") {
-        void verifyIdentity(data.cardToken);
-      }
+    const handleCommand = (command: KioskTesterCommand) => {
+      if (command.type === "scan_sticker") void validateSticker(command.code);
+      else void verifyIdentity(command.cardToken);
     };
+    const onMessage = (event: MessageEvent) => {
+      const command = parseKioskTesterCommand(event.data, kiosk.code);
+      if (command) handleCommand(command);
+    };
+    const disconnectTester = subscribeToKioskTester(kiosk.code, handleCommand);
     window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [validateSticker, verifyIdentity]);
+    return () => {
+      disconnectTester();
+      window.removeEventListener("message", onMessage);
+    };
+  }, [kiosk.code, validateSticker, verifyIdentity]);
 
   const requestedSlotIds = useMemo(() => { if (!prescription) return []; const codes = new Set(prescription.items.map((item) => item.drugCode)); return slots.filter((slot) => codes.has(slot.drugCode)).map((slot) => slot.id); }, [prescription, slots]);
+  // Keep terminal transactions in memory long enough for the completion
+  // overlay and duplicate-scan protection, but never count them as a live
+  // machine queue. Unknown/reconnecting entries are surfaced as attention,
+  // not as a confirmed queue position.
+  const machineQueue = useMemo(
+    () => queue.filter((item) => item.state === "queued" || item.state === "dispensing"),
+    [queue],
+  );
   const attentionCount = queue.filter((item) => item.state === "failed" || item.reconnecting).length;
   const step = stateStep(workflow);
 
@@ -225,15 +277,15 @@ export default function WithdrawFlow() {
       <section className="medical-header__brand" aria-label={`${kiosk.displayName} ${kiosk.code}`}><strong>ADM</strong><span>AUTOMATED DISPENSING MACHINE</span><b title={kiosk.displayName}>{kiosk.displayName}</b><small>{kiosk.code}</small></section>
       <section className="medical-header__card connection-card" aria-label="เครือข่าย วันและเวลา"><div className={`medical-header__network ${online ? "is-online" : "is-offline"}`}><span className="network-icon" aria-hidden="true"><StatusIcon name={online ? "network" : "offline"}/></span><div><strong>{online ? "ONLINE" : "OFFLINE"}</strong><small>{online ? "Connected" : "Disconnected"}</small></div></div><time dateTime={now.toISOString()}><strong>{now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</strong><span>{now.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}</span></time></section>
     </header>
-    <section className="cabinet-stage" aria-label="ผังตู้ยาสำหรับอ้างอิงตำแหน่งจริง"><header><div><strong>ผังตู้ยา</strong><span>อ้างอิงตำแหน่งยาจากตู้จริง · {kiosk.code}</span></div><span className={attentionCount ? "cabinet-stage__attention" : "cabinet-stage__ready"}><StatusIcon name={attentionCount ? "warning" : "check"}/>{attentionCount ? `ต้องตรวจสอบ ${attentionCount} คิว` : "พร้อมใช้งาน"}</span>{queue.length > 0 && <button type="button" className="cabinet-stage__queue-btn" onClick={() => setStatusOpen(true)}>📋 สถานะคิว ({queue.length})</button>}</header>{notice && <div className="queue-toast" role="status"><StatusIcon name="check"/>{notice}</div>}<ShelfGrid slots={slots} variant="overview" requestedSlotIds={requestedSlotIds}/>{prescription && <div className="request-location-banner" role="status"><strong>{prescription.prescriptionId}</strong><span>{prescription.items.length} รายการยา · ตำแหน่งที่ Sticker ร้องขอแสดงด้วยเครื่องหมาย ★</span></div>}</section>
+    <section className="cabinet-stage" aria-label="ผังตู้ยาสำหรับอ้างอิงตำแหน่งจริง"><header><div><strong>ผังตู้ยา</strong><span>อ้างอิงตำแหน่งยาจากตู้จริง · {kiosk.code}</span></div><span className={attentionCount ? "cabinet-stage__attention" : "cabinet-stage__ready"}><StatusIcon name={attentionCount ? "warning" : "check"}/>{attentionCount ? `ต้องตรวจสอบ ${attentionCount} คิว` : "พร้อมใช้งาน"}</span>{machineQueue.length > 0 && <button type="button" className="cabinet-stage__queue-btn" onClick={() => setStatusOpen(true)}>📋 สถานะคิว ({machineQueue.length})</button>}</header>{notice && <div className="queue-toast" role="status"><StatusIcon name="check"/>{notice}</div>}<ShelfGrid slots={slots} kioskCode={kiosk.code} variant="overview" requestedSlotIds={requestedSlotIds}/>{prescription && <div className="request-location-banner" role="status"><strong>{prescription.prescriptionId}</strong><span>{prescription.items.length} รายการยา · ตำแหน่งที่ Sticker ร้องขอแสดงด้วยเครื่องหมาย ★</span></div>}</section>
     <section className="withdraw-dock"><section className="withdraw-context">
       {["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) ? <div className="sticker-scanner" aria-live="polite"><span className="step-number">1</span><div><h1><span>SCAN QR LABEL</span>สแกน Sticker เบิกยา</h1><p>นำ Sticker เบิกยาไว้เหนือเครื่องสแกน</p></div><div className="sticker-scanner__frame">{workflow === "validating_sticker" ? <><span className="spinner"/><strong>กำลังตรวจสอบ Sticker กับระบบ...</strong></> : <><DecorativeQr/><strong>วาง Sticker ที่จุดสแกน</strong><small>ระบบจะอ่านข้อมูลอัตโนมัติ</small><span className="scanner-ready-pill"><StatusIcon name="check"/>เครื่องสแกนพร้อมใช้งาน</span></>}</div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}</div>
       : <div className="request-review request-review--compact"><header><div><span>รายการเบิกยาที่ตรวจสอบแล้ว</span><strong>{prescription?.prescriptionId}</strong></div><span className="status-badge status-badge--success">✓ Backend ยืนยันรายการ</span></header><div className="patient-context"><span>ผู้ป่วยที่กำลังทำรายการ</span><strong>{prescription?.patientName}</strong><b>HN {prescription?.hn}</b><small>หอผู้ป่วย {prescription?.wardId}</small></div><div className="cart-ready-summary"><div><strong>{prescription?.items.length || 0} รายการยา</strong><span>เปิดตะกร้าเพื่อตรวจสอบตำแหน่ง จำนวน และความพร้อมก่อนยืนยันตัวตน</span></div><button type="button" onClick={() => setCartOpen(true)}>เปิดตะกร้ารายการยา</button></div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}{workflow === "submission_uncertain" && <button type="button" className="reconcile-button" onClick={() => prescription && void reconcile(prescription.id)}>ตรวจสอบสถานะอีกครั้ง</button>}</div>}
-    </section><div className="dock-steps"><header className="identity-step-heading"><span className="step-number">2</span><div><strong>ขั้นตอนการเบิกยา</strong><span>สแกนและทำตามลำดับ</span></div></header><ol className="withdraw-steps withdraw-steps--compact" aria-label={`ขั้นตอนที่ ${step} จาก 3`}>{["สแกน Sticker", "ตรวจสอบรายการ", "ยืนยันตัวตน"].map((label, index) => <li key={label} className={index + 1 === step ? "is-current" : index + 1 < step ? "is-done" : ""}><b>{index + 1}</b><span>{label}</span></li>)}</ol></div>
+    </section><div className="dock-steps"><header className="identity-step-heading"><span className="step-number !text-white" style={{ fontSize: "x-large" }}>2</span><div><strong>ขั้นตอนการเบิกยา</strong><span>สแกนและทำตามลำดับ</span></div></header><ol className="withdraw-steps withdraw-steps--compact" aria-label={`ขั้นตอนที่ ${step} จาก 3`}>{["สแกน Sticker", "ตรวจสอบรายการ", "ยืนยันตัวตน"].map((label, index) => <li key={label} className={index + 1 === step ? "is-current" : index + 1 < step ? "is-done" : ""}><b>{index + 1}</b><span>{label}</span></li>)}</ol></div>
     <footer className="withdraw-footer"><section className="footer-system-status" aria-label="สถานะความพร้อมของเครื่อง"><span className="queue-safety-card__icon" aria-hidden="true"><StatusIcon name="check"/></span><span><b>ระบบพร้อมทำงาน</b><small>HARDWARE STATUS</small></span></section><small className="footer-hardware-meta">Hardware พร้อม · APP v0.1.0 · {kiosk.code}</small>
     <section className={`withdraw-actionbar${["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) ? " withdraw-actionbar--ready" : ""}`}>
-      {workflow === "request_loaded" && <><div><strong>ตะกร้ายา {prescription?.items.length || 0} รายการพร้อมตรวจสอบ</strong><span className="immediate-warning">ตรวจตำแหน่งและจำนวนยา ก่อนสแกนบัตรยืนยันเพื่อเข้าคิวจ่ายยา</span></div><div className="action-group"><button type="button" className="secondary" onClick={() => resetScanner()}>ยกเลิกรายการ</button><button type="button" onClick={() => setCartOpen(true)}>เปิดตะกร้ายา</button></div></>}
-      {["awaiting_identity", "identity_failed", "unauthorized", "verifying_identity"].includes(workflow) && <IdentityScanner busy={workflow === "verifying_identity"} onScan={verifyIdentity} onCancel={() => resetScanner()}/>}
+      {workflow === "request_loaded" && <><div><strong>ตะกร้ายา {prescription?.items.length || 0} รายการพร้อมตรวจสอบ</strong><span className="immediate-warning">ตู้ {kiosk.code} จองยาไว้แล้ว ตรวจสอบก่อนสแกนบัตรยืนยัน</span></div><div className="action-group"><button type="button" className="secondary" onClick={() => void cancelPrepared()}>ยกเลิกรายการ</button><button type="button" onClick={() => setCartOpen(true)}>เปิดตะกร้ายา</button></div></>}
+      {["awaiting_identity", "identity_failed", "unauthorized", "verifying_identity"].includes(workflow) && <IdentityScanner busy={workflow === "verifying_identity"} onScan={verifyIdentity} onCancel={() => void cancelPrepared()}/>}
       {["submitting_to_hardware", "submission_uncertain"].includes(workflow) && <><div><strong>{workflow === "submission_uncertain" ? "กำลังตรวจสอบผลการส่งคำสั่ง" : "กำลังส่งคำสั่งเข้าคิวเครื่อง"}</strong><span>รายการถูกล็อกแล้ว ห้ามสแกนซ้ำหรือปิดหน้าจอ</span></div><span className="spinner"/></>}
       {["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) && <><div><strong>{workflow === "validating_sticker" ? "กำลังตรวจสอบรายการ" : "พร้อมสแกนรายการถัดไป"}</strong>{workflow === "validating_sticker" && <span>กำลังอ่านข้อมูลจาก Sticker</span>}</div>{workflow === "scan_failed" && <button type="button" onClick={() => resetScanner()}>สแกนใหม่</button>}</>}
     </section></footer></section>
@@ -248,7 +300,7 @@ export default function WithdrawFlow() {
     )}
     {statusOpen && (
       <DispensingStatusModal
-        queue={queue}
+        queue={machineQueue}
         now={now}
         onClose={() => setStatusOpen(false)}
       />

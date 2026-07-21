@@ -89,7 +89,7 @@ export function ProjectsPage() {
         }));
       } else {
         await projectClient.createProject(create(CreateProjectRequestSchema, {
-          name: form.name.trim(), slug: form.slug.trim() || undefined, code: form.code.trim() || undefined,
+          name: form.name.trim(), slug: form.slug.trim() || undefined,
         }));
       }
       setDrawerOpen(false); await load();
@@ -147,8 +147,8 @@ export function ProjectsPage() {
 
         <DrawerSection num="01" icon={Icon.folder} title="ข้อมูลโครงการ" refEl={sectionRefs[0]}>
           <div className="md-grid2">
-            <Field label="รหัสโครงการ" lead={<Icon.hash size={18} />}>
-              <input value={form.code} onChange={(e) => setField("code", e.target.value)} placeholder="CHULA-A" disabled={!!editingId} />
+            <Field label="รหัสโครงการ (ระบบกำหนด)" lead={<Icon.hash size={18} />}>
+              <input value={form.code} placeholder={editingId ? "" : "สร้างอัตโนมัติ เช่น 0001"} disabled />
             </Field>
             <Field label="ชื่อโครงการ" required lead={<span style={{ fontWeight: 700 }}>T</span>}>
               <input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="Chula Ward A" />

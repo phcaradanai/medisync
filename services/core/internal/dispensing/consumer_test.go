@@ -12,6 +12,7 @@ func validEvent() *eventsv1.PrescriptionCreated {
 	return &eventsv1.PrescriptionCreated{
 		PrescriptionId: "RX-1",
 		SourceSystem:   "mock-his",
+		ProjectCode:    "0001",
 		Hn:             "HN000001",
 		WardId:         "WARD-3A",
 		Items: []*eventsv1.PrescriptionItem{
@@ -33,6 +34,8 @@ func TestValidateRejects(t *testing.T) {
 	}{
 		{"missing prescription_id", func(ev *eventsv1.PrescriptionCreated) { ev.PrescriptionId = "" }},
 		{"missing source_system", func(ev *eventsv1.PrescriptionCreated) { ev.SourceSystem = "" }},
+		{"missing project_code", func(ev *eventsv1.PrescriptionCreated) { ev.ProjectCode = "" }},
+		{"zero project_code", func(ev *eventsv1.PrescriptionCreated) { ev.ProjectCode = "0000" }},
 		{"no items", func(ev *eventsv1.PrescriptionCreated) { ev.Items = nil }},
 		{"item missing drug_code", func(ev *eventsv1.PrescriptionCreated) { ev.Items[0].DrugCode = "" }},
 		{"zero quantity", func(ev *eventsv1.PrescriptionCreated) { ev.Items[0].Quantity = 0 }},

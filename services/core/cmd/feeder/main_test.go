@@ -18,6 +18,9 @@ func TestSampleHasRequiredFields(t *testing.T) {
 	if ev.GetSourceSystem() == "" {
 		t.Error("source_system must not be empty")
 	}
+	if ev.GetProjectCode() != "0001" {
+		t.Errorf("project_code = %q, want 0001", ev.GetProjectCode())
+	}
 	if len(ev.GetItems()) == 0 {
 		t.Error("items must not be empty")
 	}

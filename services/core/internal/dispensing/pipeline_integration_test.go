@@ -31,12 +31,50 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 	pool := integrationPool(t)
 	store := NewStore(pool)
 	prescriptionID := uniqueID(t, "RX-PIPE")
-	dispenseID := uniqueID(t, "DISP-PIPE")
 	drugCode := uniqueID(t, "DRUG")
-	cabinetID := uniqueID(t, "CAB")
 	slotCode := uniqueID(t, "SLOT")
-	seedPipelinePrescription(t, ctx, pool, store, prescriptionID, drugCode)
-	seedPipelineSlot(t, ctx, pool, cabinetID, slotCode, drugCode)
+	var projectID string
+	if err := pool.QueryRow(ctx, `SELECT id FROM medisync.projects WHERE code='0001'`).Scan(&projectID); err != nil {
+		t.Fatalf("load project 0001: %v", err)
+	}
+	kioskCode := seedPipelineKiosk(t, ctx, pool, projectID)
+	operatorID := seedPipelineOperator(t, ctx, pool, projectID)
+	pr := seedPipelinePrescription(t, ctx, pool, store, prescriptionID, drugCode, projectID)
+	seedPipelineSlot(t, ctx, pool, kioskCode, slotCode, drugCode, projectID)
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin prepare: %v", err)
+	}
+	record, err := store.PrepareTransaction(ctx, tx, pr, kioskCode, projectID, "trace-pipeline")
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		t.Fatalf("prepare transaction: %v", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("commit prepare: %v", err)
+	}
+	dispenseID := record.ID
+	requested := transactionRequestedEvent(record)
+	payload, err := protojson.Marshal(requested)
+	if err != nil {
+		t.Fatalf("marshal dispense.requested: %v", err)
+	}
+	tx, err = pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin queue: %v", err)
+	}
+	if err := store.QueueTransaction(ctx, tx, record, operatorID, "Pipeline Pharmacist", payload); err != nil {
+		_ = tx.Rollback(ctx)
+		t.Fatalf("queue transaction: %v", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("commit queue: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.outbox WHERE created_by=$1`, operatorID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.dispense_transaction WHERE id=$1`, dispenseID)
+	})
 
 	js, nc := startEmbeddedJetStream(t, ctx)
 	events := subscribeToPipelineEvents(t, nc)
@@ -82,7 +120,7 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 	}
 	defer stopCompletion()
 
-	fulfillmentConsumer := vending.NewConsumer(js, vending.NewClient(vendingURL, "pipeline-token"), nil, logger)
+	fulfillmentConsumer := vending.NewRoutedConsumer(js, pipelineRouter{client: vending.NewClient(vendingURL, "pipeline-token")}, store, nil, logger)
 	stopFulfillment, err := fulfillmentConsumer.Start(ctx)
 	if err != nil {
 		t.Fatalf("start fulfillment consumer: %v", err)
@@ -96,17 +134,6 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 	}
 	defer stopDispense()
 
-	requested := &eventsv1.DispenseRequested{
-		DispenseId:     dispenseID,
-		PrescriptionId: prescriptionID,
-		SlotCode:       slotCode,
-		Quantity:       2,
-		TraceId:        "trace-pipeline",
-	}
-	payload, err := protojson.Marshal(requested)
-	if err != nil {
-		t.Fatalf("marshal dispense.requested: %v", err)
-	}
 	if _, err := js.Publish(ctx, natsx.SubjectDispenseRequested, payload); err != nil {
 		t.Fatalf("publish dispense.requested: %v", err)
 	}
@@ -117,11 +144,12 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 
 	select {
 	case request := <-dispenseRequests:
-		if request.Prescription != prescriptionID {
-			t.Errorf("vending prescription = %q, want %q", request.Prescription, prescriptionID)
+		wantRequestID := prescriptionID + ":" + record.Items[0].Allocations[0].ID
+		if request.Prescription != wantRequestID {
+			t.Errorf("vending prescription = %q, want %q", request.Prescription, wantRequestID)
 		}
-		if len(request.Items) != 1 || request.Items[0].Quantity != 1 {
-			t.Errorf("vending items = %+v, want one item with quantity 1", request.Items)
+		if len(request.Items) != 1 || request.Items[0].Quantity != 2 {
+			t.Errorf("vending items = %+v, want one item with quantity 2", request.Items)
 		}
 	case <-ctx.Done():
 		t.Fatal("vending agent did not receive a dispense request")
@@ -137,7 +165,7 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 	}
 	if err := pool.QueryRow(ctx,
 		`SELECT quantity FROM medisync.slot WHERE cabinet_id = $1 AND code = $2`,
-		cabinetID, slotCode,
+		kioskCode, slotCode,
 	).Scan(&quantity); err != nil {
 		t.Fatalf("read slot quantity: %v", err)
 	}
@@ -147,7 +175,119 @@ func TestDispensingToVendingPipeline(t *testing.T) {
 	if quantity != 8 {
 		t.Errorf("slot quantity = %d, want 8", quantity)
 	}
+	var txStatus string
+	var hardwareSuccess bool
+	var reserved int
+	if err := pool.QueryRow(ctx,
+		`SELECT d.status, a.hardware_success, s.reserved_quantity
+		   FROM medisync.dispense_transaction d
+		   JOIN medisync.dispense_allocation a ON a.dispense_id=d.id
+		   JOIN medisync.slot s ON s.id=a.slot_id
+		  WHERE d.id=$1`, dispenseID).Scan(&txStatus, &hardwareSuccess, &reserved); err != nil {
+		t.Fatalf("read transaction tracking: %v", err)
+	}
+	if txStatus != "DISPENSED" || !hardwareSuccess || reserved != 0 {
+		t.Errorf("transaction status=%s hardware_success=%v reserved=%d", txStatus, hardwareSuccess, reserved)
+	}
+
+	slotID := record.Items[0].Allocations[0].SlotID
+	history, _, historyTotal, err := store.ListTransactions(ctx, TransactionFilter{
+		ProjectID: projectID, KioskCode: kioskCode, SlotID: slotID, DrugCode: drugCode, PageSize: 7,
+	})
+	if err != nil {
+		t.Fatalf("list slot drug history: %v", err)
+	}
+	if historyTotal != 1 || len(history) != 1 || history[0].ID != dispenseID {
+		t.Errorf("slot drug history total=%d records=%v, want dispense %s", historyTotal, history, dispenseID)
+	}
+	wrongDrugHistory, _, wrongDrugTotal, err := store.ListTransactions(ctx, TransactionFilter{
+		ProjectID: projectID, KioskCode: kioskCode, SlotID: slotID, DrugCode: "NOT-THIS-DRUG", PageSize: 7,
+	})
+	if err != nil {
+		t.Fatalf("list mismatched slot drug history: %v", err)
+	}
+	if wrongDrugTotal != 0 || len(wrongDrugHistory) != 0 {
+		t.Errorf("mismatched slot drug history total=%d records=%v, want empty", wrongDrugTotal, wrongDrugHistory)
+	}
 }
+
+func TestListTransactionsFiltersExactKioskSlotAndDrug(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pool := integrationPool(t)
+	store := NewStore(pool)
+	var projectID string
+	if err := pool.QueryRow(ctx, `SELECT id FROM medisync.projects WHERE code='0001'`).Scan(&projectID); err != nil {
+		t.Fatalf("load project 0001: %v", err)
+	}
+	kioskCode := seedPipelineKiosk(t, ctx, pool, projectID)
+	prescriptionID := uniqueID(t, "RX-HISTORY")
+	drugCode := uniqueID(t, "DRUG-HISTORY")
+	slotCode := uniqueID(t, "SLOT-HISTORY")
+	prescription := seedPipelinePrescription(t, ctx, pool, store, prescriptionID, drugCode, projectID)
+	seedPipelineSlot(t, ctx, pool, kioskCode, slotCode, drugCode, projectID)
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin prepare history transaction: %v", err)
+	}
+	record, err := store.PrepareTransaction(ctx, tx, prescription, kioskCode, projectID, uniqueID(t, "trace-history"))
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		t.Fatalf("prepare history transaction: %v", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("commit history transaction: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.dispense_transaction WHERE id=$1`, record.ID)
+	})
+
+	slotID := record.Items[0].Allocations[0].SlotID
+	cabinetHistory, _, cabinetTotal, err := store.ListTransactions(ctx, TransactionFilter{
+		ProjectID: projectID, KioskCode: kioskCode, DrugCode: drugCode, PageSize: 7,
+	})
+	if err != nil {
+		t.Fatalf("list kiosk drug history: %v", err)
+	}
+	if cabinetTotal != 1 || len(cabinetHistory) != 1 || cabinetHistory[0].ID != record.ID {
+		t.Fatalf("kiosk drug history total=%d records=%v, want transaction %s", cabinetTotal, cabinetHistory, record.ID)
+	}
+	otherKioskHistory, _, otherKioskTotal, err := store.ListTransactions(ctx, TransactionFilter{
+		ProjectID: projectID, KioskCode: "99999999", DrugCode: drugCode, PageSize: 7,
+	})
+	if err != nil {
+		t.Fatalf("list other kiosk drug history: %v", err)
+	}
+	if otherKioskTotal != 0 || len(otherKioskHistory) != 0 {
+		t.Fatalf("other kiosk history total=%d records=%v, want empty", otherKioskTotal, otherKioskHistory)
+	}
+
+	history, _, total, err := store.ListTransactions(ctx, TransactionFilter{
+		ProjectID: projectID, KioskCode: kioskCode, SlotID: slotID, DrugCode: drugCode, PageSize: 7,
+	})
+	if err != nil {
+		t.Fatalf("list exact slot drug history: %v", err)
+	}
+	if total != 1 || len(history) != 1 || history[0].ID != record.ID {
+		t.Fatalf("exact history total=%d records=%v, want transaction %s", total, history, record.ID)
+	}
+
+	mismatch, _, mismatchTotal, err := store.ListTransactions(ctx, TransactionFilter{
+		ProjectID: projectID, KioskCode: kioskCode, SlotID: slotID, DrugCode: "NOT-THIS-DRUG", PageSize: 7,
+	})
+	if err != nil {
+		t.Fatalf("list mismatched slot drug history: %v", err)
+	}
+	if mismatchTotal != 0 || len(mismatch) != 0 {
+		t.Fatalf("mismatched history total=%d records=%v, want empty", mismatchTotal, mismatch)
+	}
+}
+
+type pipelineRouter struct{ client vending.Client }
+
+func (r pipelineRouter) ClientFor(string) (vending.Client, error) { return r.client, nil }
 
 func seedPipelinePrescription(
 	t *testing.T,
@@ -156,11 +296,13 @@ func seedPipelinePrescription(
 	store *Store,
 	prescriptionID string,
 	drugCode string,
-) {
+	projectID string,
+) *PrescriptionRow {
 	t.Helper()
 	inserted, err := store.Insert(ctx, Prescription{
 		PrescriptionID: prescriptionID,
 		SourceSystem:   "pipeline-test",
+		ProjectID:      projectID,
 		HN:             "HN-PIPELINE",
 		PatientName:    "Pipeline Test",
 		WardID:         "WARD-PIPELINE",
@@ -171,43 +313,81 @@ func seedPipelinePrescription(
 	if err != nil || !inserted {
 		t.Fatalf("seed prescription: inserted=%v err=%v", inserted, err)
 	}
-	if _, err := pool.Exec(ctx,
-		`UPDATE medisync.prescription SET state = 'DISPENSING' WHERE prescription_id = $1`,
-		prescriptionID,
-	); err != nil {
-		t.Fatalf("set prescription DISPENSING: %v", err)
-	}
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(),
 			`DELETE FROM medisync.prescription WHERE prescription_id = $1 AND source_system = 'pipeline-test'`,
 			prescriptionID,
 		)
 	})
+	row, err := store.GetByPrescriptionID(ctx, prescriptionID, "pipeline-test")
+	if err != nil || row == nil {
+		t.Fatalf("load seeded prescription: row=%v err=%v", row, err)
+	}
+	return row
 }
 
 func seedPipelineSlot(
 	t *testing.T,
 	ctx context.Context,
 	pool *pgxpool.Pool,
-	cabinetID string,
+	kioskCode string,
 	slotCode string,
 	drugCode string,
+	projectID string,
 ) {
 	t.Helper()
 	if _, err := pool.Exec(ctx,
 		`INSERT INTO medisync.slot
-		   (cabinet_id, code, drug_id, drug_code, drug_name, capacity, quantity, low_threshold, project_id)
-		 VALUES ($1, $2, $3, $3, 'Pipeline Drug', 20, 10, 2, '00000000-0000-0000-0000-000000000001')`,
-		cabinetID, slotCode, drugCode,
+		   (cabinet_id, code, drug_id, drug_code, drug_name, capacity, quantity, low_threshold,
+		    project_id, door_no, hardware_layer, channel_start, channel_end)
+		 VALUES ($1, $2, $3, $3, 'Pipeline Drug', 20, 10, 2, $4, 1, 2, 3, 3)`,
+		kioskCode, slotCode, drugCode, projectID,
 	); err != nil {
 		t.Fatalf("seed inventory slot: %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		`INSERT INTO medisync.slot_batch (slot_id,lot_number,expiry_date,quantity)
+		 SELECT id,'PIPELINE-LOT',now()+interval '1 year',quantity
+		   FROM medisync.slot WHERE cabinet_id=$1 AND code=$2`, kioskCode, slotCode); err != nil {
+		t.Fatalf("seed inventory batch: %v", err)
 	}
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(),
 			`DELETE FROM medisync.slot WHERE cabinet_id = $1 AND code = $2`,
-			cabinetID, slotCode,
+			kioskCode, slotCode,
 		)
 	})
+}
+
+func seedPipelineKiosk(t *testing.T, ctx context.Context, pool *pgxpool.Pool, projectID string) string {
+	t.Helper()
+	var code string
+	displayName := uniqueID(t, "Pipeline Kiosk")
+	if err := pool.QueryRow(ctx,
+		`INSERT INTO medisync.kiosks (display_name,pin_hash,active,project_id)
+		 VALUES ($1,'integration-only',true,$2) RETURNING code`, displayName, projectID).Scan(&code); err != nil {
+		t.Fatalf("seed kiosk: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.kiosks WHERE code=$1`, code)
+	})
+	return code
+}
+
+func seedPipelineOperator(t *testing.T, ctx context.Context, pool *pgxpool.Pool, projectID string) string {
+	t.Helper()
+	var id string
+	username := uniqueID(t, "pipeline-user")
+	if err := pool.QueryRow(ctx,
+		`INSERT INTO medisync.users (username,password_hash,display_name,role,ward_ids,project_id,active)
+		 VALUES ($1,'integration-only','Pipeline Pharmacist','PHARMACIST','{WARD-PIPELINE}',$2,true)
+		 RETURNING id`, username, projectID).Scan(&id); err != nil {
+		t.Fatalf("seed operator: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM medisync.users WHERE id=$1`, id)
+	})
+	return id
 }
 
 func startEmbeddedJetStream(t *testing.T, ctx context.Context) (jetstream.JetStream, *nats.Conn) {

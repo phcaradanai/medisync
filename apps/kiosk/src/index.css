@@ -3118,7 +3118,7 @@ body:has(.withdraw-workflow--cabinet),
   z-index: 50;
   display: grid;
   place-items: center;
-  padding: var(--space-2xl);
+  padding: 8px;
   background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(3px);
   animation: slot-detail-fade 160ms ease;
@@ -3133,12 +3133,12 @@ body:has(.withdraw-workflow--cabinet),
 .slot-detail {
   position: relative;
   display: flex;
-  width: min(100%, 1180px);
-  max-height: calc(100dvh - 2rem);
+  width: min(100%, 1240px);
+  height: min(960px, calc(100dvh - 16px));
   flex-direction: column;
-  gap: var(--space-xl);
-  overflow-y: auto;
-  padding: var(--space-2xl) var(--space-3xl) var(--space-3xl);
+  gap: 12px;
+  overflow: hidden;
+  padding: 20px 28px;
   border-radius: var(--radius-lg);
   background: var(--neutral-surface);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
@@ -3800,9 +3800,338 @@ body:has(.withdraw-workflow--cabinet),
   font: 800 1.35rem / 1 var(--font-family);
 }
 
+/* Compact the existing channel summary to leave a fixed, readable history
+   area at the bottom of the full-height popup. */
+.slot-detail__header {
+  gap: var(--space-lg);
+}
+
+.slot-detail__thumb {
+  width: 72px;
+  height: 72px;
+}
+
+.slot-detail__thumb-capsule {
+  width: 52px;
+}
+
+.slot-detail__identity {
+  gap: 6px;
+}
+
+.slot-detail__name {
+  font-size: 1.55rem;
+}
+
+.slot-detail__status {
+  padding: 8px 14px;
+}
+
+.slot-detail__stats {
+  gap: var(--space-lg);
+}
+
+.slot-detail__count-value {
+  font-size: 2.25rem;
+}
+
+.slot-channel {
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.slot-channel__rail {
+  min-height: 74px;
+}
+
+.slot-lot {
+  padding: 5px 5px 4px;
+}
+
+.slot-piece {
+  gap: 10px 20px;
+  padding: 8px 12px;
+}
+
+.slot-piece__seq strong {
+  font-size: 1.2rem;
+}
+
+.slot-piece__grid {
+  gap: 10px 20px;
+}
+
+.slot-piece__ico {
+  width: 28px;
+  height: 28px;
+}
+
+.slot-piece__field dd {
+  font-size: 0.92rem;
+}
+
+.slot-piece__fefo {
+  padding: 6px 12px;
+}
+
+.slot-channel__ruler {
+  height: 18px;
+}
+
+.slot-related__head {
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+.slot-related__nav {
+  width: 38px;
+}
+
+.slot-related__card {
+  min-width: 210px;
+  padding: 7px 12px;
+}
+
+.slot-related__card-visual {
+  width: 38px;
+  height: 38px;
+}
+
+.slot-related__capsule {
+  width: 28px;
+}
+
+/* Exact kiosk + slot + drug transaction history. */
+.slot-history {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  border: 1px solid #dbe4f0;
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.slot-history__head {
+  display: grid;
+  min-height: 48px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  border-bottom: 1px solid #e5ebf3;
+  background: #f7f9fc;
+}
+
+.slot-history__heading-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: #e7efff;
+  color: #275fc8;
+}
+
+.slot-history__heading-icon svg {
+  width: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.slot-history__head h3 {
+  margin: 0;
+  color: var(--neutral-deep);
+  font: 750 1rem / 1.2 var(--font-family);
+}
+
+.slot-history__head div > span {
+  color: var(--neutral-text-muted);
+  font: 600 0.76rem / 1.25 var(--font-family);
+}
+
+.slot-history__head > strong {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #5b6b82;
+  font: 700 0.76rem / 1 var(--font-family);
+}
+
+.slot-history__list {
+  height: calc(100% - 48px);
+  overflow: hidden;
+}
+
+.slot-history__row {
+  display: grid;
+  min-height: 41px;
+  grid-template-columns: 34px 92px minmax(190px, 1fr) minmax(120px, 0.65fr) 70px 86px;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.slot-history__row:last-child {
+  border-bottom: 0;
+}
+
+.slot-history__status-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.slot-history__status-icon svg {
+  width: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.7;
+}
+
+.slot-history__status-icon--success {
+  background: #def7e7;
+  color: #148044;
+}
+
+.slot-history__status-icon--fail {
+  background: #fde6e9;
+  color: #c4314b;
+}
+
+.slot-history__row time,
+.slot-history__transaction,
+.slot-history__lot {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.slot-history__row time strong,
+.slot-history__transaction strong,
+.slot-history__lot strong {
+  overflow: hidden;
+  color: #26364d;
+  font: 700 0.82rem / 1.15 var(--font-family);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-history__row time span,
+.slot-history__transaction span,
+.slot-history__lot span {
+  overflow: hidden;
+  color: #78869a;
+  font: 600 0.7rem / 1.15 var(--font-family);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-history__lot strong {
+  font-family: var(--font-mono);
+}
+
+.slot-history__quantity {
+  color: #26364d;
+  font: 750 0.82rem / 1 var(--font-family);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.slot-history__status-label {
+  justify-self: end;
+  font: 700 0.75rem / 1 var(--font-family);
+}
+
+.slot-history__status-label--success {
+  color: #148044;
+}
+
+.slot-history__status-label--fail {
+  color: #c4314b;
+}
+
+.slot-history__state {
+  display: flex;
+  height: 100%;
+  min-height: 90px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #718096;
+  font: 600 0.9rem / 1.35 var(--font-family);
+}
+
+.slot-history__state--error {
+  color: #9e2940;
+}
+
+.slot-history__empty-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf1f6;
+  color: #7b8797;
+  font-weight: 800;
+}
+
+.slot-history__row--skeleton {
+  grid-template-columns: 30px 84px minmax(170px, 1fr) 120px;
+}
+
+.slot-history__row--skeleton span {
+  height: 17px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #edf1f6 25%, #f7f9fc 50%, #edf1f6 75%);
+  background-size: 200% 100%;
+  animation: slot-history-loading 1.2s linear infinite;
+}
+
+@keyframes slot-history-loading {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-height: 850px) {
+  .slot-detail {
+    gap: 8px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .slot-detail__header {
+    min-height: 62px;
+  }
+
+  .slot-channel__rail {
+    min-height: 62px;
+  }
+
+  .slot-history__row:nth-child(n + 6) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-history__row--skeleton span {
+    animation: none;
+  }
+}
+
 @media (max-width: 720px) {
   .slot-detail {
-    padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+    padding: 14px;
   }
 
   .slot-detail__stats {
@@ -3812,6 +4141,15 @@ body:has(.withdraw-workflow--cabinet),
   .slot-detail__lot-count {
     padding-left: 0;
     border-left: 0;
+  }
+
+  .slot-history__row {
+    grid-template-columns: 32px 82px minmax(120px, 1fr) 70px;
+  }
+
+  .slot-history__lot,
+  .slot-history__status-label {
+    display: none;
   }
 }
 
@@ -4933,3 +5271,52 @@ body:has(.withdraw-workflow--cabinet),
   background: var(--neutral-deep); color: #fff; font: var(--type-kiosk-action); cursor: pointer;
 }
 .dispense-live__btn:active { opacity: .7; }
+
+/* Safety-critical kiosk legibility overrides. Keep scanner/identity actions
+   readable at arm's length and preserve the 48px minimum touch target. */
+.withdraw-workflow.withdraw-workflow--cabinet {
+  grid-template-rows: 92px minmax(240px, 1fr) clamp(340px, 38dvh, 410px);
+}
+.medical-header__card strong,
+.medical-header__card small,
+.medical-header__brand > b,
+.medical-header__brand > small,
+.connection-card time span { font-size: 1rem; }
+.medical-header__card small,
+.medical-header__brand > small { color: #365f78; }
+.withdraw-workflow--cabinet .sticker-scanner h1 { font-size: 1.625rem; }
+.withdraw-workflow--cabinet .sticker-scanner h1 span,
+.withdraw-workflow--cabinet .sticker-scanner p,
+.withdraw-workflow--cabinet .sticker-scanner__frame small,
+.scanner-ready-pill,
+.withdraw-workflow--cabinet .identity-step-heading span,
+.withdraw-workflow--cabinet .dock-steps .withdraw-steps li span,
+.withdraw-workflow--cabinet .withdraw-footer .withdraw-actionbar--ready span,
+.footer-hardware-meta { font-size: 1rem; }
+.withdraw-workflow--cabinet .sticker-scanner__frame strong,
+.medication-cart__drug strong,
+.medication-cart__location strong { font-size: 1.125rem; }
+.medication-cart__drug span,
+.medication-cart__location small,
+.medication-cart__quantity small,
+.medication-cart__location span,
+.medication-cart__quantity span,
+.medication-cart__items article > b { font-size: 1rem; }
+.medication-cart__location small,
+.medication-cart__quantity small { color: #425f72; }
+.cabinet-stage__queue-btn,
+.withdraw-workflow--cabinet .withdraw-footer .withdraw-actionbar > button,
+.withdraw-dock .sticker-scanner input,
+.withdraw-dock .sticker-scanner button { min-height: var(--touch-target-min); }
+.dispense-live__sub,
+.dispense-live__meta dt,
+.dispense-live__meta dd,
+.dispense-live__hint { font-size: 1rem; }
+
+@media (orientation: portrait) {
+  .withdraw-workflow.withdraw-workflow--cabinet {
+    grid-template-rows: 130px minmax(180px, 1fr) clamp(360px, 42dvh, 430px);
+  }
+  .withdraw-workflow--cabinet .withdraw-footer .withdraw-actionbar--ready strong,
+  .footer-system-status b { font-size: 1rem; }
+}

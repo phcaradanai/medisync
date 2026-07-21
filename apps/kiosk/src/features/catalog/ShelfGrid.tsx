@@ -13,6 +13,7 @@ import SlotDetailModal from "./SlotDetailModal";
 
 export interface ShelfGridProps {
   slots: readonly SlotCellData[];
+  kioskCode?: string;
   selectedSlotId?: string | null;
   initialShelf?: number;
   expiryWarningDays?: number;
@@ -98,6 +99,7 @@ export function isSameDrug(a: SlotCellData, b: SlotCellData): boolean {
 
 export default function ShelfGrid({
   slots,
+  kioskCode,
   selectedSlotId,
   initialShelf = 1,
   expiryWarningDays = 30,
@@ -288,7 +290,7 @@ export default function ShelfGrid({
             })()} */}
           </div> 
         )}
-        {detailSlot && <SlotDetailModal slot={detailSlot} relatedSlots={relatedSlots} expiryWarningDays={expiryWarningDays} onClose={() => setDetailSlotId(null)} onSelectRelated={(related) => setDetailSlotId(related.id)} />}
+        {detailSlot && <SlotDetailModal slot={detailSlot} kioskCode={kioskCode} relatedSlots={relatedSlots} expiryWarningDays={expiryWarningDays} onClose={() => setDetailSlotId(null)} onSelectRelated={(related) => setDetailSlotId(related.id)} />}
       </section>
     );
   }

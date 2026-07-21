@@ -38,7 +38,7 @@ export function DashboardPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const kioskCode = useCallback((id: string) => kiosks.find((k) => k.id === id)?.code ?? "—", [kiosks]);
+  const kioskCode = useCallback((code: string) => kiosks.find((k) => k.code === code)?.code ?? code ?? "—", [kiosks]);
 
   const totalItems = counts.drugs + counts.projects + counts.kiosks + counts.users;
   const lowSlots = useMemo(() => slots.filter((s) => s.drugId && s.quantity <= s.lowThreshold), [slots]);

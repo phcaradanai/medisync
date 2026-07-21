@@ -28,7 +28,7 @@ function ShelfGridScreen() {
     setError(null);
     try {
       const response = await inventoryClient.listSlots(
-        create(ListSlotsRequestSchema, { cabinetId: "", lowOnly: false }),
+        create(ListSlotsRequestSchema, { cabinetId: state!.kiosk.code, lowOnly: false }),
       );
       setSlots(response.slots);
     } catch (caughtError: unknown) {
@@ -38,7 +38,7 @@ function ShelfGridScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [state]);
 
   useEffect(() => {
     void fetchSlots();
@@ -77,6 +77,7 @@ function ShelfGridScreen() {
         {!loading && !error && (
           <ShelfGrid
             slots={slots}
+            kioskCode={state!.kiosk.code}
             selectedSlotId={selectedSlotId}
             onSelect={(slot) => setSelectedSlotId(slot.id)}
           />

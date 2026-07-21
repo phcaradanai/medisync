@@ -90,25 +90,28 @@ func (r *fakeKioskRows) Conn() *pgx.Conn { return nil }
 var _ pgx.Rows = (*fakeKioskRows)(nil)
 
 func TestKioskStoreCreateSuccess(t *testing.T) {
-	db := &fakeDB{execTag: pgconn.NewCommandTag("INSERT 0 1")}
+	created := Kiosk{ID: "k1", Code: "00010001", DisplayName: "Test Kiosk", PinHash: "$2a$10$hash", Active: true, ProjectID: "p1", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	db := &fakeDB{queryRow: &fakeKioskRow{scanFn: kioskScanData(created)}}
 	store := NewKioskStoreWithDB(db)
 
-	err := store.Create(context.Background(), &Kiosk{Code: "K1", DisplayName: "Test Kiosk", PinHash: "$2a$10$hash"})
+	kiosk := &Kiosk{DisplayName: "Test Kiosk", PinHash: "$2a$10$hash", ProjectID: "p1"}
+	err := store.Create(context.Background(), kiosk)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(db.execCalls) != 1 {
-		t.Fatalf("expected 1 exec call, got %d", len(db.execCalls))
+	if len(db.queryRowCalls) != 1 {
+		t.Fatalf("expected 1 query row call, got %d", len(db.queryRowCalls))
 	}
-	if !strings.Contains(db.execCalls[0].sql, "INSERT INTO medisync.kiosks") {
+	if !strings.Contains(db.queryRowCalls[0].sql, "INSERT INTO medisync.kiosks") {
 		t.Error("SQL should be an INSERT into medisync.kiosks")
+	}
+	if kiosk.Code != "00010001" {
+		t.Fatalf("generated kiosk code = %q", kiosk.Code)
 	}
 }
 
 func TestKioskStoreCreateDuplicateCode(t *testing.T) {
-	db := &fakeDB{
-		execErr: &pgconn.PgError{Code: "23505"},
-	}
+	db := &fakeDB{queryRow: &fakeKioskRow{scanErr: &pgconn.PgError{Code: "23505"}}}
 	store := NewKioskStoreWithDB(db)
 
 	err := store.Create(context.Background(), &Kiosk{Code: "DUP", DisplayName: "Dup", PinHash: "$2a$10$h"})

@@ -238,10 +238,14 @@ func (x *ListKiosksResponse) GetTotalCount() int64 {
 }
 
 type CreateKioskRequest struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Code        string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	DisplayName string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Pin         string                 `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Deprecated input. The server generates PPPPKKKK from project.code and the
+	// next kiosk sequence. Returned Kiosk.code is immutable.
+	//
+	// Deprecated: Marked as deprecated in medisync/kiosk/v1/kiosk.proto.
+	Code        string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Pin         string `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
 	// Project to assign this kiosk to. Required.
 	ProjectId string `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	// Full descriptive name (e.g. "ตู้ยาหอผู้ป่วย A").
@@ -280,6 +284,7 @@ func (*CreateKioskRequest) Descriptor() ([]byte, []int) {
 	return file_medisync_kiosk_v1_kiosk_proto_rawDescGZIP(), []int{3}
 }
 
+// Deprecated: Marked as deprecated in medisync/kiosk/v1/kiosk.proto.
 func (x *CreateKioskRequest) GetCode() string {
 	if x != nil {
 		return x.Code
@@ -784,9 +789,9 @@ const file_medisync_kiosk_v1_kiosk_proto_rawDesc = "" +
 	"\x06kiosks\x18\x01 \x03(\v2\x18.medisync.kiosk.v1.KioskR\x06kiosks\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
 	"\vtotal_count\x18\x03 \x01(\x03R\n" +
-	"totalCount\"\x90\x01\n" +
-	"\x12CreateKioskRequest\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code\x12!\n" +
+	"totalCount\"\x94\x01\n" +
+	"\x12CreateKioskRequest\x12\x16\n" +
+	"\x04code\x18\x01 \x01(\tB\x02\x18\x01R\x04code\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x10\n" +
 	"\x03pin\x18\x03 \x01(\tR\x03pin\x12\x1d\n" +
 	"\n" +

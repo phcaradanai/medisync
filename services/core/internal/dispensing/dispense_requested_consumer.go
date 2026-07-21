@@ -95,6 +95,9 @@ func (c *DispenseRequestedConsumer) handle(ctx context.Context, msg jetstream.Ms
 		FulfillmentId:  ev.DispenseId,
 		PrescriptionId: ev.PrescriptionId,
 		TraceId:        ev.TraceId,
+		KioskCode:      ev.KioskCode,
+		Allocations:    ev.Allocations,
+		ProjectId:      ev.ProjectId,
 	}
 	payload, err := protojson.Marshal(fulfillEv)
 	if err != nil {

@@ -29,7 +29,8 @@ Wire format: **protojson** of the messages in `proto/medisync/events/v1/events.p
 
 - Subject: `rx.prescription.created` on the shared NATS (JetStream enabled)
 - Payload: protojson of `medisync.events.v1.PrescriptionCreated` — schema file: `proto/medisync/events/v1/events.proto` (self-contained; only imports `google/protobuf/timestamp.proto`)
-- Required fields: `prescription_id`, `source_system`, at least one item with `drug_code` and positive `quantity`
+- Required fields: `prescription_id`, `source_system`, immutable 4-digit `project_code`, and at least one item with `drug_code` and positive `quantity`
+- `project_code` is resolved to an internal foreign key by core; external producers must not send a project UUID or kiosk row ID
 - Idempotency: `(prescription_id, source_system)` — replays are safe and ignored; additionally set the `Nats-Msg-Id` header to `<source_system>/<prescription_id>` for broker-level dedupe
 - Invalid payloads are terminated to `medisync.dlq.rx.prescription.created` with an audit record — they are **not** retried
 - Reference implementation: `services/core/cmd/feeder`

@@ -71,6 +71,7 @@ func run() (runErr error) {
 		"print_ops_url", cfg.PrintOpsURL,
 		"print_ops_fake", cfg.PrintOpsFake,
 		"vending_url", cfg.VendingURL,
+		"vending_routes_configured", cfg.VendingEndpointsJSON != "",
 		"fulfillment_fake", cfg.FulfillmentFake,
 	)
 
@@ -177,6 +178,24 @@ func run() (runErr error) {
 
 	// ── Dispensing ────────────────────────────────────────────────
 	dispensingStore := dispensing.NewStore(pool)
+	reaperCtx, cancelReaper := context.WithCancel(context.Background())
+	defer cancelReaper()
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-reaperCtx.Done():
+				return
+			case <-ticker.C:
+				if count, err := dispensingStore.ExpireStaleTransactions(reaperCtx, pool.Begin); err != nil {
+					log.Error("expire stale dispense transactions", "error", err)
+				} else if count > 0 {
+					log.Info("expired stale dispense transactions", "count", count)
+				}
+			}
+		}
+	}()
 	dispensingServer := dispensing.NewDispensingServer(
 		dispensingStore, pool,
 		newDispensingTokenParser(jwtMgr),
@@ -224,7 +243,9 @@ func run() (runErr error) {
 		q := r.URL.Query()
 		projectID := q.Get("project_id")
 		pageSize := int32(50)
-		if ps := q.Get("page_size"); ps != "" { fmt.Sscanf(ps, "%d", &pageSize) }
+		if ps := q.Get("page_size"); ps != "" {
+			fmt.Sscanf(ps, "%d", &pageSize)
+		}
 		pageToken := q.Get("page_token")
 
 		entries, total, nextToken, err := audit.List(r.Context(), pool, projectID, pageSize, pageToken)
@@ -273,8 +294,11 @@ func run() (runErr error) {
 	}
 	defer stopDispReq()
 
-	vendingClient := vending.NewClientFromConfig(cfg)
-	vendingConsumer := vending.NewConsumer(js, vendingClient, auditw, log)
+	vendingRouter, err := vending.NewRouterFromConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("configure vending router: %w", err)
+	}
+	vendingConsumer := vending.NewRoutedConsumer(js, vendingRouter, dispensingStore, auditw, log)
 	stopVendingConsumer, err := vendingConsumer.Start(startupCtx)
 	if err != nil {
 		return err
@@ -441,7 +465,7 @@ func (p *inventoryTokenParser) Parse(tokenString string) (inventory.TokenClaimse
 	kClaims, kErr := p.mgr.ParseKiosk(tokenString)
 	if kErr == nil {
 		return inventory.Claims{
-			Subject:   kClaims.Subject,
+			Subject:   kClaims.Code,
 			Role:      "KIOSK",
 			ProjectID: kClaims.ProjectID,
 		}, nil

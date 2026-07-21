@@ -160,7 +160,7 @@ func TestGetByPrescriptionID_Integration(t *testing.T) {
 
 // TestListByWard_Integration filters by ward.
 func TestListByWard_Integration(t *testing.T) {
-	store, _, cleanup := txStore(t)
+	store, tx, cleanup := txStore(t)
 	defer cleanup()
 	ctx := context.Background()
 
@@ -175,6 +175,15 @@ func TestListByWard_Integration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Insert for ward %s: %v", ward, err)
 		}
+	}
+	var seededA, seededB int
+	if err := tx.QueryRow(ctx,
+		`SELECT count(*) FILTER (WHERE ward_id=$1), count(*) FILTER (WHERE ward_id=$2)
+		   FROM medisync.prescription`, wardA, wardB).Scan(&seededA, &seededB); err != nil {
+		t.Fatalf("count seeded wards: %v", err)
+	}
+	if seededA != 2 || seededB != 1 {
+		t.Fatalf("seeded ward counts A=%d B=%d", seededA, seededB)
 	}
 
 	rows, nextToken, totalCount, err := store.ListByWard(ctx, []string{wardA}, nil, 1, "")
@@ -419,7 +428,7 @@ func TestOutboxSchema_Integration(t *testing.T) {
 		err := tx.QueryRow(ctx,
 			`SELECT EXISTS (
 				SELECT 1 FROM information_schema.columns
-				WHERE table_schema = 'dispensing' AND table_name = 'outbox' AND column_name = $1
+				WHERE table_schema = 'medisync' AND table_name = 'outbox' AND column_name = $1
 				AND data_type = $2)`, col.name, col.dataType).Scan(&exists)
 		if err != nil {
 			t.Fatalf("check column %s: %v", col.name, err)
@@ -434,7 +443,7 @@ func TestOutboxSchema_Integration(t *testing.T) {
 	err := tx.QueryRow(ctx,
 		`SELECT EXISTS (
 			SELECT 1 FROM pg_indexes
-			WHERE schemaname = 'dispensing' AND tablename = 'outbox'
+			WHERE schemaname = 'medisync' AND tablename = 'outbox'
 			AND indexname = 'outbox_unpublished_idx')`).Scan(&indexExists)
 	if err != nil {
 		t.Fatalf("check index: %v", err)
@@ -456,12 +465,12 @@ func TestPrescriptionSchemaUnchanged_Integration(t *testing.T) {
 	var count int
 	err := tx.QueryRow(ctx,
 		`SELECT COUNT(*) FROM information_schema.columns
-		 WHERE table_schema = 'dispensing' AND table_name = 'prescription'`).Scan(&count)
+		 WHERE table_schema = 'medisync' AND table_name = 'prescription'`).Scan(&count)
 	if err != nil {
 		t.Fatalf("count columns: %v", err)
 	}
-	if count != 13 {
-		t.Errorf("prescription table should have 13 columns, got %d", count)
+	if count != 16 {
+		t.Errorf("prescription table should have 16 columns, got %d", count)
 	}
 
 	// Verify state CHECK constraint still exists.
@@ -470,7 +479,7 @@ func TestPrescriptionSchemaUnchanged_Integration(t *testing.T) {
 		`SELECT EXISTS (
 			SELECT 1 FROM pg_constraint c
 			JOIN pg_namespace n ON n.oid = c.connamespace
-			WHERE n.nspname = 'dispensing'
+			WHERE n.nspname = 'medisync'
 			AND conname = 'prescription_state_check')`).Scan(&constraintExists)
 	if err != nil {
 		t.Fatalf("check constraint: %v", err)

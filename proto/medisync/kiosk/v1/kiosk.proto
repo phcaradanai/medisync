@@ -41,7 +41,9 @@ message ListKiosksResponse {
 }
 
 message CreateKioskRequest {
-  string code = 1;
+  // Deprecated input. The server generates PPPPKKKK from project.code and the
+  // next kiosk sequence. Returned Kiosk.code is immutable.
+  string code = 1 [deprecated = true];
   string display_name = 2;
   string pin = 3;
   // Project to assign this kiosk to. Required.

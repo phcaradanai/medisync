@@ -17,13 +17,15 @@ import (
 func TestConsumer_Handle_HealthFail(t *testing.T) {
 	fakeClient := NewFailHealthClient("cabinet offline")
 	c := &Consumer{
-		client: fakeClient,
+		router: singleClientRouter{client: fakeClient},
 		log:    slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
 	}
 
 	event := &eventsv1.FulfillmentRequested{
 		FulfillmentId:  "ful-1",
 		PrescriptionId: "RX-001",
+		KioskCode:      "00010001",
+		Allocations:    testAllocations(),
 		TraceId:        "trace-1",
 	}
 	payload, _ := protojson.Marshal(event)
@@ -40,13 +42,15 @@ func TestConsumer_Handle_HealthFail(t *testing.T) {
 func TestConsumer_Handle_DispenseFail(t *testing.T) {
 	fakeClient := NewFailDispenseClient("serial timeout")
 	c := &Consumer{
-		client: fakeClient,
+		router: singleClientRouter{client: fakeClient},
 		log:    slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
 	}
 
 	event := &eventsv1.FulfillmentRequested{
 		FulfillmentId:  "ful-1",
 		PrescriptionId: "RX-001",
+		KioskCode:      "00010001",
+		Allocations:    testAllocations(),
 		TraceId:        "trace-1",
 	}
 	payload, _ := protojson.Marshal(event)
@@ -62,13 +66,15 @@ func TestConsumer_Handle_DispenseFail(t *testing.T) {
 func TestConsumer_Handle_TimeoutResponse(t *testing.T) {
 	fakeClient := NewTimeoutClient()
 	c := &Consumer{
-		client: fakeClient,
+		router: singleClientRouter{client: fakeClient},
 		log:    slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
 	}
 
 	event := &eventsv1.FulfillmentRequested{
 		FulfillmentId:  "ful-1",
 		PrescriptionId: "RX-001",
+		KioskCode:      "00010001",
+		Allocations:    testAllocations(),
 		TraceId:        "trace-1",
 	}
 	payload, _ := protojson.Marshal(event)
@@ -83,13 +89,15 @@ func TestConsumer_Handle_TimeoutResponse(t *testing.T) {
 func TestConsumer_Handle_Success(t *testing.T) {
 	fakeClient := NewFakeClient()
 	c := &Consumer{
-		client: fakeClient,
+		router: singleClientRouter{client: fakeClient},
 		log:    slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
 	}
 
 	event := &eventsv1.FulfillmentRequested{
 		FulfillmentId:  "ful-1",
 		PrescriptionId: "RX-001",
+		KioskCode:      "00010001",
+		Allocations:    testAllocations(),
 		TraceId:        "trace-1",
 	}
 	payload, _ := protojson.Marshal(event)
@@ -103,7 +111,7 @@ func TestConsumer_Handle_Success(t *testing.T) {
 
 func TestConsumer_Handle_MalformedMessage(t *testing.T) {
 	c := &Consumer{
-		client: NewFakeClient(),
+		router: singleClientRouter{client: NewFakeClient()},
 		log:    slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
 	}
 
@@ -114,7 +122,7 @@ func TestConsumer_Handle_MalformedMessage(t *testing.T) {
 
 func TestConsumer_Handle_MissingIDs(t *testing.T) {
 	c := &Consumer{
-		client: NewFakeClient(),
+		router: singleClientRouter{client: NewFakeClient()},
 		log:    slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
 	}
 
@@ -130,21 +138,30 @@ func TestConsumer_Handle_MissingIDs(t *testing.T) {
 	// Should have been rejected via Term(), not dispensed.
 }
 
+func testAllocations() []*eventsv1.DispenseAllocation {
+	return []*eventsv1.DispenseAllocation{{
+		AllocationId: "alloc-1",
+		DoorNo:       1, HardwareLayer: 1, ChannelStart: 1, ChannelEnd: 1, Quantity: 1,
+	}}
+}
+
 type fakeJetStreamMsg struct {
 	subject string
 	data    []byte
 }
 
-func (m *fakeJetStreamMsg) Data() []byte                           { return m.data }
-func (m *fakeJetStreamMsg) Subject() string                        { return m.subject }
-func (m *fakeJetStreamMsg) Headers() nats.Header                   { return nil }
-func (m *fakeJetStreamMsg) Metadata() (*jetstream.MsgMetadata, error) { return &jetstream.MsgMetadata{}, nil }
+func (m *fakeJetStreamMsg) Data() []byte         { return m.data }
+func (m *fakeJetStreamMsg) Subject() string      { return m.subject }
+func (m *fakeJetStreamMsg) Headers() nats.Header { return nil }
+func (m *fakeJetStreamMsg) Metadata() (*jetstream.MsgMetadata, error) {
+	return &jetstream.MsgMetadata{}, nil
+}
 func (m *fakeJetStreamMsg) Ack() error                             { return nil }
 func (m *fakeJetStreamMsg) Nak() error                             { return nil }
 func (m *fakeJetStreamMsg) Term() error                            { return nil }
 func (m *fakeJetStreamMsg) InProgress() error                      { return nil }
 func (m *fakeJetStreamMsg) AckAck() error                          { return nil }
-func (m *fakeJetStreamMsg) NakWithDelay(delay time.Duration) error  { return nil }
-func (m *fakeJetStreamMsg) DoubleAck(ctx context.Context) error     { return nil }
+func (m *fakeJetStreamMsg) NakWithDelay(delay time.Duration) error { return nil }
+func (m *fakeJetStreamMsg) DoubleAck(ctx context.Context) error    { return nil }
 func (m *fakeJetStreamMsg) Reply() string                          { return "" }
 func (m *fakeJetStreamMsg) TermWithReason(reason string) error     { return nil }

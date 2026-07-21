@@ -17,6 +17,7 @@ const SECTIONS: Section[] = [
   { path: "/devices", title: "อุปกรณ์ · ตู้ยา & Kiosk", icon: Icon.cabinet },
   { path: "/users", title: "ผู้ใช้งาน · Master Data", icon: Icon.users },
   { path: "/inventory", title: "คลังยา · ดูอย่างเดียว", icon: Icon.inventory },
+  { path: "/dispense-transactions", title: "รายงาน · Dispense Transactions", icon: Icon.clock },
 ];
 
 function initials(name: string): string {

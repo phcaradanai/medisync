@@ -104,7 +104,7 @@ export function InventoryPage() {
     setSlotForm({
       ...emptySlotForm,
       projectId: projects[0]?.id ?? "",
-      cabinetId: kiosks[0]?.id ?? "",
+      cabinetId: kiosks[0]?.code ?? "",
     });
     setFormError(null);
     setShowCreate(true);
@@ -222,7 +222,7 @@ export function InventoryPage() {
     ? drugs.filter(d => d.code.toLowerCase().includes(drugFilter.toLowerCase()) || d.name.toLowerCase().includes(drugFilter.toLowerCase()))
     : drugs;
 
-  const cabinetCode = (id: string) => kiosks.find(k => k.id === id)?.code || id?.slice(0, 8) || "—";
+  const cabinetCode = (code: string) => kiosks.find(k => k.code === code)?.code || code || "—";
 
   const toggleEmergency = useCallback((slot: Slot) => {
     // Update local state and call backend
@@ -301,7 +301,7 @@ export function InventoryPage() {
               <label>Cabinet *</label>
               <select value={slotForm.cabinetId} onChange={(e) => setSlotForm(f => ({ ...f, cabinetId: e.target.value }))} required>
                 <option value="">-- Select Cabinet --</option>
-                {kiosks.filter(k => k.active).map(k => <option key={k.id} value={k.id}>{k.code} — {k.displayName}</option>)}
+                {kiosks.filter(k => k.active).map(k => <option key={k.id} value={k.code}>{k.code} — {k.displayName}</option>)}
               </select>
             </div>
 

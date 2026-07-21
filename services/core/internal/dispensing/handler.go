@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -168,101 +169,230 @@ func (s *DispensingServer) GetPrescription(
 	}), nil
 }
 
-// Dispense transitions a READY prescription to DISPENSING and writes the
-// medisync.dispense.requested outbox event in the same transaction.
-// Authorization is enforced on the prescription's ward.
+// Dispense is the retired one-step endpoint. Physical dispensing must pass
+// through PrepareDispense and ConfirmDispense so kiosk identity, stock
+// reservation, and operator identity are durably bound before hardware starts.
 func (s *DispensingServer) Dispense(
 	ctx context.Context,
 	req *connect.Request[dispensingv1.DispenseRequest],
 ) (*connect.Response[dispensingv1.DispenseResponse], error) {
+	if _, err := s.authenticate(req.Header()); err != nil {
+		return nil, err
+	}
+	return nil, connect.NewError(connect.CodeFailedPrecondition,
+		errors.New("one-step dispense is disabled; scan with PrepareDispense then confirm identity with ConfirmDispense"))
+}
+
+func (s *DispensingServer) PrepareDispense(ctx context.Context, req *connect.Request[dispensingv1.PrepareDispenseRequest]) (*connect.Response[dispensingv1.PrepareDispenseResponse], error) {
 	claims, err := s.authenticate(req.Header())
 	if err != nil {
 		return nil, err
 	}
-
-	msg := req.Msg
-	if msg == nil || msg.PrescriptionId == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, ErrPrescriptionIDRequired)
+	if claims.Role != "KIOSK" || claims.Subject == "" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
 	}
-
-	// Fetch the prescription by external ID. Source system is inferred from
-	// stored data (the dispense endpoint is called by kiosk, not the feeder).
-	// We look up by prescription_id; if multiple source systems, we take the
-	// most recent READY one. For M2, the common case is a single source.
-	pr, err := s.findReadyByPrescriptionID(ctx, msg.PrescriptionId)
+	msg := req.Msg
+	if msg == nil || strings.TrimSpace(msg.StickerCode) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("sticker_code is required"))
+	}
+	pr, err := s.findReadyByPrescriptionIDForProject(ctx, strings.TrimSpace(msg.StickerCode), claims.ProjectID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("find prescription: %w", err))
 	}
 	if pr == nil {
 		return nil, connect.NewError(connect.CodeNotFound, ErrPrescriptionNotFound)
 	}
-
-	if !s.authorizeWard(claims, pr.WardID) {
-		return nil, connect.NewError(connect.CodeNotFound, ErrPrescriptionNotFound)
-	}
-
-	if pr.State != StateReady {
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("prescription is in state %s, must be READY to dispense", pr.State))
-	}
-
-	// Build the outbox payload.
-	traceID := msg.TraceId
+	traceID := strings.TrimSpace(msg.TraceId)
 	if traceID == "" {
 		traceID = uuid.New().String()
 	}
-	dispenseID := uuid.New().String()
-
-	outboxEvent := &eventsv1.DispenseRequested{
-		DispenseId:     dispenseID,
-		PrescriptionId: pr.PrescriptionID,
-		TraceId:        traceID,
-	}
-	outboxPayload, err := protojson.Marshal(outboxEvent)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("marshal outbox event: %w", err))
-	}
-
-	// Transition state with outbox in a single transaction.
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("begin tx: %w", err))
-	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-
-	// We need the full store (not the narrow DispensingStore) for TransitionState.
 	fullStore, ok := s.store.(*Store)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("store does not support TransitionState"))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("transaction store unavailable"))
 	}
-
-	updated, err := fullStore.TransitionState(ctx, tx, pr.ID, StateReady, StateDispensing, outboxPayload)
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("transition state: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("begin prepare: %w", err))
 	}
-
+	defer tx.Rollback(ctx) //nolint:errcheck
+	record, err := fullStore.PrepareTransaction(ctx, tx, pr, claims.Subject, claims.ProjectID, traceID)
+	if err != nil {
+		code := connect.CodeFailedPrecondition
+		if errors.Is(err, ErrDispenseWrongKiosk) {
+			code = connect.CodePermissionDenied
+		}
+		return nil, connect.NewError(code, err)
+	}
 	if err := tx.Commit(ctx); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("commit tx: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("commit prepare: %w", err))
 	}
+	s.writeAudit(ctx, audit.Entry{TraceID: traceID, Actor: claims.Subject, Action: "dispense.sticker_scanned", Entity: "dispense_transaction", EntityID: record.ID, ProjectID: claims.ProjectID, Detail: map[string]any{"kiosk_code": claims.Subject, "prescription_id": pr.PrescriptionID}})
+	return connect.NewResponse(&dispensingv1.PrepareDispenseResponse{Transaction: toProtoTransaction(record), Prescription: toProtoPrescription(pr)}), nil
+}
 
-	// Write audit entry.
-	s.writeAudit(ctx, audit.Entry{
-		TraceID:  traceID,
-		Actor:    claims.Subject,
-		Action:   "prescription.dispense.requested",
-		Entity:   "prescription",
-		EntityID: pr.PrescriptionID,
-		Detail: map[string]any{
-			"dispense_id": dispenseID,
-			"ward_id":     pr.WardID,
-			"from_state":  string(StateReady),
-			"to_state":    string(StateDispensing),
-		},
-	})
+func (s *DispensingServer) ConfirmDispense(ctx context.Context, req *connect.Request[dispensingv1.ConfirmDispenseRequest]) (*connect.Response[dispensingv1.ConfirmDispenseResponse], error) {
+	staff, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
+	if staff.Role == "KIOSK" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("staff authentication required"))
+	}
+	kiosk, err := s.authenticateNamed(req.Header(), "X-Kiosk-Authorization")
+	if err != nil {
+		return nil, err
+	}
+	if kiosk.Role != "KIOSK" || kiosk.Subject == "" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
+	}
+	msg := req.Msg
+	if msg == nil || msg.DispenseId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("dispense_id is required"))
+	}
+	fullStore, ok := s.store.(*Store)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("transaction store unavailable"))
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	record, err := fullStore.GetTransactionForUpdate(ctx, tx, msg.DispenseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if record == nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrDispenseNotFound)
+	}
+	if record.KioskCode != kiosk.Subject {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrDispenseWrongKiosk)
+	}
+	if staff.ProjectID != record.ProjectID || kiosk.ProjectID != record.ProjectID {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrDispenseWrongKiosk)
+	}
+	pr, err := s.store.GetByID(ctx, record.PrescriptionRowID)
+	if err != nil || pr == nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrPrescriptionNotFound)
+	}
+	if !s.authorizeWard(staff, pr.WardID) {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrUnauthorized)
+	}
+	var operatorName string
+	if err := tx.QueryRow(ctx, `SELECT display_name FROM medisync.users WHERE id=$1 AND project_id=$2 AND active=true`, staff.Subject, staff.ProjectID).Scan(&operatorName); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("operator is inactive or outside this project"))
+	}
+	event := transactionRequestedEvent(record)
+	payload, err := protojson.Marshal(event)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err := fullStore.QueueTransaction(ctx, tx, record, staff.Subject, operatorName, payload); err != nil {
+		code := connect.CodeFailedPrecondition
+		if errors.Is(err, ErrDispenseExpired) {
+			code = connect.CodeDeadlineExceeded
+		}
+		return nil, connect.NewError(code, err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	updated, err := fullStore.GetTransaction(ctx, record.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	s.writeAudit(ctx, audit.Entry{TraceID: record.TraceID, Actor: staff.Subject, Action: "dispense.identity_confirmed", Entity: "dispense_transaction", EntityID: record.ID, ProjectID: record.ProjectID, Detail: map[string]any{"kiosk_code": record.KioskCode, "operator": operatorName}})
+	return connect.NewResponse(&dispensingv1.ConfirmDispenseResponse{Transaction: toProtoTransaction(updated)}), nil
+}
 
-	return connect.NewResponse(&dispensingv1.DispenseResponse{
-		Prescription: toProtoPrescription(updated),
-	}), nil
+func (s *DispensingServer) CancelDispense(ctx context.Context, req *connect.Request[dispensingv1.CancelDispenseRequest]) (*connect.Response[dispensingv1.CancelDispenseResponse], error) {
+	kiosk, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
+	if kiosk.Role != "KIOSK" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
+	}
+	msg := req.Msg
+	if msg == nil || msg.DispenseId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("dispense_id is required"))
+	}
+	fullStore, ok := s.store.(*Store)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("transaction store unavailable"))
+	}
+	record, err := fullStore.CancelTransaction(ctx, s.pool.Begin, msg.DispenseId, kiosk.Subject, msg.Reason)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	s.writeAudit(ctx, audit.Entry{TraceID: record.TraceID, Actor: kiosk.Subject, Action: "dispense.cancelled", Entity: "dispense_transaction", EntityID: record.ID, ProjectID: record.ProjectID, Detail: map[string]any{"kiosk_code": record.KioskCode, "reason": msg.Reason}})
+	return connect.NewResponse(&dispensingv1.CancelDispenseResponse{Transaction: toProtoTransaction(record)}), nil
+}
+
+func (s *DispensingServer) GetDispenseTransaction(ctx context.Context, req *connect.Request[dispensingv1.GetDispenseTransactionRequest]) (*connect.Response[dispensingv1.GetDispenseTransactionResponse], error) {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
+	if req.Msg == nil || req.Msg.DispenseId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("dispense_id is required"))
+	}
+	fullStore, ok := s.store.(*Store)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("transaction store unavailable"))
+	}
+	record, err := fullStore.GetTransaction(ctx, req.Msg.DispenseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if record == nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrDispenseNotFound)
+	}
+	if claims.ProjectID != record.ProjectID || (claims.Role == "KIOSK" && claims.Subject != record.KioskCode) {
+		return nil, connect.NewError(connect.CodeNotFound, ErrDispenseNotFound)
+	}
+	return connect.NewResponse(&dispensingv1.GetDispenseTransactionResponse{Transaction: toProtoTransaction(record)}), nil
+}
+
+func (s *DispensingServer) ListDispenseTransactions(ctx context.Context, req *connect.Request[dispensingv1.ListDispenseTransactionsRequest]) (*connect.Response[dispensingv1.ListDispenseTransactionsResponse], error) {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
+	msg := req.Msg
+	filter := TransactionFilter{ProjectID: claims.ProjectID, PageSize: 50}
+	if msg != nil {
+		filter.KioskCode, filter.Prescription, filter.OperatorUserID = msg.KioskCode, msg.PrescriptionId, msg.OperatorUserId
+		filter.SlotID, filter.DrugCode = msg.SlotId, msg.DrugCode
+		filter.PageSize, filter.PageToken = msg.PageSize, msg.PageToken
+		if msg.CreatedFrom != nil {
+			value := msg.CreatedFrom.AsTime()
+			filter.CreatedFrom = &value
+		}
+		if msg.CreatedTo != nil {
+			value := msg.CreatedTo.AsTime()
+			filter.CreatedTo = &value
+		}
+		for _, status := range msg.Statuses {
+			filter.Statuses = append(filter.Statuses, protoTransactionStatus(status))
+		}
+	}
+	if claims.Role == "KIOSK" {
+		filter.KioskCode = claims.Subject
+	}
+	fullStore, ok := s.store.(*Store)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("transaction store unavailable"))
+	}
+	records, next, total, err := fullStore.ListTransactions(ctx, filter)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	result := make([]*dispensingv1.DispenseTransaction, 0, len(records))
+	for _, record := range records {
+		result = append(result, toProtoTransaction(record))
+	}
+	return connect.NewResponse(&dispensingv1.ListDispenseTransactionsResponse{Transactions: result, NextPageToken: next, TotalCount: total}), nil
 }
 
 // findReadyByPrescriptionID looks up a prescription by its external ID.
@@ -281,6 +411,15 @@ func (s *DispensingServer) findReadyByPrescriptionID(ctx context.Context, prescr
 	return scanPrescription(row)
 }
 
+func (s *DispensingServer) findReadyByPrescriptionIDForProject(ctx context.Context, prescriptionID, projectID string) (*PrescriptionRow, error) {
+	query := `SELECT id, prescription_id, source_system, hn, patient_name, ward_id,
+	                 items, state, failure_reason, issued_at, created_at, updated_at
+	            FROM medisync.prescription
+	           WHERE prescription_id = $1 AND project_id = $2 AND state = 'READY'
+	           ORDER BY created_at DESC LIMIT 1`
+	return scanPrescription(s.pool.QueryRow(ctx, query, prescriptionID, projectID))
+}
+
 // authenticate extracts and validates the Bearer token from the request headers.
 // Returns the token claims or a Connect error (Unauthenticated).
 func (s *DispensingServer) authenticate(header interface{ Get(string) string }) (*TokenClaims, error) {
@@ -294,6 +433,22 @@ func (s *DispensingServer) authenticate(header interface{ Get(string) string }) 
 		return nil, connect.NewError(connect.CodeUnauthenticated, ErrUnauthorized)
 	}
 
+	return claims, nil
+}
+
+func (s *DispensingServer) authenticateNamed(header interface{ Get(string) string }, name string) (*TokenClaims, error) {
+	auth := header.Get(name)
+	if auth == "" {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("%s header is required", name))
+	}
+	parts := strings.SplitN(auth, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") || strings.TrimSpace(parts[1]) == "" {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("%s must use Bearer scheme", name))
+	}
+	claims, err := s.parser.Parse(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, ErrUnauthorized)
+	}
 	return claims, nil
 }
 
@@ -466,6 +621,123 @@ func toProtoPrescription(pr *PrescriptionRow) *dispensingv1.Prescription {
 		IssuedAt:       issuedAt,
 		CreatedAt:      timestamppb.New(pr.CreatedAt),
 		UpdatedAt:      timestamppb.New(pr.UpdatedAt),
+	}
+}
+
+func transactionRequestedEvent(record *TransactionRecord) *eventsv1.DispenseRequested {
+	event := &eventsv1.DispenseRequested{
+		DispenseId: record.ID, PrescriptionId: record.PrescriptionRef,
+		TraceId: record.TraceID, KioskCode: record.KioskCode, ProjectId: record.ProjectID,
+	}
+	for _, item := range record.Items {
+		for _, allocation := range item.Allocations {
+			event.Allocations = append(event.Allocations, &eventsv1.DispenseAllocation{
+				AllocationId: allocation.ID, ItemId: item.ID, DrugCode: item.DrugCode,
+				SlotCode: allocation.SlotCode, BatchId: allocation.BatchID,
+				Quantity: allocation.Quantity, DoorNo: allocation.DoorNo,
+				HardwareLayer: allocation.HardwareLayer, ChannelStart: allocation.ChannelStart,
+				ChannelEnd: allocation.ChannelEnd,
+			})
+		}
+	}
+	if len(event.Allocations) > 0 {
+		event.SlotCode = event.Allocations[0].SlotCode
+		for _, allocation := range event.Allocations {
+			event.Quantity += allocation.Quantity
+		}
+	}
+	return event
+}
+
+func toProtoTransaction(record *TransactionRecord) *dispensingv1.DispenseTransaction {
+	if record == nil {
+		return nil
+	}
+	result := &dispensingv1.DispenseTransaction{
+		DispenseId: record.ID, PrescriptionId: record.PrescriptionRef,
+		SourceSystem: record.SourceSystem, KioskCode: record.KioskCode,
+		OperatorUserId: record.OperatorUserID, OperatorDisplayName: record.OperatorDisplayName,
+		Status: transactionStatusProto(record.Status), TraceId: record.TraceID,
+		FailureCode: record.FailureCode, FailureDetail: record.FailureDetail,
+		StickerScannedAt: timestamppb.New(record.StickerScannedAt), ExpiresAt: timestamppb.New(record.ExpiresAt),
+		CreatedAt: timestamppb.New(record.CreatedAt), UpdatedAt: timestamppb.New(record.UpdatedAt),
+	}
+	result.IdentityConfirmedAt = optionalTimestamp(record.IdentityConfirmedAt)
+	result.QueuedAt = optionalTimestamp(record.QueuedAt)
+	result.StartedAt = optionalTimestamp(record.StartedAt)
+	result.CompletedAt = optionalTimestamp(record.CompletedAt)
+	result.FailedAt = optionalTimestamp(record.FailedAt)
+	result.CancelledAt = optionalTimestamp(record.CancelledAt)
+	for _, item := range record.Items {
+		pbItem := &dispensingv1.DispenseTransactionItem{
+			Id: item.ID, SequenceNo: item.SequenceNo, DrugCode: item.DrugCode,
+			DrugName: item.DrugName, RequestedQuantity: item.RequestedQuantity,
+			AllocatedQuantity: item.AllocatedQuantity, DispensedQuantity: item.DispensedQuantity,
+			Status: item.Status,
+		}
+		for _, allocation := range item.Allocations {
+			pbItem.Allocations = append(pbItem.Allocations, &dispensingv1.DispenseAllocation{
+				Id: allocation.ID, SlotId: allocation.SlotID, SlotCode: allocation.SlotCode, BatchId: allocation.BatchID,
+				LotNumber: allocation.LotNumber, ExpiryDate: optionalTimestamp(allocation.ExpiryDate),
+				Quantity: allocation.Quantity, DispensedQuantity: allocation.DispensedQuantity,
+				DoorNo: allocation.DoorNo, HardwareLayer: allocation.HardwareLayer,
+				ChannelStart: allocation.ChannelStart, ChannelEnd: allocation.ChannelEnd,
+				Status: allocation.Status, HardwareAttemptedAt: optionalTimestamp(allocation.HardwareAttemptedAt),
+				HardwareSuccess: allocation.HardwareSuccess, HardwareDetail: allocation.HardwareDetail,
+				HardwareResponse: string(allocation.HardwareResponse),
+			})
+		}
+		result.Items = append(result.Items, pbItem)
+	}
+	return result
+}
+
+func optionalTimestamp(value *time.Time) *timestamppb.Timestamp {
+	if value == nil {
+		return nil
+	}
+	return timestamppb.New(*value)
+}
+
+func transactionStatusProto(status TransactionStatus) dispensingv1.DispenseTransactionStatus {
+	switch status {
+	case TransactionAwaitingIdentity:
+		return dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_AWAITING_IDENTITY
+	case TransactionQueued:
+		return dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_QUEUED
+	case TransactionDispensing:
+		return dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_DISPENSING
+	case TransactionDispensed:
+		return dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_DISPENSED
+	case TransactionFailed:
+		return dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_FAILED
+	case TransactionCancelled:
+		return dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_CANCELLED
+	case TransactionExpired:
+		return dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_EXPIRED
+	default:
+		return dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_UNSPECIFIED
+	}
+}
+
+func protoTransactionStatus(status dispensingv1.DispenseTransactionStatus) TransactionStatus {
+	switch status {
+	case dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_AWAITING_IDENTITY:
+		return TransactionAwaitingIdentity
+	case dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_QUEUED:
+		return TransactionQueued
+	case dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_DISPENSING:
+		return TransactionDispensing
+	case dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_DISPENSED:
+		return TransactionDispensed
+	case dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_FAILED:
+		return TransactionFailed
+	case dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_CANCELLED:
+		return TransactionCancelled
+	case dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_EXPIRED:
+		return TransactionExpired
+	default:
+		return ""
 	}
 }
 

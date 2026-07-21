@@ -1,4 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { create } from "@bufbuild/protobuf";
+import { createClient } from "@connectrpc/connect";
+import {
+  DispenseTransactionStatus,
+  DispensingService,
+  ListDispenseTransactionsRequestSchema,
+  type DispenseTransaction,
+} from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
+import { transport } from "../../transport";
 import {
   expiryValueToDate,
   getExpiryState,
@@ -9,6 +18,8 @@ import {
 
 export interface SlotDetailModalProps {
   slot: SlotCellData;
+  /** Immutable business code of the kiosk whose slot is being inspected. */
+  kioskCode?: string;
   /** Other slots holding the same drug — rendered in the bottom carousel. */
   relatedSlots?: readonly SlotCellData[];
   expiryWarningDays?: number;
@@ -22,6 +33,21 @@ interface LotView extends SlotLotInput {
   startPiece: number;
 }
 
+export interface SlotHistoryRow {
+  id: string;
+  prescriptionId: string;
+  operator: string;
+  slotLabel: string;
+  lotLabel: string;
+  quantity: number;
+  succeeded: boolean;
+  detail: string;
+  occurredAt?: DispenseTransaction["createdAt"];
+}
+
+const dispensingClient = createClient(DispensingService, transport);
+const HISTORY_LIMIT = 7;
+
 // Theme palette cycled across lots so each batch reads as a distinct colour.
 const LOT_TONES = ["#22c55e", "#1e66f5", "#7c3aed", "#0ea5e9"];
 
@@ -31,6 +57,18 @@ const thaiDate = new Intl.DateTimeFormat("th-TH-u-ca-gregory", {
   year: "numeric",
 });
 
+const historyDate = new Intl.DateTimeFormat("th-TH-u-ca-gregory", {
+  day: "2-digit",
+  month: "short",
+  year: "2-digit",
+});
+
+const historyTime = new Intl.DateTimeFormat("th-TH", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 function formatThaiDate(value?: ExpiryValue): string | null {
   const date = expiryValueToDate(value);
   return date ? thaiDate.format(date) : null;
@@ -38,6 +76,99 @@ function formatThaiDate(value?: ExpiryValue): string | null {
 
 function pieceLabel(sequence: number): string {
   return `#${String(sequence).padStart(3, "0")}`;
+}
+
+function timestampMilliseconds(value?: DispenseTransaction["createdAt"]): number {
+  return value ? Number(value.seconds) * 1000 + value.nanos / 1_000_000 : 0;
+}
+
+function terminalTimestamp(transaction: DispenseTransaction) {
+  return (
+    transaction.completedAt ||
+    transaction.failedAt ||
+    transaction.cancelledAt ||
+    transaction.updatedAt ||
+    transaction.createdAt
+  );
+}
+
+/** Collapse all FEFO batch allocations from one action into one readable log row. */
+export function buildSlotHistory(
+  transactions: readonly DispenseTransaction[],
+  slot: SlotCellData,
+): SlotHistoryRow[] {
+  const drugCode = normalizeHistoryKey(slot.drugCode);
+  if (!drugCode) return [];
+
+  return transactions
+    .flatMap((transaction) => {
+      const allocations = transaction.items
+        .filter((item) => normalizeHistoryKey(item.drugCode) === drugCode)
+        .flatMap((item) => item.allocations);
+      if (allocations.length === 0) return [];
+
+      const succeeded = allocations.every(
+        (allocation) =>
+          allocation.status === "DISPENSED" &&
+          allocation.dispensedQuantity > 0 &&
+          (allocation.hardwareSuccess || !allocation.hardwareAttemptedAt),
+      );
+      const lots = [...new Set(allocations.map((allocation) => allocation.lotNumber).filter(Boolean))];
+      const slotCodes = [...new Set(allocations.map((allocation) => allocation.slotCode).filter(Boolean))];
+      const failureDetail = allocations.find((allocation) => allocation.hardwareDetail)?.hardwareDetail;
+      const occurredAt =
+        allocations.find((allocation) => allocation.hardwareAttemptedAt)?.hardwareAttemptedAt ||
+        terminalTimestamp(transaction);
+
+      return [{
+        id: transaction.dispenseId,
+        prescriptionId: transaction.prescriptionId || "—",
+        operator: transaction.operatorDisplayName || transaction.operatorUserId || "—",
+        slotLabel: slotCodes.length > 1 ? `${slotCodes[0]} +${slotCodes.length - 1}` : slotCodes[0] || "—",
+        lotLabel: lots.length > 1 ? `${lots[0]} +${lots.length - 1}` : lots[0] || "—",
+        quantity: allocations.reduce(
+          (sum, allocation) =>
+            sum + (succeeded ? allocation.dispensedQuantity : allocation.quantity),
+          0,
+        ),
+        succeeded,
+        detail: succeeded
+          ? "จ่ายยาสำเร็จ"
+          : failureDetail || transaction.failureDetail || "จ่ายยาไม่สำเร็จ",
+        occurredAt,
+      }];
+    })
+    .sort(
+      (a, b) =>
+        timestampMilliseconds(b.occurredAt) - timestampMilliseconds(a.occurredAt),
+    )
+    .slice(0, HISTORY_LIMIT);
+}
+
+function normalizeHistoryKey(value?: string): string {
+  return value?.trim().toLocaleUpperCase("en-US") ?? "";
+}
+
+function HistoryStatusIcon({ succeeded }: { succeeded: boolean }) {
+  return (
+    <span
+      className={`slot-history__status-icon slot-history__status-icon--${
+        succeeded ? "success" : "fail"
+      }`}
+      aria-label={succeeded ? "สำเร็จ" : "ไม่สำเร็จ"}
+      role="img"
+    >
+      {succeeded ? (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m6.5 12.5 3.2 3.2 7.8-8" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m8 8 8 8M16 8l-8 8" />
+        </svg>
+      )}
+    </span>
+  );
 }
 
 /**
@@ -102,6 +233,7 @@ function CapsuleGlyph({ className }: { className?: string }) {
 
 export default function SlotDetailModal({
   slot,
+  kioskCode,
   relatedSlots = [],
   expiryWarningDays = 30,
   now = new Date(),
@@ -110,6 +242,8 @@ export default function SlotDetailModal({
 }: SlotDetailModalProps) {
   const lots = useMemo(() => deriveLots(slot), [slot]);
   const [selectedLot, setSelectedLot] = useState(0);
+  const [history, setHistory] = useState<SlotHistoryRow[]>([]);
+  const [historyState, setHistoryState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
@@ -135,6 +269,47 @@ export default function SlotDetailModal({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  useEffect(() => {
+    let active = true;
+    if (!kioskCode || !slot.drugCode) {
+      setHistory([]);
+      setHistoryState("ready");
+      return () => {
+        active = false;
+      };
+    }
+
+    setHistory([]);
+    setHistoryState("loading");
+    void dispensingClient
+      .listDispenseTransactions(
+        create(ListDispenseTransactionsRequestSchema, {
+          kioskCode,
+          drugCode: slot.drugCode,
+          statuses: [
+            DispenseTransactionStatus.DISPENSED,
+            DispenseTransactionStatus.FAILED,
+            DispenseTransactionStatus.CANCELLED,
+            DispenseTransactionStatus.EXPIRED,
+          ],
+          pageSize: HISTORY_LIMIT,
+        }),
+      )
+      .then((response) => {
+        if (!active) return;
+        setHistory(buildSlotHistory(response.transactions, slot));
+        setHistoryState("ready");
+      })
+      .catch(() => {
+        if (!active) return;
+        setHistoryState("error");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [kioskCode, slot]);
 
   const ruler = useMemo(() => {
     const step = 50;
@@ -441,6 +616,68 @@ export default function SlotDetailModal({
               </button>
             </div>
           </section>
+
+        <section className="slot-history" aria-label="ประวัติการจ่ายยาชนิดนี้ในตู้นี้">
+          <header className="slot-history__head">
+            <div className="slot-history__heading-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 7v5l3 2M4.9 5.2A9 9 0 1 1 3 12" />
+                <path d="M3 4v5h5" />
+              </svg>
+            </div>
+            <div>
+              <h3>ประวัติยาชนิดนี้ในตู้</h3>
+              <span>{slot.drugCode} · ตู้ {kioskCode || "—"}</span>
+            </div>
+            <strong>ล่าสุด {HISTORY_LIMIT} รายการ</strong>
+          </header>
+
+          <div className="slot-history__list" aria-live="polite">
+            {historyState === "loading" &&
+              Array.from({ length: 5 }, (_, index) => (
+                <div className="slot-history__row slot-history__row--skeleton" key={index}>
+                  <span /><span /><span /><span />
+                </div>
+              ))}
+            {historyState === "error" && (
+              <div className="slot-history__state slot-history__state--error" role="alert">
+                <HistoryStatusIcon succeeded={false} />
+                <span>โหลดประวัติไม่สำเร็จ — ปิดแล้วเปิดช่องนี้เพื่อลองใหม่</span>
+              </div>
+            )}
+            {historyState === "ready" && history.length === 0 && (
+              <div className="slot-history__state">
+                <span className="slot-history__empty-icon" aria-hidden="true">—</span>
+                <span>ยังไม่มีประวัติการจ่ายยาชนิดนี้จากตู้นี้</span>
+              </div>
+            )}
+            {historyState === "ready" && history.map((row) => {
+              const occurred = timestampMilliseconds(row.occurredAt);
+              const date = occurred ? new Date(occurred) : null;
+              return (
+                <article className="slot-history__row" key={row.id} title={row.detail}>
+                  <HistoryStatusIcon succeeded={row.succeeded} />
+                  <time dateTime={date?.toISOString()}>
+                    <strong>{date ? historyTime.format(date) : "—"}</strong>
+                    <span>{date ? historyDate.format(date) : "ไม่ระบุเวลา"}</span>
+                  </time>
+                  <div className="slot-history__transaction">
+                    <strong>{row.prescriptionId}</strong>
+                    <span>{row.operator}</span>
+                  </div>
+                  <div className="slot-history__lot">
+                    <span>ช่อง {row.slotLabel} · LOT</span>
+                    <strong>{row.lotLabel}</strong>
+                  </div>
+                  <strong className="slot-history__quantity">{row.quantity} ชิ้น</strong>
+                  <span className={`slot-history__status-label slot-history__status-label--${row.succeeded ? "success" : "fail"}`}>
+                    {row.succeeded ? "สำเร็จ" : "ไม่สำเร็จ"}
+                  </span>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       </div>
     </div>
   );

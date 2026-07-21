@@ -7,9 +7,9 @@
 //	          producer path). Items are drawn from a chosen cabinet's real
 //	          slots so the kiosk cart resolves drug positions. Prints a
 //	          scannable prescription_id (the "sticker").
-//	confirm — log in as staff and call DispensingService/Dispense for a
-//	          prescription_id, exactly like a user scanning to confirm at the
-//	          cabinet face, then poll GetPrescription until DISPENSED/FAILED.
+//	confirm — log in as the selected kiosk, prepare/reserve after sticker scan,
+//	          log in as staff, then confirm with both identities and poll the
+//	          durable dispense transaction until DISPENSED/FAILED.
 //	flow    — create then confirm back-to-back = full E2E like hardware.
 //	serve   — a tiny local web console: change values in a form and click to
 //	          run create / confirm / flow. Does the NATS + core work
@@ -18,7 +18,7 @@
 // Dev/testing only. Reuses the same wire contracts as production.
 //
 //	go run ./cmd/kiosktester -mode=serve
-//	go run ./cmd/kiosktester -mode=flow -cabinet=CAB1
+//	go run ./cmd/kiosktester -mode=flow -kiosk-code=00010001
 package main
 
 import (
@@ -80,13 +80,13 @@ func parseFlags() config {
 	flag.StringVar(&c.addr, "addr", ":8899", "serve mode: listen address")
 	flag.StringVar(&c.core, "core", "http://localhost:8080", "core Connect API base URL")
 	flag.StringVar(&c.natsURL, "nats", "nats://localhost:4222", "NATS server URL")
-	flag.StringVar(&c.kioskURL, "kiosk-url", "", "kiosk web app URL for postMessage integration (empty = derive from core host: same hostname, port 5173)")
-	flag.StringVar(&c.kioskCode, "kiosk-code", "DEMO-K1", "kiosk code (for ListSlots auth)")
+	flag.StringVar(&c.kioskURL, "kiosk-url", "", "kiosk web app URL opened by the console shortcut (empty = derive from core host: same hostname, port 5173)")
+	flag.StringVar(&c.kioskCode, "kiosk-code", "00010001", "immutable 8-digit kiosk code")
 	flag.StringVar(&c.kioskPIN, "kiosk-pin", "123456", "kiosk PIN")
 	flag.StringVar(&c.staff, "staff", "pharmacist", "staff username for the confirm step (pharmacist | nurse | refiller)")
 	flag.StringVar(&c.staffPass, "staff-pass", "", "staff password (default: demo-<role>-2026)")
 	flag.StringVar(&c.staffRole, "role", "auto", "label for the simulated scan: PHARMACIST | NURSE | REFILLER (auto = infer from username)")
-	flag.StringVar(&c.cabinet, "cabinet", "", "cabinet id to draw drugs from (empty = any)")
+	flag.StringVar(&c.cabinet, "cabinet", "", "deprecated alias for -kiosk-code")
 	flag.StringVar(&c.ward, "ward", "WARD-3A", "ward id stamped on the prescription")
 	flag.StringVar(&c.hn, "hn", "HN900001", "patient hospital number")
 	flag.StringVar(&c.patient, "patient", "ผู้ป่วยทดสอบ Kiosk", "patient name")
@@ -100,6 +100,10 @@ func parseFlags() config {
 }
 
 func run(c config) error {
+	if strings.TrimSpace(c.cabinet) != "" {
+		c.kioskCode = strings.TrimSpace(c.cabinet)
+	}
+	c.cabinet = c.kioskCode
 	if c.kioskURL == "" {
 		c.kioskURL = deriveKioskURL(c.core)
 	}
@@ -179,7 +183,7 @@ func createPrescription(ctx context.Context, c config, fixedID string) *result {
 	if err != nil {
 		return r.fail(fmt.Errorf("kiosk login: %w", err))
 	}
-	slots, err := listSlots(ctx, c.core, kioskTok, c.cabinet)
+	slots, err := listSlots(ctx, c.core, kioskTok, c.kioskCode)
 	if err != nil {
 		return r.fail(fmt.Errorf("list slots: %w", err))
 	}
@@ -196,6 +200,7 @@ func createPrescription(ctx context.Context, c config, fixedID string) *result {
 	ev := &eventsv1.PrescriptionCreated{
 		PrescriptionId: id,
 		SourceSystem:   c.source,
+		ProjectCode:    c.kioskCode[:4],
 		Hn:             c.hn,
 		PatientName:    c.patient,
 		WardId:         c.ward,
@@ -219,7 +224,7 @@ func createPrescription(ctx context.Context, c config, fixedID string) *result {
 	r.log("✅ สร้างรายการเบิกยาแล้ว (READY) — สแกน/ป้อนรหัสนี้ที่ตู้")
 	r.log("   Prescription ID : %s", id)
 	r.log("   Ward            : %s", c.ward)
-	r.log("   Cabinet         : %s", orAny(c.cabinet))
+	r.log("   Kiosk code      : %s", c.kioskCode)
 	r.log("   Items           : %s", itemsSummary(items))
 	return r
 }
@@ -286,9 +291,10 @@ func item(s slot, qty int) map[string]any {
 
 // staffCredentials resolves the (username, password, role label) for the
 // simulated staff scan. Defaults match demoseed users:
-//   pharmacist / demo-pharmacist-2026  → PHARMACIST (เบิกยา)
-//   nurse      / demo-nurse-2026       → NURSE      (เบิกยา)
-//   refiller   / demo-refiller-2026    → REFILLER   (หน้าจอเติมยา)
+//
+//	pharmacist / demo-pharmacist-2026  → PHARMACIST (เบิกยา)
+//	nurse      / demo-nurse-2026       → NURSE      (เบิกยา)
+//	refiller   / demo-refiller-2026    → REFILLER   (หน้าจอเติมยา)
 func staffCredentials(c config) (username, password, role string) {
 	username = c.staff
 	if username == "" {
@@ -316,12 +322,21 @@ func staffCredentials(c config) (username, password, role string) {
 	return username, password, role
 }
 
-// ── confirm (scan + dispense, no polling) ───────────────────────────
+// ── confirm (sticker prepare + staff identity + queue) ──────────────
 
 func confirmPrescription(ctx context.Context, c config, prescriptionID string) *result {
 	r := &result{OK: true, ID: prescriptionID}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	kioskTok, _, err := kioskLogin(ctx, c.core, c.kioskCode, c.kioskPIN)
+	if err != nil {
+		return r.fail(fmt.Errorf("kiosk login (%s): %w", c.kioskCode, err))
+	}
+	prepared, err := prepareDispense(ctx, c.core, kioskTok, prescriptionID)
+	if err != nil {
+		return r.fail(fmt.Errorf("prepare dispense at kiosk %s: %w", c.kioskCode, err))
+	}
+	r.log("🏷️  สแกน Sticker ที่ตู้ %s → transaction=%s", c.kioskCode, prepared.DispenseID)
 
 	username, password, role := staffCredentials(c)
 	staffTok, err := staffLogin(ctx, c.core, username, password)
@@ -330,18 +345,18 @@ func confirmPrescription(ctx context.Context, c config, prescriptionID string) *
 	}
 
 	r.log("👤 จำลองสแกนบัตรผู้ใช้: %s (role=%s)", username, role)
-	r.log("📤 ยืนยันที่ตู้: Dispense(%s)", prescriptionID)
-	pr, err := dispense(ctx, c.core, staffTok, prescriptionID)
+	r.log("📤 ยืนยันตัวตนที่ตู้: ConfirmDispense(%s)", prepared.DispenseID)
+	tx, err := confirmDispense(ctx, c.core, staffTok, kioskTok, prepared.DispenseID)
 	if err != nil {
-		return r.fail(fmt.Errorf("dispense: %w", err))
+		return r.fail(fmt.Errorf("confirm dispense: %w", err))
 	}
-	r.log("   → รับเข้าคิว state=%s (internal id=%s)", shortState(pr.State), pr.ID)
-	r.State = shortState(pr.State)
-	r.ID = pr.ID
+	r.log("   → รับเข้าคิว state=%s (dispense id=%s, kiosk=%s)", shortTransactionState(tx.Status), tx.DispenseID, tx.KioskCode)
+	r.State = shortTransactionState(tx.Status)
+	r.ID = tx.DispenseID
 	if r.State == "DISPENSED" {
 		r.log("✅ จ่ายยาสำเร็จ")
 	} else if r.State == "FAILED" {
-		return r.fail(fmt.Errorf("dispense failed: %s", pr.FailureReason))
+		return r.fail(fmt.Errorf("dispense failed: %s", tx.FailureDetail))
 	} else {
 		r.log("   กด [ดูสถานะ] เพื่อ poll จนจบ")
 	}
@@ -355,39 +370,38 @@ func pollPrescription(ctx context.Context, c config, internalID string) *result 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout+5*time.Second)
 	defer cancel()
 
-	username, password, role := staffCredentials(c)
-	staffTok, err := staffLogin(ctx, c.core, username, password)
+	kioskTok, _, err := kioskLogin(ctx, c.core, c.kioskCode, c.kioskPIN)
 	if err != nil {
-		return r.fail(fmt.Errorf("staff login (%s/%s): %w", username, role, err))
+		return r.fail(fmt.Errorf("kiosk login (%s): %w", c.kioskCode, err))
 	}
 
 	r.log("🔄 ตรวจสอบสถานะ: %s", internalID)
 	deadline := time.Now().Add(c.timeout)
 	last := ""
 	for time.Now().Before(deadline) {
-		cur, err := getPrescription(ctx, c.core, staffTok, internalID)
+		cur, err := getDispenseTransaction(ctx, c.core, kioskTok, internalID)
 		if err != nil {
 			r.log("   … poll error: %v", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		if cur.State != last {
-			r.log("   → state=%s", shortState(cur.State))
-			last = cur.State
+		if cur.Status != last {
+			r.log("   → state=%s", shortTransactionState(cur.Status))
+			last = cur.Status
 		}
-		switch shortState(cur.State) {
+		switch shortTransactionState(cur.Status) {
 		case "DISPENSED":
 			r.State = "DISPENSED"
 			r.log("✅ จ่ายยาสำเร็จ")
 			return r
 		case "FAILED":
 			r.State = "FAILED"
-			return r.fail(fmt.Errorf("dispense failed: %s", cur.FailureReason))
+			return r.fail(fmt.Errorf("dispense failed: %s", cur.FailureDetail))
 		}
 		time.Sleep(1 * time.Second)
 	}
-	r.State = shortState(last)
-	return r.fail(fmt.Errorf("timed out after %s (last=%s)", c.timeout, shortState(last)))
+	r.State = shortTransactionState(last)
+	return r.fail(fmt.Errorf("timed out after %s (last=%s)", c.timeout, shortTransactionState(last)))
 }
 
 // ── web console (serve mode) ─────────────────────────────────────────
@@ -397,6 +411,7 @@ var consoleHTML []byte
 
 func serve(c config) error {
 	mux := http.NewServeMux()
+	kioskBridge := newKioskCommandBroker()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path != "/" {
 			http.NotFound(w, req)
@@ -409,12 +424,16 @@ func serve(c config) error {
 	mux.HandleFunc("/api/slots", func(w http.ResponseWriter, req *http.Request) {
 		ctx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
 		defer cancel()
-		tok, _, err := kioskLogin(ctx, c.core, c.kioskCode, c.kioskPIN)
+		kioskCode := strings.TrimSpace(req.URL.Query().Get("cabinet"))
+		if kioskCode == "" {
+			kioskCode = c.kioskCode
+		}
+		tok, _, err := kioskLogin(ctx, c.core, kioskCode, c.kioskPIN)
 		if err != nil {
 			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
 			return
 		}
-		slots, err := listSlots(ctx, c.core, tok, req.URL.Query().Get("cabinet"))
+		slots, err := listSlots(ctx, c.core, tok, kioskCode)
 		if err != nil {
 			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
 			return
@@ -449,10 +468,13 @@ func serve(c config) error {
 		}
 		writeJSON(w, http.StatusOK, res)
 	})
+	mux.HandleFunc("/api/kiosk-status", kioskBridge.handleStatus)
+	mux.HandleFunc("/api/kiosk-events", kioskBridge.handleEvents)
+	mux.HandleFunc("/api/kiosk-command", kioskBridge.handleCommand)
 	mux.HandleFunc("/api/run", func(w http.ResponseWriter, req *http.Request) {
 		var body struct {
 			Mode, Cabinet, Ward, HN, Patient, Source, Drugs, ID, Staff, StaffPass, Role string
-			Items                                                                      int
+			Items                                                                       int
 		}
 		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
@@ -460,6 +482,7 @@ func serve(c config) error {
 		}
 		rc := c // per-request copy of the base config
 		override(&rc.cabinet, body.Cabinet)
+		override(&rc.kioskCode, body.Cabinet)
 		override(&rc.ward, body.Ward)
 		override(&rc.hn, body.HN)
 		override(&rc.patient, body.Patient)
@@ -574,6 +597,16 @@ type prescription struct {
 	HN             string `json:"hn"`
 }
 
+type dispenseTransaction struct {
+	DispenseID          string `json:"dispenseId"`
+	PrescriptionID      string `json:"prescriptionId"`
+	KioskCode           string `json:"kioskCode"`
+	OperatorDisplayName string `json:"operatorDisplayName"`
+	Status              string `json:"status"`
+	FailureCode         string `json:"failureCode"`
+	FailureDetail       string `json:"failureDetail"`
+}
+
 func kioskLogin(ctx context.Context, core, code, pin string) (token, kioskID string, err error) {
 	var out struct {
 		AccessToken string `json:"accessToken"`
@@ -604,22 +637,31 @@ func listSlots(ctx context.Context, core, token, cabinet string) ([]slot, error)
 	return out.Slots, err
 }
 
-func dispense(ctx context.Context, core, token, prescriptionID string) (*prescription, error) {
+func prepareDispense(ctx context.Context, core, kioskToken, prescriptionID string) (*dispenseTransaction, error) {
 	var out struct {
-		Prescription prescription `json:"prescription"`
+		Transaction dispenseTransaction `json:"transaction"`
 	}
-	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/Dispense", token,
-		map[string]any{"prescriptionId": prescriptionID, "traceId": "kiosktester-confirm-" + prescriptionID}, &out)
-	return &out.Prescription, err
+	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/PrepareDispense", kioskToken,
+		map[string]any{"stickerCode": prescriptionID, "traceId": "kiosktester-prepare-" + prescriptionID + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)}, &out)
+	return &out.Transaction, err
 }
 
-func getPrescription(ctx context.Context, core, token, internalID string) (*prescription, error) {
+func confirmDispense(ctx context.Context, core, staffToken, kioskToken, dispenseID string) (*dispenseTransaction, error) {
 	var out struct {
-		Prescription prescription `json:"prescription"`
+		Transaction dispenseTransaction `json:"transaction"`
 	}
-	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/GetPrescription", token,
-		map[string]any{"id": internalID}, &out)
-	return &out.Prescription, err
+	err := connectCallWithKiosk(ctx, core, "medisync.dispensing.v1.DispensingService/ConfirmDispense", staffToken, kioskToken,
+		map[string]any{"dispenseId": dispenseID}, &out)
+	return &out.Transaction, err
+}
+
+func getDispenseTransaction(ctx context.Context, core, token, dispenseID string) (*dispenseTransaction, error) {
+	var out struct {
+		Transaction dispenseTransaction `json:"transaction"`
+	}
+	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/GetDispenseTransaction", token,
+		map[string]any{"dispenseId": dispenseID}, &out)
+	return &out.Transaction, err
 }
 
 func listPrescriptions(ctx context.Context, core, token, wardID string) ([]prescription, error) {
@@ -694,12 +736,16 @@ func enrollDemoCards(ctx context.Context, c config) (*result, error) {
 		}
 		r.log("✅ enrolled card %s → %s (%s)", tok, u.Username, u.Role)
 	}
-	r.log("การ์ดพร้อมใช้: สแกนบัตรที่ kiosk UI จะจำลอง cardLogin ผ่าน postMessage")
+	r.log("การ์ดพร้อมใช้: Kiosk UI ที่เชื่อมกับ tester สามารถจำลอง cardLogin ได้")
 	return r, nil
 }
 
 // connectCall POSTs a Connect unary JSON request and decodes the reply.
 func connectCall(ctx context.Context, core, method, token string, body, out any) error {
+	return connectCallWithKiosk(ctx, core, method, token, "", body, out)
+}
+
+func connectCallWithKiosk(ctx context.Context, core, method, token, kioskToken string, body, out any) error {
 	payload, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -712,6 +758,9 @@ func connectCall(ctx context.Context, core, method, token string, body, out any)
 	req.Header.Set("Content-Type", "application/json")
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	if kioskToken != "" {
+		req.Header.Set("X-Kiosk-Authorization", "Bearer "+kioskToken)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -770,6 +819,10 @@ func publishPrescription(ctx context.Context, url, source, id string, ev *events
 // ── helpers ──────────────────────────────────────────────────────────
 
 func shortState(s string) string { return strings.TrimPrefix(s, "PRESCRIPTION_STATE_") }
+
+func shortTransactionState(s string) string {
+	return strings.TrimPrefix(s, "DISPENSE_TRANSACTION_STATUS_")
+}
 
 func orAny(s string) string {
 	if strings.TrimSpace(s) == "" {

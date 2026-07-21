@@ -62,6 +62,9 @@ type Config struct {
 	PrintOpsFake bool
 	// VendingURL is the base URL of the vending-3d-ctl-agent API.
 	VendingURL string
+	// VendingEndpointsJSON maps immutable kiosk codes to their dedicated agent
+	// base URL, for example {"00010001":"http://vending-00010001:3303"}.
+	VendingEndpointsJSON string
 	// VendingAPIBearerToken is the Bearer token sent to vending-3d-ctl-agent.
 	VendingAPIBearerToken string
 	// VendingFake, when true, uses a no-op fake vending client (for dev/testing).
@@ -150,6 +153,7 @@ func Load() (Config, error) {
 
 	// ── Vending ──────────────────────────────────────────────────────
 	cfg.VendingURL = getenv("VENDING_URL", "http://localhost:3000")
+	cfg.VendingEndpointsJSON = os.Getenv("VENDING_ENDPOINTS_JSON")
 	cfg.VendingAPIBearerToken = os.Getenv("VENDING_API_BEARER_TOKEN")
 
 	vendingFakeStr := strings.ToLower(getenv("VENDING_FAKE", "false"))

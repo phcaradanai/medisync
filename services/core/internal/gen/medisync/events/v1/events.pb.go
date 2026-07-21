@@ -155,8 +155,11 @@ type PrescriptionCreated struct {
 	Items          []*PrescriptionItem    `protobuf:"bytes,6,rep,name=items,proto3" json:"items,omitempty"`
 	IssuedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
 	TraceId        string                 `protobuf:"bytes,8,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Immutable 4-digit business code of the destination project. Producers
+	// must not send a database UUID or a kiosk row ID.
+	ProjectCode   string `protobuf:"bytes,9,opt,name=project_code,json=projectCode,proto3" json:"project_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PrescriptionCreated) Reset() {
@@ -245,6 +248,13 @@ func (x *PrescriptionCreated) GetTraceId() string {
 	return ""
 }
 
+func (x *PrescriptionCreated) GetProjectCode() string {
+	if x != nil {
+		return x.ProjectCode
+	}
+	return ""
+}
+
 // Subject: medisync.dispense.requested
 type DispenseRequested struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -253,6 +263,9 @@ type DispenseRequested struct {
 	SlotCode       string                 `protobuf:"bytes,3,opt,name=slot_code,json=slotCode,proto3" json:"slot_code,omitempty"`
 	Quantity       int32                  `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
 	TraceId        string                 `protobuf:"bytes,5,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	KioskCode      string                 `protobuf:"bytes,6,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
+	Allocations    []*DispenseAllocation  `protobuf:"bytes,7,rep,name=allocations,proto3" json:"allocations,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -322,23 +335,223 @@ func (x *DispenseRequested) GetTraceId() string {
 	return ""
 }
 
+func (x *DispenseRequested) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
+func (x *DispenseRequested) GetAllocations() []*DispenseAllocation {
+	if x != nil {
+		return x.Allocations
+	}
+	return nil
+}
+
+func (x *DispenseRequested) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type DispenseAllocation struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AllocationId  string                 `protobuf:"bytes,1,opt,name=allocation_id,json=allocationId,proto3" json:"allocation_id,omitempty"`
+	ItemId        string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	DrugCode      string                 `protobuf:"bytes,3,opt,name=drug_code,json=drugCode,proto3" json:"drug_code,omitempty"`
+	SlotCode      string                 `protobuf:"bytes,4,opt,name=slot_code,json=slotCode,proto3" json:"slot_code,omitempty"`
+	BatchId       string                 `protobuf:"bytes,5,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	Quantity      int32                  `protobuf:"varint,6,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	DoorNo        int32                  `protobuf:"varint,7,opt,name=door_no,json=doorNo,proto3" json:"door_no,omitempty"`
+	HardwareLayer int32                  `protobuf:"varint,8,opt,name=hardware_layer,json=hardwareLayer,proto3" json:"hardware_layer,omitempty"`
+	ChannelStart  int32                  `protobuf:"varint,9,opt,name=channel_start,json=channelStart,proto3" json:"channel_start,omitempty"`
+	ChannelEnd    int32                  `protobuf:"varint,10,opt,name=channel_end,json=channelEnd,proto3" json:"channel_end,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DispenseAllocation) Reset() {
+	*x = DispenseAllocation{}
+	mi := &file_medisync_events_v1_events_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DispenseAllocation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DispenseAllocation) ProtoMessage() {}
+
+func (x *DispenseAllocation) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_events_v1_events_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DispenseAllocation.ProtoReflect.Descriptor instead.
+func (*DispenseAllocation) Descriptor() ([]byte, []int) {
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DispenseAllocation) GetAllocationId() string {
+	if x != nil {
+		return x.AllocationId
+	}
+	return ""
+}
+
+func (x *DispenseAllocation) GetItemId() string {
+	if x != nil {
+		return x.ItemId
+	}
+	return ""
+}
+
+func (x *DispenseAllocation) GetDrugCode() string {
+	if x != nil {
+		return x.DrugCode
+	}
+	return ""
+}
+
+func (x *DispenseAllocation) GetSlotCode() string {
+	if x != nil {
+		return x.SlotCode
+	}
+	return ""
+}
+
+func (x *DispenseAllocation) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
+	}
+	return ""
+}
+
+func (x *DispenseAllocation) GetQuantity() int32 {
+	if x != nil {
+		return x.Quantity
+	}
+	return 0
+}
+
+func (x *DispenseAllocation) GetDoorNo() int32 {
+	if x != nil {
+		return x.DoorNo
+	}
+	return 0
+}
+
+func (x *DispenseAllocation) GetHardwareLayer() int32 {
+	if x != nil {
+		return x.HardwareLayer
+	}
+	return 0
+}
+
+func (x *DispenseAllocation) GetChannelStart() int32 {
+	if x != nil {
+		return x.ChannelStart
+	}
+	return 0
+}
+
+func (x *DispenseAllocation) GetChannelEnd() int32 {
+	if x != nil {
+		return x.ChannelEnd
+	}
+	return 0
+}
+
+type DispenseAllocationResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AllocationId  string                 `protobuf:"bytes,1,opt,name=allocation_id,json=allocationId,proto3" json:"allocation_id,omitempty"`
+	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	Detail        string                 `protobuf:"bytes,3,opt,name=detail,proto3" json:"detail,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DispenseAllocationResult) Reset() {
+	*x = DispenseAllocationResult{}
+	mi := &file_medisync_events_v1_events_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DispenseAllocationResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DispenseAllocationResult) ProtoMessage() {}
+
+func (x *DispenseAllocationResult) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_events_v1_events_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DispenseAllocationResult.ProtoReflect.Descriptor instead.
+func (*DispenseAllocationResult) Descriptor() ([]byte, []int) {
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DispenseAllocationResult) GetAllocationId() string {
+	if x != nil {
+		return x.AllocationId
+	}
+	return ""
+}
+
+func (x *DispenseAllocationResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *DispenseAllocationResult) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
 // Subject: medisync.dispense.completed
 // Emitted only on hardware-confirmed success.
 type DispenseCompleted struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	DispenseId     string                 `protobuf:"bytes,1,opt,name=dispense_id,json=dispenseId,proto3" json:"dispense_id,omitempty"`
-	PrescriptionId string                 `protobuf:"bytes,2,opt,name=prescription_id,json=prescriptionId,proto3" json:"prescription_id,omitempty"`
-	SlotCode       string                 `protobuf:"bytes,3,opt,name=slot_code,json=slotCode,proto3" json:"slot_code,omitempty"`
-	Quantity       int32                  `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	CompletedAt    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
-	TraceId        string                 `protobuf:"bytes,6,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state            protoimpl.MessageState      `protogen:"open.v1"`
+	DispenseId       string                      `protobuf:"bytes,1,opt,name=dispense_id,json=dispenseId,proto3" json:"dispense_id,omitempty"`
+	PrescriptionId   string                      `protobuf:"bytes,2,opt,name=prescription_id,json=prescriptionId,proto3" json:"prescription_id,omitempty"`
+	SlotCode         string                      `protobuf:"bytes,3,opt,name=slot_code,json=slotCode,proto3" json:"slot_code,omitempty"`
+	Quantity         int32                       `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	CompletedAt      *timestamppb.Timestamp      `protobuf:"bytes,5,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	TraceId          string                      `protobuf:"bytes,6,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	KioskCode        string                      `protobuf:"bytes,7,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
+	HardwareResponse string                      `protobuf:"bytes,8,opt,name=hardware_response,json=hardwareResponse,proto3" json:"hardware_response,omitempty"`
+	Results          []*DispenseAllocationResult `protobuf:"bytes,9,rep,name=results,proto3" json:"results,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *DispenseCompleted) Reset() {
 	*x = DispenseCompleted{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[3]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -350,7 +563,7 @@ func (x *DispenseCompleted) String() string {
 func (*DispenseCompleted) ProtoMessage() {}
 
 func (x *DispenseCompleted) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[3]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -363,7 +576,7 @@ func (x *DispenseCompleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DispenseCompleted.ProtoReflect.Descriptor instead.
 func (*DispenseCompleted) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{3}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DispenseCompleted) GetDispenseId() string {
@@ -408,6 +621,27 @@ func (x *DispenseCompleted) GetTraceId() string {
 	return ""
 }
 
+func (x *DispenseCompleted) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
+func (x *DispenseCompleted) GetHardwareResponse() string {
+	if x != nil {
+		return x.HardwareResponse
+	}
+	return ""
+}
+
+func (x *DispenseCompleted) GetResults() []*DispenseAllocationResult {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
 // Subject: medisync.dispense.failed
 type DispenseFailed struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -417,15 +651,17 @@ type DispenseFailed struct {
 	// Machine-readable reason: "timeout", "jam", "agent_unreachable", ...
 	Reason string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
 	// Raw detail from the vending agent for diagnostics.
-	Detail        string `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
-	TraceId       string `protobuf:"bytes,6,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	Detail        string                      `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
+	TraceId       string                      `protobuf:"bytes,6,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	KioskCode     string                      `protobuf:"bytes,7,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
+	Results       []*DispenseAllocationResult `protobuf:"bytes,8,rep,name=results,proto3" json:"results,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DispenseFailed) Reset() {
 	*x = DispenseFailed{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[4]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -437,7 +673,7 @@ func (x *DispenseFailed) String() string {
 func (*DispenseFailed) ProtoMessage() {}
 
 func (x *DispenseFailed) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[4]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -450,7 +686,7 @@ func (x *DispenseFailed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DispenseFailed.ProtoReflect.Descriptor instead.
 func (*DispenseFailed) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{4}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DispenseFailed) GetDispenseId() string {
@@ -495,6 +731,20 @@ func (x *DispenseFailed) GetTraceId() string {
 	return ""
 }
 
+func (x *DispenseFailed) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
+func (x *DispenseFailed) GetResults() []*DispenseAllocationResult {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
 // Subject: medisync.print.requested
 type PrintRequested struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -508,7 +758,7 @@ type PrintRequested struct {
 
 func (x *PrintRequested) Reset() {
 	*x = PrintRequested{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[5]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -520,7 +770,7 @@ func (x *PrintRequested) String() string {
 func (*PrintRequested) ProtoMessage() {}
 
 func (x *PrintRequested) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[5]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -533,7 +783,7 @@ func (x *PrintRequested) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrintRequested.ProtoReflect.Descriptor instead.
 func (*PrintRequested) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{5}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PrintRequested) GetPrintId() string {
@@ -580,7 +830,7 @@ type PrintCompleted struct {
 
 func (x *PrintCompleted) Reset() {
 	*x = PrintCompleted{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[6]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -592,7 +842,7 @@ func (x *PrintCompleted) String() string {
 func (*PrintCompleted) ProtoMessage() {}
 
 func (x *PrintCompleted) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[6]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +855,7 @@ func (x *PrintCompleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrintCompleted.ProtoReflect.Descriptor instead.
 func (*PrintCompleted) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{6}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PrintCompleted) GetPrintId() string {
@@ -658,13 +908,16 @@ type FulfillmentRequested struct {
 	FulfillmentId  string                 `protobuf:"bytes,1,opt,name=fulfillment_id,json=fulfillmentId,proto3" json:"fulfillment_id,omitempty"`
 	PrescriptionId string                 `protobuf:"bytes,2,opt,name=prescription_id,json=prescriptionId,proto3" json:"prescription_id,omitempty"`
 	TraceId        string                 `protobuf:"bytes,3,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	KioskCode      string                 `protobuf:"bytes,4,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
+	Allocations    []*DispenseAllocation  `protobuf:"bytes,5,rep,name=allocations,proto3" json:"allocations,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *FulfillmentRequested) Reset() {
 	*x = FulfillmentRequested{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[7]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -676,7 +929,7 @@ func (x *FulfillmentRequested) String() string {
 func (*FulfillmentRequested) ProtoMessage() {}
 
 func (x *FulfillmentRequested) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[7]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -689,7 +942,7 @@ func (x *FulfillmentRequested) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FulfillmentRequested.ProtoReflect.Descriptor instead.
 func (*FulfillmentRequested) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{7}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *FulfillmentRequested) GetFulfillmentId() string {
@@ -713,6 +966,27 @@ func (x *FulfillmentRequested) GetTraceId() string {
 	return ""
 }
 
+func (x *FulfillmentRequested) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
+func (x *FulfillmentRequested) GetAllocations() []*DispenseAllocation {
+	if x != nil {
+		return x.Allocations
+	}
+	return nil
+}
+
+func (x *FulfillmentRequested) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 // Subject: medisync.fulfillment.completed
 // Emitted after a hardware-confirmed dispense (or permanent failure).
 type FulfillmentCompleted struct {
@@ -722,13 +996,14 @@ type FulfillmentCompleted struct {
 	Success        bool                   `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
 	Detail         string                 `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
 	TraceId        string                 `protobuf:"bytes,5,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	KioskCode      string                 `protobuf:"bytes,6,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *FulfillmentCompleted) Reset() {
 	*x = FulfillmentCompleted{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[8]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -740,7 +1015,7 @@ func (x *FulfillmentCompleted) String() string {
 func (*FulfillmentCompleted) ProtoMessage() {}
 
 func (x *FulfillmentCompleted) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[8]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +1028,7 @@ func (x *FulfillmentCompleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FulfillmentCompleted.ProtoReflect.Descriptor instead.
 func (*FulfillmentCompleted) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{8}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *FulfillmentCompleted) GetFulfillmentId() string {
@@ -791,6 +1066,13 @@ func (x *FulfillmentCompleted) GetTraceId() string {
 	return ""
 }
 
+func (x *FulfillmentCompleted) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
 // Subject: medisync.stock.changed
 type StockChanged struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -800,13 +1082,15 @@ type StockChanged struct {
 	QuantityAfter int32                  `protobuf:"varint,4,opt,name=quantity_after,json=quantityAfter,proto3" json:"quantity_after,omitempty"`
 	Reason        StockChangeReason      `protobuf:"varint,5,opt,name=reason,proto3,enum=medisync.events.v1.StockChangeReason" json:"reason,omitempty"`
 	TraceId       string                 `protobuf:"bytes,6,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	KioskCode     string                 `protobuf:"bytes,7,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
+	DispenseId    string                 `protobuf:"bytes,8,opt,name=dispense_id,json=dispenseId,proto3" json:"dispense_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *StockChanged) Reset() {
 	*x = StockChanged{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[9]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -818,7 +1102,7 @@ func (x *StockChanged) String() string {
 func (*StockChanged) ProtoMessage() {}
 
 func (x *StockChanged) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[9]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -831,7 +1115,7 @@ func (x *StockChanged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockChanged.ProtoReflect.Descriptor instead.
 func (*StockChanged) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{9}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *StockChanged) GetSlotCode() string {
@@ -876,6 +1160,20 @@ func (x *StockChanged) GetTraceId() string {
 	return ""
 }
 
+func (x *StockChanged) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
+func (x *StockChanged) GetDispenseId() string {
+	if x != nil {
+		return x.DispenseId
+	}
+	return ""
+}
+
 // Subject: medisync.stock.low
 type StockLow struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -889,7 +1187,7 @@ type StockLow struct {
 
 func (x *StockLow) Reset() {
 	*x = StockLow{}
-	mi := &file_medisync_events_v1_events_proto_msgTypes[10]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -901,7 +1199,7 @@ func (x *StockLow) String() string {
 func (*StockLow) ProtoMessage() {}
 
 func (x *StockLow) ProtoReflect() protoreflect.Message {
-	mi := &file_medisync_events_v1_events_proto_msgTypes[10]
+	mi := &file_medisync_events_v1_events_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -914,7 +1212,7 @@ func (x *StockLow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockLow.ProtoReflect.Descriptor instead.
 func (*StockLow) Descriptor() ([]byte, []int) {
-	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{10}
+	return file_medisync_events_v1_events_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *StockLow) GetSlotCode() string {
@@ -955,7 +1253,7 @@ const file_medisync_events_v1_events_proto_rawDesc = "" +
 	"\tdrug_name\x18\x02 \x01(\tR\bdrugName\x12\x1a\n" +
 	"\bquantity\x18\x03 \x01(\x05R\bquantity\x12\x1f\n" +
 	"\vdosage_text\x18\x04 \x01(\tR\n" +
-	"dosageText\"\xbf\x02\n" +
+	"dosageText\"\xe2\x02\n" +
 	"\x13PrescriptionCreated\x12'\n" +
 	"\x0fprescription_id\x18\x01 \x01(\tR\x0eprescriptionId\x12#\n" +
 	"\rsource_system\x18\x02 \x01(\tR\fsourceSystem\x12\x0e\n" +
@@ -964,14 +1262,37 @@ const file_medisync_events_v1_events_proto_rawDesc = "" +
 	"\award_id\x18\x05 \x01(\tR\x06wardId\x12:\n" +
 	"\x05items\x18\x06 \x03(\v2$.medisync.events.v1.PrescriptionItemR\x05items\x127\n" +
 	"\tissued_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\x12\x19\n" +
-	"\btrace_id\x18\b \x01(\tR\atraceId\"\xb1\x01\n" +
+	"\btrace_id\x18\b \x01(\tR\atraceId\x12!\n" +
+	"\fproject_code\x18\t \x01(\tR\vprojectCode\"\xb9\x02\n" +
 	"\x11DispenseRequested\x12\x1f\n" +
 	"\vdispense_id\x18\x01 \x01(\tR\n" +
 	"dispenseId\x12'\n" +
 	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x1b\n" +
 	"\tslot_code\x18\x03 \x01(\tR\bslotCode\x12\x1a\n" +
 	"\bquantity\x18\x04 \x01(\x05R\bquantity\x12\x19\n" +
-	"\btrace_id\x18\x05 \x01(\tR\atraceId\"\xf0\x01\n" +
+	"\btrace_id\x18\x05 \x01(\tR\atraceId\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\x06 \x01(\tR\tkioskCode\x12H\n" +
+	"\vallocations\x18\a \x03(\v2&.medisync.events.v1.DispenseAllocationR\vallocations\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\b \x01(\tR\tprojectId\"\xc9\x02\n" +
+	"\x12DispenseAllocation\x12#\n" +
+	"\rallocation_id\x18\x01 \x01(\tR\fallocationId\x12\x17\n" +
+	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12\x1b\n" +
+	"\tdrug_code\x18\x03 \x01(\tR\bdrugCode\x12\x1b\n" +
+	"\tslot_code\x18\x04 \x01(\tR\bslotCode\x12\x19\n" +
+	"\bbatch_id\x18\x05 \x01(\tR\abatchId\x12\x1a\n" +
+	"\bquantity\x18\x06 \x01(\x05R\bquantity\x12\x17\n" +
+	"\adoor_no\x18\a \x01(\x05R\x06doorNo\x12%\n" +
+	"\x0ehardware_layer\x18\b \x01(\x05R\rhardwareLayer\x12#\n" +
+	"\rchannel_start\x18\t \x01(\x05R\fchannelStart\x12\x1f\n" +
+	"\vchannel_end\x18\n" +
+	" \x01(\x05R\n" +
+	"channelEnd\"q\n" +
+	"\x18DispenseAllocationResult\x12#\n" +
+	"\rallocation_id\x18\x01 \x01(\tR\fallocationId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x16\n" +
+	"\x06detail\x18\x03 \x01(\tR\x06detail\"\x84\x03\n" +
 	"\x11DispenseCompleted\x12\x1f\n" +
 	"\vdispense_id\x18\x01 \x01(\tR\n" +
 	"dispenseId\x12'\n" +
@@ -979,7 +1300,11 @@ const file_medisync_events_v1_events_proto_rawDesc = "" +
 	"\tslot_code\x18\x03 \x01(\tR\bslotCode\x12\x1a\n" +
 	"\bquantity\x18\x04 \x01(\x05R\bquantity\x12=\n" +
 	"\fcompleted_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12\x19\n" +
-	"\btrace_id\x18\x06 \x01(\tR\atraceId\"\xc2\x01\n" +
+	"\btrace_id\x18\x06 \x01(\tR\atraceId\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\a \x01(\tR\tkioskCode\x12+\n" +
+	"\x11hardware_response\x18\b \x01(\tR\x10hardwareResponse\x12F\n" +
+	"\aresults\x18\t \x03(\v2,.medisync.events.v1.DispenseAllocationResultR\aresults\"\xa9\x02\n" +
 	"\x0eDispenseFailed\x12\x1f\n" +
 	"\vdispense_id\x18\x01 \x01(\tR\n" +
 	"dispenseId\x12'\n" +
@@ -987,7 +1312,10 @@ const file_medisync_events_v1_events_proto_rawDesc = "" +
 	"\tslot_code\x18\x03 \x01(\tR\bslotCode\x12\x16\n" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x16\n" +
 	"\x06detail\x18\x05 \x01(\tR\x06detail\x12\x19\n" +
-	"\btrace_id\x18\x06 \x01(\tR\atraceId\"\x8e\x01\n" +
+	"\btrace_id\x18\x06 \x01(\tR\atraceId\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\a \x01(\tR\tkioskCode\x12F\n" +
+	"\aresults\x18\b \x03(\v2,.medisync.events.v1.DispenseAllocationResultR\aresults\"\x8e\x01\n" +
 	"\x0ePrintRequested\x12\x19\n" +
 	"\bprint_id\x18\x01 \x01(\tR\aprintId\x12'\n" +
 	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x19\n" +
@@ -1001,24 +1329,35 @@ const file_medisync_events_v1_events_proto_rawDesc = "" +
 	"\x06detail\x18\x04 \x01(\tR\x06detail\x12\x19\n" +
 	"\btrace_id\x18\x05 \x01(\tR\atraceId\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x06 \x01(\tR\tprojectId\"\x81\x01\n" +
+	"project_id\x18\x06 \x01(\tR\tprojectId\"\x89\x02\n" +
 	"\x14FulfillmentRequested\x12%\n" +
 	"\x0efulfillment_id\x18\x01 \x01(\tR\rfulfillmentId\x12'\n" +
 	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x19\n" +
-	"\btrace_id\x18\x03 \x01(\tR\atraceId\"\xb3\x01\n" +
+	"\btrace_id\x18\x03 \x01(\tR\atraceId\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\x04 \x01(\tR\tkioskCode\x12H\n" +
+	"\vallocations\x18\x05 \x03(\v2&.medisync.events.v1.DispenseAllocationR\vallocations\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x06 \x01(\tR\tprojectId\"\xd2\x01\n" +
 	"\x14FulfillmentCompleted\x12%\n" +
 	"\x0efulfillment_id\x18\x01 \x01(\tR\rfulfillmentId\x12'\n" +
 	"\x0fprescription_id\x18\x02 \x01(\tR\x0eprescriptionId\x12\x18\n" +
 	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x16\n" +
 	"\x06detail\x18\x04 \x01(\tR\x06detail\x12\x19\n" +
-	"\btrace_id\x18\x05 \x01(\tR\atraceId\"\xdf\x01\n" +
+	"\btrace_id\x18\x05 \x01(\tR\atraceId\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\x06 \x01(\tR\tkioskCode\"\x9f\x02\n" +
 	"\fStockChanged\x12\x1b\n" +
 	"\tslot_code\x18\x01 \x01(\tR\bslotCode\x12\x1b\n" +
 	"\tdrug_code\x18\x02 \x01(\tR\bdrugCode\x12\x14\n" +
 	"\x05delta\x18\x03 \x01(\x05R\x05delta\x12%\n" +
 	"\x0equantity_after\x18\x04 \x01(\x05R\rquantityAfter\x12=\n" +
 	"\x06reason\x18\x05 \x01(\x0e2%.medisync.events.v1.StockChangeReasonR\x06reason\x12\x19\n" +
-	"\btrace_id\x18\x06 \x01(\tR\atraceId\"~\n" +
+	"\btrace_id\x18\x06 \x01(\tR\atraceId\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\a \x01(\tR\tkioskCode\x12\x1f\n" +
+	"\vdispense_id\x18\b \x01(\tR\n" +
+	"dispenseId\"~\n" +
 	"\bStockLow\x12\x1b\n" +
 	"\tslot_code\x18\x01 \x01(\tR\bslotCode\x12\x1b\n" +
 	"\tdrug_code\x18\x02 \x01(\tR\bdrugCode\x12\x1a\n" +
@@ -1043,32 +1382,38 @@ func file_medisync_events_v1_events_proto_rawDescGZIP() []byte {
 }
 
 var file_medisync_events_v1_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_medisync_events_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_medisync_events_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_medisync_events_v1_events_proto_goTypes = []any{
-	(StockChangeReason)(0),        // 0: medisync.events.v1.StockChangeReason
-	(*PrescriptionItem)(nil),      // 1: medisync.events.v1.PrescriptionItem
-	(*PrescriptionCreated)(nil),   // 2: medisync.events.v1.PrescriptionCreated
-	(*DispenseRequested)(nil),     // 3: medisync.events.v1.DispenseRequested
-	(*DispenseCompleted)(nil),     // 4: medisync.events.v1.DispenseCompleted
-	(*DispenseFailed)(nil),        // 5: medisync.events.v1.DispenseFailed
-	(*PrintRequested)(nil),        // 6: medisync.events.v1.PrintRequested
-	(*PrintCompleted)(nil),        // 7: medisync.events.v1.PrintCompleted
-	(*FulfillmentRequested)(nil),  // 8: medisync.events.v1.FulfillmentRequested
-	(*FulfillmentCompleted)(nil),  // 9: medisync.events.v1.FulfillmentCompleted
-	(*StockChanged)(nil),          // 10: medisync.events.v1.StockChanged
-	(*StockLow)(nil),              // 11: medisync.events.v1.StockLow
-	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
+	(StockChangeReason)(0),           // 0: medisync.events.v1.StockChangeReason
+	(*PrescriptionItem)(nil),         // 1: medisync.events.v1.PrescriptionItem
+	(*PrescriptionCreated)(nil),      // 2: medisync.events.v1.PrescriptionCreated
+	(*DispenseRequested)(nil),        // 3: medisync.events.v1.DispenseRequested
+	(*DispenseAllocation)(nil),       // 4: medisync.events.v1.DispenseAllocation
+	(*DispenseAllocationResult)(nil), // 5: medisync.events.v1.DispenseAllocationResult
+	(*DispenseCompleted)(nil),        // 6: medisync.events.v1.DispenseCompleted
+	(*DispenseFailed)(nil),           // 7: medisync.events.v1.DispenseFailed
+	(*PrintRequested)(nil),           // 8: medisync.events.v1.PrintRequested
+	(*PrintCompleted)(nil),           // 9: medisync.events.v1.PrintCompleted
+	(*FulfillmentRequested)(nil),     // 10: medisync.events.v1.FulfillmentRequested
+	(*FulfillmentCompleted)(nil),     // 11: medisync.events.v1.FulfillmentCompleted
+	(*StockChanged)(nil),             // 12: medisync.events.v1.StockChanged
+	(*StockLow)(nil),                 // 13: medisync.events.v1.StockLow
+	(*timestamppb.Timestamp)(nil),    // 14: google.protobuf.Timestamp
 }
 var file_medisync_events_v1_events_proto_depIdxs = []int32{
 	1,  // 0: medisync.events.v1.PrescriptionCreated.items:type_name -> medisync.events.v1.PrescriptionItem
-	12, // 1: medisync.events.v1.PrescriptionCreated.issued_at:type_name -> google.protobuf.Timestamp
-	12, // 2: medisync.events.v1.DispenseCompleted.completed_at:type_name -> google.protobuf.Timestamp
-	0,  // 3: medisync.events.v1.StockChanged.reason:type_name -> medisync.events.v1.StockChangeReason
-	4,  // [4:4] is the sub-list for method output_type
-	4,  // [4:4] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	14, // 1: medisync.events.v1.PrescriptionCreated.issued_at:type_name -> google.protobuf.Timestamp
+	4,  // 2: medisync.events.v1.DispenseRequested.allocations:type_name -> medisync.events.v1.DispenseAllocation
+	14, // 3: medisync.events.v1.DispenseCompleted.completed_at:type_name -> google.protobuf.Timestamp
+	5,  // 4: medisync.events.v1.DispenseCompleted.results:type_name -> medisync.events.v1.DispenseAllocationResult
+	5,  // 5: medisync.events.v1.DispenseFailed.results:type_name -> medisync.events.v1.DispenseAllocationResult
+	4,  // 6: medisync.events.v1.FulfillmentRequested.allocations:type_name -> medisync.events.v1.DispenseAllocation
+	0,  // 7: medisync.events.v1.StockChanged.reason:type_name -> medisync.events.v1.StockChangeReason
+	8,  // [8:8] is the sub-list for method output_type
+	8,  // [8:8] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_medisync_events_v1_events_proto_init() }
@@ -1082,7 +1427,7 @@ func file_medisync_events_v1_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_medisync_events_v1_events_proto_rawDesc), len(file_medisync_events_v1_events_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

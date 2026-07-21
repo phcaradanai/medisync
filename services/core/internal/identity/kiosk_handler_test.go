@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -48,6 +49,12 @@ func (s *fakeKioskStore) Create(_ context.Context, k *Kiosk) error {
 	}
 	if s.kiosksByID == nil {
 		s.kiosksByID = map[string]*Kiosk{}
+	}
+	if k.Code == "" {
+		k.Code = fmt.Sprintf("0001%04d", len(s.allKiosks)+1)
+	}
+	if k.ID == "" {
+		k.ID = "generated-" + k.Code
 	}
 	if _, exists := s.kiosksByCode[k.Code]; exists {
 		return ErrDuplicateKioskCode
@@ -299,13 +306,13 @@ func TestKioskLoginRateLimited(t *testing.T) {
 
 func TestKioskValidateSuccess(t *testing.T) {
 	store := &fakeKioskStore{
-		kiosksByID: map[string]*Kiosk{
-			"k1": {ID: "k1", Code: "KIOSK-1", DisplayName: "Valid", Active: true},
+		kiosksByCode: map[string]*Kiosk{
+			"00010001": {ID: "k1", Code: "00010001", DisplayName: "Valid", Active: true},
 		},
 	}
 	jwt := &fakeKioskJWT{
 		parseClaims: &KioskTokenClaims{
-			RegisteredClaims: jwt.RegisteredClaims{Subject: "k1"},
+			RegisteredClaims: jwt.RegisteredClaims{Subject: "00010001"},
 		},
 	}
 	h := setupKioskHandler(t, store, jwt, nil)
@@ -319,7 +326,7 @@ func TestKioskValidateSuccess(t *testing.T) {
 	if resp.Msg.Kiosk == nil {
 		t.Fatal("expected kiosk in response")
 	}
-	if resp.Msg.Kiosk.Code != "KIOSK-1" {
+	if resp.Msg.Kiosk.Code != "00010001" {
 		t.Errorf("Kiosk.Code = %q", resp.Msg.Kiosk.Code)
 	}
 }
@@ -343,7 +350,7 @@ func TestKioskValidateInvalidToken(t *testing.T) {
 
 func TestKioskValidateKioskNotFound(t *testing.T) {
 	store := &fakeKioskStore{
-		kiosksByID: map[string]*Kiosk{},
+		kiosksByCode: map[string]*Kiosk{},
 	}
 	jwt := &fakeKioskJWT{
 		parseClaims: &KioskTokenClaims{
@@ -360,13 +367,13 @@ func TestKioskValidateKioskNotFound(t *testing.T) {
 
 func TestKioskValidateInactiveKiosk(t *testing.T) {
 	store := &fakeKioskStore{
-		kiosksByID: map[string]*Kiosk{
-			"k1": {ID: "k1", Code: "KIOSK-1", DisplayName: "Inactive", Active: false},
+		kiosksByCode: map[string]*Kiosk{
+			"00010001": {ID: "k1", Code: "00010001", DisplayName: "Inactive", Active: false},
 		},
 	}
 	jwt := &fakeKioskJWT{
 		parseClaims: &KioskTokenClaims{
-			RegisteredClaims: jwt.RegisteredClaims{Subject: "k1"},
+			RegisteredClaims: jwt.RegisteredClaims{Subject: "00010001"},
 		},
 	}
 	h := setupKioskHandler(t, store, jwt, nil)
@@ -435,7 +442,7 @@ func TestCreateKioskSuccess(t *testing.T) {
 	store := &fakeKioskStore{}
 	h := setupKioskHandler(t, store, &fakeKioskJWT{}, nil)
 
-	req := connect.NewRequest(&kioskv1.CreateKioskRequest{Code: "NEW-K", DisplayName: "New Kiosk", Pin: "123456"})
+	req := connect.NewRequest(&kioskv1.CreateKioskRequest{DisplayName: "New Kiosk", Pin: "123456"})
 	req.Header().Set("Authorization", "Bearer admin-token")
 	resp, err := h.CreateKiosk(context.Background(), req)
 	if err != nil {
@@ -444,7 +451,7 @@ func TestCreateKioskSuccess(t *testing.T) {
 	if resp.Msg.Kiosk == nil {
 		t.Fatal("expected kiosk in response")
 	}
-	if resp.Msg.Kiosk.Code != "NEW-K" {
+	if resp.Msg.Kiosk.Code != "00010001" {
 		t.Errorf("Kiosk.Code = %q", resp.Msg.Kiosk.Code)
 	}
 	if resp.Msg.Kiosk.Pin == nil || *resp.Msg.Kiosk.Pin != "123456" {
@@ -467,12 +474,17 @@ func TestCreateKioskDuplicateCode(t *testing.T) {
 	assertConnectCode(t, err, connect.CodeAlreadyExists)
 }
 
-func TestCreateKioskMissingCode(t *testing.T) {
+func TestCreateKioskGeneratesCode(t *testing.T) {
 	h := setupKioskHandler(t, &fakeKioskStore{}, &fakeKioskJWT{}, nil)
 	req := connect.NewRequest(&kioskv1.CreateKioskRequest{Code: "", DisplayName: "No Code", Pin: "1234"})
 	req.Header().Set("Authorization", "Bearer admin-token")
-	_, err := h.CreateKiosk(context.Background(), req)
-	assertConnectCode(t, err, connect.CodeInvalidArgument)
+	resp, err := h.CreateKiosk(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Msg.Kiosk.GetCode() != "00010001" {
+		t.Fatalf("generated code = %q", resp.Msg.Kiosk.GetCode())
+	}
 }
 
 func TestCreateKioskMissingPin(t *testing.T) {

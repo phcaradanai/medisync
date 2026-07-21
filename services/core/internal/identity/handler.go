@@ -446,11 +446,7 @@ func (s *ProjectServer) CreateProject(ctx context.Context, req *connect.Request[
 	if slug == "" {
 		slug = strings.ToLower(strings.ReplaceAll(msg.Name, " ", "-"))
 	}
-	code := msg.Code
-	if code == "" {
-		code = slug
-	}
-	p, err := s.store.CreateProject(ctx, msg.Name, slug, code)
+	p, err := s.store.CreateProject(ctx, msg.Name, slug, "")
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create project: %w", err))
 	}
