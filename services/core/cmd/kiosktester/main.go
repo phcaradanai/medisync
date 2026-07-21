@@ -31,6 +31,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	neturl "net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -56,6 +57,7 @@ type config struct {
 	addr      string
 	core      string
 	natsURL   string
+	kioskURL  string
 	kioskCode string
 	kioskPIN  string
 	staff     string
@@ -78,6 +80,7 @@ func parseFlags() config {
 	flag.StringVar(&c.addr, "addr", ":8899", "serve mode: listen address")
 	flag.StringVar(&c.core, "core", "http://localhost:8080", "core Connect API base URL")
 	flag.StringVar(&c.natsURL, "nats", "nats://localhost:4222", "NATS server URL")
+	flag.StringVar(&c.kioskURL, "kiosk-url", "", "kiosk web app URL for postMessage integration (empty = derive from core host: same hostname, port 5173)")
 	flag.StringVar(&c.kioskCode, "kiosk-code", "DEMO-K1", "kiosk code (for ListSlots auth)")
 	flag.StringVar(&c.kioskPIN, "kiosk-pin", "123456", "kiosk PIN")
 	flag.StringVar(&c.staff, "staff", "pharmacist", "staff username for the confirm step (pharmacist | nurse | refiller)")
@@ -97,6 +100,9 @@ func parseFlags() config {
 }
 
 func run(c config) error {
+	if c.kioskURL == "" {
+		c.kioskURL = deriveKioskURL(c.core)
+	}
 	switch c.mode {
 	case "serve":
 		return serve(c)
@@ -397,7 +403,8 @@ func serve(c config) error {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(consoleHTML)
+		html := strings.Replace(string(consoleHTML), "__KIOSK_URL__", c.kioskURL, 1)
+		w.Write([]byte(html))
 	})
 	mux.HandleFunc("/api/slots", func(w http.ResponseWriter, req *http.Request) {
 		ctx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
@@ -506,7 +513,7 @@ func serve(c config) error {
 	})
 
 	fmt.Printf("🖥️  Kiosk flow tester console: http://localhost%s\n", displayAddr(c.addr))
-	fmt.Printf("    core=%s  nats=%s  kiosk=%s\n", c.core, c.natsURL, c.kioskCode)
+	fmt.Printf("    core=%s  nats=%s  kiosk=%s  kioskUI=%s\n", c.core, c.natsURL, c.kioskCode, c.kioskURL)
 	return http.ListenAndServe(c.addr, mux)
 }
 
@@ -521,6 +528,22 @@ func displayAddr(addr string) string {
 		return addr
 	}
 	return addr
+}
+
+// deriveKioskURL infers the kiosk web app URL from the core API URL.
+// It replaces the port with 5173 (Vite dev server default) and strips any
+// path.  e.g. http://localhost:8080 → http://localhost:5173,
+// http://192.168.1.50:8080 → http://192.168.1.50:5173.
+func deriveKioskURL(coreURL string) string {
+	u, err := neturl.Parse(coreURL)
+	if err != nil {
+		return "http://localhost:5173"
+	}
+	host := u.Hostname()
+	if host == "" {
+		host = "localhost"
+	}
+	return "http://" + host + ":5173"
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

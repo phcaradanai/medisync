@@ -411,7 +411,7 @@
 
   // ── Kiosk UI integration (postMessage) ─────────────────────────────
   let kioskWin = null;
-  const KIOSK_URL = "http://localhost:5173";
+  const KIOSK_URL = "__KIOSK_URL__";
 
   function openKiosk() {
     kioskWin = window.open(KIOSK_URL, "medisync-kiosk", "width=1200,height=800");
