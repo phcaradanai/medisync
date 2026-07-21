@@ -94,12 +94,12 @@ func (r *fakeRow) Scan(dest ...any) error {
 }
 
 // rowWithUser returns a fakeRow that fills dest with a sample user.
-// Matches the 10-column scan used by GetByUsername / GetByID.
+// Matches the 10-column normal scan and the 11-column card-login scan.
 func rowWithUser(u User) *fakeRow {
 	return &fakeRow{
 		scanFn: func(dest ...any) error {
-			if len(dest) != 10 {
-				return fmt.Errorf("expected 10 dests, got %d", len(dest))
+			if len(dest) != 10 && len(dest) != 11 {
+				return fmt.Errorf("expected 10 or 11 dests, got %d", len(dest))
 			}
 			*(dest[0].(*string)) = u.ID
 			*(dest[1].(*string)) = u.Username
@@ -120,6 +120,9 @@ func rowWithUser(u User) *fakeRow {
 			}
 			if dt, ok := dest[9].(*time.Time); ok {
 				*dt = u.UpdatedAt
+			}
+			if len(dest) == 11 {
+				*(dest[10].(*string)) = u.EmployeeCode
 			}
 			return nil
 		},
@@ -474,12 +477,12 @@ func TestGetByCardTokenWithHasherReturnsUser(t *testing.T) {
 	}
 
 	u := User{
-		ID:       "user-hashed",
-		Username: "hasheduser",
-		Role:     RoleNurse,
-		Active:   true,
+		ID:           "user-hashed",
+		Username:     "hasheduser",
+		EmployeeCode: "EMP-HASHED",
+		Role:         RoleNurse,
+		Active:       true,
 	}
-	// Card-login now uses the same 9-column scan as normal reads.
 	db := &fakeDB{queryRow: rowWithUser(u)}
 	store := NewStoreWithDBAndHasher(db, hasher)
 
@@ -492,6 +495,9 @@ func TestGetByCardTokenWithHasherReturnsUser(t *testing.T) {
 	}
 	if user.Username != "hasheduser" {
 		t.Errorf("Username = %q, want hasheduser", user.Username)
+	}
+	if user.EmployeeCode != "EMP-HASHED" {
+		t.Errorf("EmployeeCode = %q, want EMP-HASHED", user.EmployeeCode)
 	}
 }
 

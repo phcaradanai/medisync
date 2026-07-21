@@ -218,17 +218,22 @@ service DispensingService {
   rpc GetDispenseTransaction(GetDispenseTransactionRequest) returns (GetDispenseTransactionResponse);
   rpc ListDispenseTransactions(ListDispenseTransactionsRequest) returns (ListDispenseTransactionsResponse);
 
-  // Emergency dispensing — sticker-less, card-verified.
+  // Emergency dispensing for medication without a prescription-generated
+  // sticker. HN identifies the patient and employee_code identifies the
+  // responsible operator; this does not create a prescription transaction.
   rpc ListEmergencyDrugs(ListEmergencyDrugsRequest) returns (ListEmergencyDrugsResponse);
   rpc EmergencyDispense(EmergencyDispenseRequest) returns (EmergencyDispenseResponse);
+  rpc GetEmergencyDispenseTransaction(GetEmergencyDispenseTransactionRequest) returns (GetEmergencyDispenseTransactionResponse);
+  rpc ListEmergencyDispenseTransactions(ListEmergencyDispenseTransactionsRequest) returns (ListEmergencyDispenseTransactionsResponse);
 }
 
 // ── Emergency Dispensing ──────────────────────────────────────────
 
 message ListEmergencyDrugsRequest {
-  string kiosk_id = 1;
+  string kiosk_id = 1 [deprecated = true];
   int32 page_size = 2;
   string page_token = 3;
+  string kiosk_code = 4;
 }
 
 message EmergencyDrug {
@@ -248,12 +253,17 @@ message ListEmergencyDrugsResponse {
 }
 
 message EmergencyDispenseRequest {
-  string kiosk_id = 1;
-  string card_token = 2;       // scanned user card
-  string slot_id = 3;
+  string kiosk_id = 1 [deprecated = true];
+  string card_token = 2 [deprecated = true]; // Legacy only; ignored by the current flow.
+  string slot_id = 3 [deprecated = true];
   string drug_code = 4;
   int32 quantity = 5;
-  string reason = 6;           // optional reason for audit
+  string reason = 6;
+  string kiosk_code = 7;
+  string hn = 8;
+  string employee_code = 9;
+  string slot_code = 10;
+  string trace_id = 11;
 }
 
 message EmergencyDispenseResponse {
@@ -261,5 +271,74 @@ message EmergencyDispenseResponse {
   string slot_code = 2;
   string drug_name = 3;
   int32 quantity = 4;
-  string status = 5;           // "DISPENSED" or "FAILED"
+  string status = 5;
+  EmergencyDispenseTransaction transaction = 6;
+}
+
+enum EmergencyDispenseStatus {
+  EMERGENCY_DISPENSE_STATUS_UNSPECIFIED = 0;
+  EMERGENCY_DISPENSE_STATUS_QUEUED = 1;
+  EMERGENCY_DISPENSE_STATUS_DISPENSING = 2;
+  EMERGENCY_DISPENSE_STATUS_DISPENSED = 3;
+  EMERGENCY_DISPENSE_STATUS_FAILED = 4;
+}
+
+enum EmergencyOperatorAuthMethod {
+  EMERGENCY_OPERATOR_AUTH_METHOD_UNSPECIFIED = 0;
+  EMERGENCY_OPERATOR_AUTH_METHOD_CARD = 1;
+  EMERGENCY_OPERATOR_AUTH_METHOD_EMPLOYEE_CODE = 2;
+}
+
+message EmergencyDispenseTransaction {
+  string dispense_id = 1;
+  string kiosk_code = 2;
+  string project_id = 3;
+  string hn = 4;
+  string employee_code = 5;
+  string operator_user_id = 6;
+  string operator_display_name = 7;
+  string slot_code = 8;
+  string drug_code = 9;
+  string drug_name = 10;
+  int32 requested_quantity = 11;
+  int32 dispensed_quantity = 12;
+  EmergencyDispenseStatus status = 13;
+  string reason = 14;
+  string failure_code = 15;
+  string failure_detail = 16;
+  string trace_id = 17;
+  google.protobuf.Timestamp queued_at = 18;
+  google.protobuf.Timestamp started_at = 19;
+  google.protobuf.Timestamp completed_at = 20;
+  google.protobuf.Timestamp failed_at = 21;
+  google.protobuf.Timestamp created_at = 22;
+  google.protobuf.Timestamp updated_at = 23;
+  EmergencyOperatorAuthMethod operator_auth_method = 24;
+}
+
+message GetEmergencyDispenseTransactionRequest {
+  string dispense_id = 1;
+}
+
+message GetEmergencyDispenseTransactionResponse {
+  EmergencyDispenseTransaction transaction = 1;
+}
+
+message ListEmergencyDispenseTransactionsRequest {
+  string kiosk_code = 1;
+  repeated EmergencyDispenseStatus statuses = 2;
+  string hn = 3;
+  string employee_code = 4;
+  string drug_code = 5;
+  google.protobuf.Timestamp created_from = 6;
+  google.protobuf.Timestamp created_to = 7;
+  int32 page_size = 8;
+  string page_token = 9;
+  repeated EmergencyOperatorAuthMethod operator_auth_methods = 10;
+}
+
+message ListEmergencyDispenseTransactionsResponse {
+  repeated EmergencyDispenseTransaction transactions = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
 }

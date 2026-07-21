@@ -152,6 +152,110 @@ func (DispenseTransactionStatus) EnumDescriptor() ([]byte, []int) {
 	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{1}
 }
 
+type EmergencyDispenseStatus int32
+
+const (
+	EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_UNSPECIFIED EmergencyDispenseStatus = 0
+	EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_QUEUED      EmergencyDispenseStatus = 1
+	EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_DISPENSING  EmergencyDispenseStatus = 2
+	EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_DISPENSED   EmergencyDispenseStatus = 3
+	EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_FAILED      EmergencyDispenseStatus = 4
+)
+
+// Enum value maps for EmergencyDispenseStatus.
+var (
+	EmergencyDispenseStatus_name = map[int32]string{
+		0: "EMERGENCY_DISPENSE_STATUS_UNSPECIFIED",
+		1: "EMERGENCY_DISPENSE_STATUS_QUEUED",
+		2: "EMERGENCY_DISPENSE_STATUS_DISPENSING",
+		3: "EMERGENCY_DISPENSE_STATUS_DISPENSED",
+		4: "EMERGENCY_DISPENSE_STATUS_FAILED",
+	}
+	EmergencyDispenseStatus_value = map[string]int32{
+		"EMERGENCY_DISPENSE_STATUS_UNSPECIFIED": 0,
+		"EMERGENCY_DISPENSE_STATUS_QUEUED":      1,
+		"EMERGENCY_DISPENSE_STATUS_DISPENSING":  2,
+		"EMERGENCY_DISPENSE_STATUS_DISPENSED":   3,
+		"EMERGENCY_DISPENSE_STATUS_FAILED":      4,
+	}
+)
+
+func (x EmergencyDispenseStatus) Enum() *EmergencyDispenseStatus {
+	p := new(EmergencyDispenseStatus)
+	*p = x
+	return p
+}
+
+func (x EmergencyDispenseStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EmergencyDispenseStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_medisync_dispensing_v1_dispensing_proto_enumTypes[2].Descriptor()
+}
+
+func (EmergencyDispenseStatus) Type() protoreflect.EnumType {
+	return &file_medisync_dispensing_v1_dispensing_proto_enumTypes[2]
+}
+
+func (x EmergencyDispenseStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EmergencyDispenseStatus.Descriptor instead.
+func (EmergencyDispenseStatus) EnumDescriptor() ([]byte, []int) {
+	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{2}
+}
+
+type EmergencyOperatorAuthMethod int32
+
+const (
+	EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_UNSPECIFIED   EmergencyOperatorAuthMethod = 0
+	EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_CARD          EmergencyOperatorAuthMethod = 1
+	EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_EMPLOYEE_CODE EmergencyOperatorAuthMethod = 2
+)
+
+// Enum value maps for EmergencyOperatorAuthMethod.
+var (
+	EmergencyOperatorAuthMethod_name = map[int32]string{
+		0: "EMERGENCY_OPERATOR_AUTH_METHOD_UNSPECIFIED",
+		1: "EMERGENCY_OPERATOR_AUTH_METHOD_CARD",
+		2: "EMERGENCY_OPERATOR_AUTH_METHOD_EMPLOYEE_CODE",
+	}
+	EmergencyOperatorAuthMethod_value = map[string]int32{
+		"EMERGENCY_OPERATOR_AUTH_METHOD_UNSPECIFIED":   0,
+		"EMERGENCY_OPERATOR_AUTH_METHOD_CARD":          1,
+		"EMERGENCY_OPERATOR_AUTH_METHOD_EMPLOYEE_CODE": 2,
+	}
+)
+
+func (x EmergencyOperatorAuthMethod) Enum() *EmergencyOperatorAuthMethod {
+	p := new(EmergencyOperatorAuthMethod)
+	*p = x
+	return p
+}
+
+func (x EmergencyOperatorAuthMethod) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EmergencyOperatorAuthMethod) Descriptor() protoreflect.EnumDescriptor {
+	return file_medisync_dispensing_v1_dispensing_proto_enumTypes[3].Descriptor()
+}
+
+func (EmergencyOperatorAuthMethod) Type() protoreflect.EnumType {
+	return &file_medisync_dispensing_v1_dispensing_proto_enumTypes[3]
+}
+
+func (x EmergencyOperatorAuthMethod) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EmergencyOperatorAuthMethod.Descriptor instead.
+func (EmergencyOperatorAuthMethod) EnumDescriptor() ([]byte, []int) {
+	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{3}
+}
+
 type PrescriptionItem struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	DrugCode string                 `protobuf:"bytes,1,opt,name=drug_code,json=drugCode,proto3" json:"drug_code,omitempty"`
@@ -1717,10 +1821,12 @@ func (x *ListDispenseTransactionsResponse) GetTotalCount() int64 {
 }
 
 type ListEmergencyDrugsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	KioskId       string                 `protobuf:"bytes,1,opt,name=kiosk_id,json=kioskId,proto3" json:"kiosk_id,omitempty"`
-	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Deprecated: Marked as deprecated in medisync/dispensing/v1/dispensing.proto.
+	KioskId       string `protobuf:"bytes,1,opt,name=kiosk_id,json=kioskId,proto3" json:"kiosk_id,omitempty"`
+	PageSize      int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	KioskCode     string `protobuf:"bytes,4,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1755,6 +1861,7 @@ func (*ListEmergencyDrugsRequest) Descriptor() ([]byte, []int) {
 	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{21}
 }
 
+// Deprecated: Marked as deprecated in medisync/dispensing/v1/dispensing.proto.
 func (x *ListEmergencyDrugsRequest) GetKioskId() string {
 	if x != nil {
 		return x.KioskId
@@ -1772,6 +1879,13 @@ func (x *ListEmergencyDrugsRequest) GetPageSize() int32 {
 func (x *ListEmergencyDrugsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListEmergencyDrugsRequest) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
 	}
 	return ""
 }
@@ -1929,13 +2043,21 @@ func (x *ListEmergencyDrugsResponse) GetNextPageToken() string {
 }
 
 type EmergencyDispenseRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	KioskId       string                 `protobuf:"bytes,1,opt,name=kiosk_id,json=kioskId,proto3" json:"kiosk_id,omitempty"`
-	CardToken     string                 `protobuf:"bytes,2,opt,name=card_token,json=cardToken,proto3" json:"card_token,omitempty"` // scanned user card
-	SlotId        string                 `protobuf:"bytes,3,opt,name=slot_id,json=slotId,proto3" json:"slot_id,omitempty"`
-	DrugCode      string                 `protobuf:"bytes,4,opt,name=drug_code,json=drugCode,proto3" json:"drug_code,omitempty"`
-	Quantity      int32                  `protobuf:"varint,5,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	Reason        string                 `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"` // optional reason for audit
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Deprecated: Marked as deprecated in medisync/dispensing/v1/dispensing.proto.
+	KioskId string `protobuf:"bytes,1,opt,name=kiosk_id,json=kioskId,proto3" json:"kiosk_id,omitempty"`
+	// Deprecated: Marked as deprecated in medisync/dispensing/v1/dispensing.proto.
+	CardToken string `protobuf:"bytes,2,opt,name=card_token,json=cardToken,proto3" json:"card_token,omitempty"` // Legacy only; ignored by the current flow.
+	// Deprecated: Marked as deprecated in medisync/dispensing/v1/dispensing.proto.
+	SlotId        string `protobuf:"bytes,3,opt,name=slot_id,json=slotId,proto3" json:"slot_id,omitempty"`
+	DrugCode      string `protobuf:"bytes,4,opt,name=drug_code,json=drugCode,proto3" json:"drug_code,omitempty"`
+	Quantity      int32  `protobuf:"varint,5,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Reason        string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	KioskCode     string `protobuf:"bytes,7,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
+	Hn            string `protobuf:"bytes,8,opt,name=hn,proto3" json:"hn,omitempty"`
+	EmployeeCode  string `protobuf:"bytes,9,opt,name=employee_code,json=employeeCode,proto3" json:"employee_code,omitempty"`
+	SlotCode      string `protobuf:"bytes,10,opt,name=slot_code,json=slotCode,proto3" json:"slot_code,omitempty"`
+	TraceId       string `protobuf:"bytes,11,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1970,6 +2092,7 @@ func (*EmergencyDispenseRequest) Descriptor() ([]byte, []int) {
 	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{24}
 }
 
+// Deprecated: Marked as deprecated in medisync/dispensing/v1/dispensing.proto.
 func (x *EmergencyDispenseRequest) GetKioskId() string {
 	if x != nil {
 		return x.KioskId
@@ -1977,6 +2100,7 @@ func (x *EmergencyDispenseRequest) GetKioskId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in medisync/dispensing/v1/dispensing.proto.
 func (x *EmergencyDispenseRequest) GetCardToken() string {
 	if x != nil {
 		return x.CardToken
@@ -1984,6 +2108,7 @@ func (x *EmergencyDispenseRequest) GetCardToken() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in medisync/dispensing/v1/dispensing.proto.
 func (x *EmergencyDispenseRequest) GetSlotId() string {
 	if x != nil {
 		return x.SlotId
@@ -2012,13 +2137,49 @@ func (x *EmergencyDispenseRequest) GetReason() string {
 	return ""
 }
 
+func (x *EmergencyDispenseRequest) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseRequest) GetHn() string {
+	if x != nil {
+		return x.Hn
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseRequest) GetEmployeeCode() string {
+	if x != nil {
+		return x.EmployeeCode
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseRequest) GetSlotCode() string {
+	if x != nil {
+		return x.SlotCode
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseRequest) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
 type EmergencyDispenseResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DispenseId    string                 `protobuf:"bytes,1,opt,name=dispense_id,json=dispenseId,proto3" json:"dispense_id,omitempty"`
-	SlotCode      string                 `protobuf:"bytes,2,opt,name=slot_code,json=slotCode,proto3" json:"slot_code,omitempty"`
-	DrugName      string                 `protobuf:"bytes,3,opt,name=drug_name,json=drugName,proto3" json:"drug_name,omitempty"`
-	Quantity      int32                  `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"` // "DISPENSED" or "FAILED"
+	state         protoimpl.MessageState        `protogen:"open.v1"`
+	DispenseId    string                        `protobuf:"bytes,1,opt,name=dispense_id,json=dispenseId,proto3" json:"dispense_id,omitempty"`
+	SlotCode      string                        `protobuf:"bytes,2,opt,name=slot_code,json=slotCode,proto3" json:"slot_code,omitempty"`
+	DrugName      string                        `protobuf:"bytes,3,opt,name=drug_name,json=drugName,proto3" json:"drug_name,omitempty"`
+	Quantity      int32                         `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Status        string                        `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Transaction   *EmergencyDispenseTransaction `protobuf:"bytes,6,opt,name=transaction,proto3" json:"transaction,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2086,6 +2247,505 @@ func (x *EmergencyDispenseResponse) GetStatus() string {
 		return x.Status
 	}
 	return ""
+}
+
+func (x *EmergencyDispenseResponse) GetTransaction() *EmergencyDispenseTransaction {
+	if x != nil {
+		return x.Transaction
+	}
+	return nil
+}
+
+type EmergencyDispenseTransaction struct {
+	state               protoimpl.MessageState      `protogen:"open.v1"`
+	DispenseId          string                      `protobuf:"bytes,1,opt,name=dispense_id,json=dispenseId,proto3" json:"dispense_id,omitempty"`
+	KioskCode           string                      `protobuf:"bytes,2,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
+	ProjectId           string                      `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Hn                  string                      `protobuf:"bytes,4,opt,name=hn,proto3" json:"hn,omitempty"`
+	EmployeeCode        string                      `protobuf:"bytes,5,opt,name=employee_code,json=employeeCode,proto3" json:"employee_code,omitempty"`
+	OperatorUserId      string                      `protobuf:"bytes,6,opt,name=operator_user_id,json=operatorUserId,proto3" json:"operator_user_id,omitempty"`
+	OperatorDisplayName string                      `protobuf:"bytes,7,opt,name=operator_display_name,json=operatorDisplayName,proto3" json:"operator_display_name,omitempty"`
+	SlotCode            string                      `protobuf:"bytes,8,opt,name=slot_code,json=slotCode,proto3" json:"slot_code,omitempty"`
+	DrugCode            string                      `protobuf:"bytes,9,opt,name=drug_code,json=drugCode,proto3" json:"drug_code,omitempty"`
+	DrugName            string                      `protobuf:"bytes,10,opt,name=drug_name,json=drugName,proto3" json:"drug_name,omitempty"`
+	RequestedQuantity   int32                       `protobuf:"varint,11,opt,name=requested_quantity,json=requestedQuantity,proto3" json:"requested_quantity,omitempty"`
+	DispensedQuantity   int32                       `protobuf:"varint,12,opt,name=dispensed_quantity,json=dispensedQuantity,proto3" json:"dispensed_quantity,omitempty"`
+	Status              EmergencyDispenseStatus     `protobuf:"varint,13,opt,name=status,proto3,enum=medisync.dispensing.v1.EmergencyDispenseStatus" json:"status,omitempty"`
+	Reason              string                      `protobuf:"bytes,14,opt,name=reason,proto3" json:"reason,omitempty"`
+	FailureCode         string                      `protobuf:"bytes,15,opt,name=failure_code,json=failureCode,proto3" json:"failure_code,omitempty"`
+	FailureDetail       string                      `protobuf:"bytes,16,opt,name=failure_detail,json=failureDetail,proto3" json:"failure_detail,omitempty"`
+	TraceId             string                      `protobuf:"bytes,17,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	QueuedAt            *timestamppb.Timestamp      `protobuf:"bytes,18,opt,name=queued_at,json=queuedAt,proto3" json:"queued_at,omitempty"`
+	StartedAt           *timestamppb.Timestamp      `protobuf:"bytes,19,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	CompletedAt         *timestamppb.Timestamp      `protobuf:"bytes,20,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	FailedAt            *timestamppb.Timestamp      `protobuf:"bytes,21,opt,name=failed_at,json=failedAt,proto3" json:"failed_at,omitempty"`
+	CreatedAt           *timestamppb.Timestamp      `protobuf:"bytes,22,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp      `protobuf:"bytes,23,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	OperatorAuthMethod  EmergencyOperatorAuthMethod `protobuf:"varint,24,opt,name=operator_auth_method,json=operatorAuthMethod,proto3,enum=medisync.dispensing.v1.EmergencyOperatorAuthMethod" json:"operator_auth_method,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *EmergencyDispenseTransaction) Reset() {
+	*x = EmergencyDispenseTransaction{}
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmergencyDispenseTransaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmergencyDispenseTransaction) ProtoMessage() {}
+
+func (x *EmergencyDispenseTransaction) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmergencyDispenseTransaction.ProtoReflect.Descriptor instead.
+func (*EmergencyDispenseTransaction) Descriptor() ([]byte, []int) {
+	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *EmergencyDispenseTransaction) GetDispenseId() string {
+	if x != nil {
+		return x.DispenseId
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetHn() string {
+	if x != nil {
+		return x.Hn
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetEmployeeCode() string {
+	if x != nil {
+		return x.EmployeeCode
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetOperatorUserId() string {
+	if x != nil {
+		return x.OperatorUserId
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetOperatorDisplayName() string {
+	if x != nil {
+		return x.OperatorDisplayName
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetSlotCode() string {
+	if x != nil {
+		return x.SlotCode
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetDrugCode() string {
+	if x != nil {
+		return x.DrugCode
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetDrugName() string {
+	if x != nil {
+		return x.DrugName
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetRequestedQuantity() int32 {
+	if x != nil {
+		return x.RequestedQuantity
+	}
+	return 0
+}
+
+func (x *EmergencyDispenseTransaction) GetDispensedQuantity() int32 {
+	if x != nil {
+		return x.DispensedQuantity
+	}
+	return 0
+}
+
+func (x *EmergencyDispenseTransaction) GetStatus() EmergencyDispenseStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_UNSPECIFIED
+}
+
+func (x *EmergencyDispenseTransaction) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetFailureCode() string {
+	if x != nil {
+		return x.FailureCode
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetFailureDetail() string {
+	if x != nil {
+		return x.FailureDetail
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
+func (x *EmergencyDispenseTransaction) GetQueuedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.QueuedAt
+	}
+	return nil
+}
+
+func (x *EmergencyDispenseTransaction) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+func (x *EmergencyDispenseTransaction) GetCompletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CompletedAt
+	}
+	return nil
+}
+
+func (x *EmergencyDispenseTransaction) GetFailedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FailedAt
+	}
+	return nil
+}
+
+func (x *EmergencyDispenseTransaction) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *EmergencyDispenseTransaction) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *EmergencyDispenseTransaction) GetOperatorAuthMethod() EmergencyOperatorAuthMethod {
+	if x != nil {
+		return x.OperatorAuthMethod
+	}
+	return EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_UNSPECIFIED
+}
+
+type GetEmergencyDispenseTransactionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DispenseId    string                 `protobuf:"bytes,1,opt,name=dispense_id,json=dispenseId,proto3" json:"dispense_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetEmergencyDispenseTransactionRequest) Reset() {
+	*x = GetEmergencyDispenseTransactionRequest{}
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEmergencyDispenseTransactionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEmergencyDispenseTransactionRequest) ProtoMessage() {}
+
+func (x *GetEmergencyDispenseTransactionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEmergencyDispenseTransactionRequest.ProtoReflect.Descriptor instead.
+func (*GetEmergencyDispenseTransactionRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetEmergencyDispenseTransactionRequest) GetDispenseId() string {
+	if x != nil {
+		return x.DispenseId
+	}
+	return ""
+}
+
+type GetEmergencyDispenseTransactionResponse struct {
+	state         protoimpl.MessageState        `protogen:"open.v1"`
+	Transaction   *EmergencyDispenseTransaction `protobuf:"bytes,1,opt,name=transaction,proto3" json:"transaction,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetEmergencyDispenseTransactionResponse) Reset() {
+	*x = GetEmergencyDispenseTransactionResponse{}
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEmergencyDispenseTransactionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEmergencyDispenseTransactionResponse) ProtoMessage() {}
+
+func (x *GetEmergencyDispenseTransactionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEmergencyDispenseTransactionResponse.ProtoReflect.Descriptor instead.
+func (*GetEmergencyDispenseTransactionResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GetEmergencyDispenseTransactionResponse) GetTransaction() *EmergencyDispenseTransaction {
+	if x != nil {
+		return x.Transaction
+	}
+	return nil
+}
+
+type ListEmergencyDispenseTransactionsRequest struct {
+	state               protoimpl.MessageState        `protogen:"open.v1"`
+	KioskCode           string                        `protobuf:"bytes,1,opt,name=kiosk_code,json=kioskCode,proto3" json:"kiosk_code,omitempty"`
+	Statuses            []EmergencyDispenseStatus     `protobuf:"varint,2,rep,packed,name=statuses,proto3,enum=medisync.dispensing.v1.EmergencyDispenseStatus" json:"statuses,omitempty"`
+	Hn                  string                        `protobuf:"bytes,3,opt,name=hn,proto3" json:"hn,omitempty"`
+	EmployeeCode        string                        `protobuf:"bytes,4,opt,name=employee_code,json=employeeCode,proto3" json:"employee_code,omitempty"`
+	DrugCode            string                        `protobuf:"bytes,5,opt,name=drug_code,json=drugCode,proto3" json:"drug_code,omitempty"`
+	CreatedFrom         *timestamppb.Timestamp        `protobuf:"bytes,6,opt,name=created_from,json=createdFrom,proto3" json:"created_from,omitempty"`
+	CreatedTo           *timestamppb.Timestamp        `protobuf:"bytes,7,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`
+	PageSize            int32                         `protobuf:"varint,8,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken           string                        `protobuf:"bytes,9,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	OperatorAuthMethods []EmergencyOperatorAuthMethod `protobuf:"varint,10,rep,packed,name=operator_auth_methods,json=operatorAuthMethods,proto3,enum=medisync.dispensing.v1.EmergencyOperatorAuthMethod" json:"operator_auth_methods,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) Reset() {
+	*x = ListEmergencyDispenseTransactionsRequest{}
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEmergencyDispenseTransactionsRequest) ProtoMessage() {}
+
+func (x *ListEmergencyDispenseTransactionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEmergencyDispenseTransactionsRequest.ProtoReflect.Descriptor instead.
+func (*ListEmergencyDispenseTransactionsRequest) Descriptor() ([]byte, []int) {
+	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetKioskCode() string {
+	if x != nil {
+		return x.KioskCode
+	}
+	return ""
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetStatuses() []EmergencyDispenseStatus {
+	if x != nil {
+		return x.Statuses
+	}
+	return nil
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetHn() string {
+	if x != nil {
+		return x.Hn
+	}
+	return ""
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetEmployeeCode() string {
+	if x != nil {
+		return x.EmployeeCode
+	}
+	return ""
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetDrugCode() string {
+	if x != nil {
+		return x.DrugCode
+	}
+	return ""
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetCreatedFrom() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedFrom
+	}
+	return nil
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetCreatedTo() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedTo
+	}
+	return nil
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListEmergencyDispenseTransactionsRequest) GetOperatorAuthMethods() []EmergencyOperatorAuthMethod {
+	if x != nil {
+		return x.OperatorAuthMethods
+	}
+	return nil
+}
+
+type ListEmergencyDispenseTransactionsResponse struct {
+	state         protoimpl.MessageState          `protogen:"open.v1"`
+	Transactions  []*EmergencyDispenseTransaction `protobuf:"bytes,1,rep,name=transactions,proto3" json:"transactions,omitempty"`
+	NextPageToken string                          `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int64                           `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEmergencyDispenseTransactionsResponse) Reset() {
+	*x = ListEmergencyDispenseTransactionsResponse{}
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEmergencyDispenseTransactionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEmergencyDispenseTransactionsResponse) ProtoMessage() {}
+
+func (x *ListEmergencyDispenseTransactionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_medisync_dispensing_v1_dispensing_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEmergencyDispenseTransactionsResponse.ProtoReflect.Descriptor instead.
+func (*ListEmergencyDispenseTransactionsResponse) Descriptor() ([]byte, []int) {
+	return file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ListEmergencyDispenseTransactionsResponse) GetTransactions() []*EmergencyDispenseTransaction {
+	if x != nil {
+		return x.Transactions
+	}
+	return nil
+}
+
+func (x *ListEmergencyDispenseTransactionsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListEmergencyDispenseTransactionsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
 }
 
 var File_medisync_dispensing_v1_dispensing_proto protoreflect.FileDescriptor
@@ -2238,12 +2898,14 @@ const file_medisync_dispensing_v1_dispensing_proto_rawDesc = "" +
 	"\ftransactions\x18\x01 \x03(\v2+.medisync.dispensing.v1.DispenseTransactionR\ftransactions\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
 	"\vtotal_count\x18\x03 \x01(\x03R\n" +
-	"totalCount\"r\n" +
-	"\x19ListEmergencyDrugsRequest\x12\x19\n" +
-	"\bkiosk_id\x18\x01 \x01(\tR\akioskId\x12\x1b\n" +
+	"totalCount\"\x95\x01\n" +
+	"\x19ListEmergencyDrugsRequest\x12\x1d\n" +
+	"\bkiosk_id\x18\x01 \x01(\tB\x02\x18\x01R\akioskId\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"\xdb\x01\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\x04 \x01(\tR\tkioskCode\"\xdb\x01\n" +
 	"\rEmergencyDrug\x12\x17\n" +
 	"\aslot_id\x18\x01 \x01(\tR\x06slotId\x12\x1b\n" +
 	"\tslot_code\x18\x02 \x01(\tR\bslotCode\x12\x1b\n" +
@@ -2256,22 +2918,87 @@ const file_medisync_dispensing_v1_dispensing_proto_rawDesc = "" +
 	"\x05drugs\x18\x01 \x03(\v2%.medisync.dispensing.v1.EmergencyDrugR\x05drugs\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x03R\n" +
 	"totalCount\x12&\n" +
-	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\"\xbe\x01\n" +
-	"\x18EmergencyDispenseRequest\x12\x19\n" +
-	"\bkiosk_id\x18\x01 \x01(\tR\akioskId\x12\x1d\n" +
+	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\"\xd6\x02\n" +
+	"\x18EmergencyDispenseRequest\x12\x1d\n" +
+	"\bkiosk_id\x18\x01 \x01(\tB\x02\x18\x01R\akioskId\x12!\n" +
 	"\n" +
-	"card_token\x18\x02 \x01(\tR\tcardToken\x12\x17\n" +
-	"\aslot_id\x18\x03 \x01(\tR\x06slotId\x12\x1b\n" +
+	"card_token\x18\x02 \x01(\tB\x02\x18\x01R\tcardToken\x12\x1b\n" +
+	"\aslot_id\x18\x03 \x01(\tB\x02\x18\x01R\x06slotId\x12\x1b\n" +
 	"\tdrug_code\x18\x04 \x01(\tR\bdrugCode\x12\x1a\n" +
 	"\bquantity\x18\x05 \x01(\x05R\bquantity\x12\x16\n" +
-	"\x06reason\x18\x06 \x01(\tR\x06reason\"\xaa\x01\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\a \x01(\tR\tkioskCode\x12\x0e\n" +
+	"\x02hn\x18\b \x01(\tR\x02hn\x12#\n" +
+	"\remployee_code\x18\t \x01(\tR\femployeeCode\x12\x1b\n" +
+	"\tslot_code\x18\n" +
+	" \x01(\tR\bslotCode\x12\x19\n" +
+	"\btrace_id\x18\v \x01(\tR\atraceId\"\x82\x02\n" +
 	"\x19EmergencyDispenseResponse\x12\x1f\n" +
 	"\vdispense_id\x18\x01 \x01(\tR\n" +
 	"dispenseId\x12\x1b\n" +
 	"\tslot_code\x18\x02 \x01(\tR\bslotCode\x12\x1b\n" +
 	"\tdrug_name\x18\x03 \x01(\tR\bdrugName\x12\x1a\n" +
 	"\bquantity\x18\x04 \x01(\x05R\bquantity\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status*\x9c\x02\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12V\n" +
+	"\vtransaction\x18\x06 \x01(\v24.medisync.dispensing.v1.EmergencyDispenseTransactionR\vtransaction\"\xd4\b\n" +
+	"\x1cEmergencyDispenseTransaction\x12\x1f\n" +
+	"\vdispense_id\x18\x01 \x01(\tR\n" +
+	"dispenseId\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\x02 \x01(\tR\tkioskCode\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\x12\x0e\n" +
+	"\x02hn\x18\x04 \x01(\tR\x02hn\x12#\n" +
+	"\remployee_code\x18\x05 \x01(\tR\femployeeCode\x12(\n" +
+	"\x10operator_user_id\x18\x06 \x01(\tR\x0eoperatorUserId\x122\n" +
+	"\x15operator_display_name\x18\a \x01(\tR\x13operatorDisplayName\x12\x1b\n" +
+	"\tslot_code\x18\b \x01(\tR\bslotCode\x12\x1b\n" +
+	"\tdrug_code\x18\t \x01(\tR\bdrugCode\x12\x1b\n" +
+	"\tdrug_name\x18\n" +
+	" \x01(\tR\bdrugName\x12-\n" +
+	"\x12requested_quantity\x18\v \x01(\x05R\x11requestedQuantity\x12-\n" +
+	"\x12dispensed_quantity\x18\f \x01(\x05R\x11dispensedQuantity\x12G\n" +
+	"\x06status\x18\r \x01(\x0e2/.medisync.dispensing.v1.EmergencyDispenseStatusR\x06status\x12\x16\n" +
+	"\x06reason\x18\x0e \x01(\tR\x06reason\x12!\n" +
+	"\ffailure_code\x18\x0f \x01(\tR\vfailureCode\x12%\n" +
+	"\x0efailure_detail\x18\x10 \x01(\tR\rfailureDetail\x12\x19\n" +
+	"\btrace_id\x18\x11 \x01(\tR\atraceId\x127\n" +
+	"\tqueued_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\bqueuedAt\x129\n" +
+	"\n" +
+	"started_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12=\n" +
+	"\fcompleted_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x127\n" +
+	"\tfailed_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\bfailedAt\x129\n" +
+	"\n" +
+	"created_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12e\n" +
+	"\x14operator_auth_method\x18\x18 \x01(\x0e23.medisync.dispensing.v1.EmergencyOperatorAuthMethodR\x12operatorAuthMethod\"I\n" +
+	"&GetEmergencyDispenseTransactionRequest\x12\x1f\n" +
+	"\vdispense_id\x18\x01 \x01(\tR\n" +
+	"dispenseId\"\x81\x01\n" +
+	"'GetEmergencyDispenseTransactionResponse\x12V\n" +
+	"\vtransaction\x18\x01 \x01(\v24.medisync.dispensing.v1.EmergencyDispenseTransactionR\vtransaction\"\x87\x04\n" +
+	"(ListEmergencyDispenseTransactionsRequest\x12\x1d\n" +
+	"\n" +
+	"kiosk_code\x18\x01 \x01(\tR\tkioskCode\x12K\n" +
+	"\bstatuses\x18\x02 \x03(\x0e2/.medisync.dispensing.v1.EmergencyDispenseStatusR\bstatuses\x12\x0e\n" +
+	"\x02hn\x18\x03 \x01(\tR\x02hn\x12#\n" +
+	"\remployee_code\x18\x04 \x01(\tR\femployeeCode\x12\x1b\n" +
+	"\tdrug_code\x18\x05 \x01(\tR\bdrugCode\x12=\n" +
+	"\fcreated_from\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vcreatedFrom\x129\n" +
+	"\n" +
+	"created_to\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedTo\x12\x1b\n" +
+	"\tpage_size\x18\b \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\t \x01(\tR\tpageToken\x12g\n" +
+	"\x15operator_auth_methods\x18\n" +
+	" \x03(\x0e23.medisync.dispensing.v1.EmergencyOperatorAuthMethodR\x13operatorAuthMethods\"\xce\x01\n" +
+	")ListEmergencyDispenseTransactionsResponse\x12X\n" +
+	"\ftransactions\x18\x01 \x03(\v24.medisync.dispensing.v1.EmergencyDispenseTransactionR\ftransactions\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount*\x9c\x02\n" +
 	"\x11PrescriptionState\x12\"\n" +
 	"\x1ePRESCRIPTION_STATE_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bPRESCRIPTION_STATE_RECEIVED\x10\x01\x12\x1c\n" +
@@ -2289,7 +3016,17 @@ const file_medisync_dispensing_v1_dispensing_proto_rawDesc = "" +
 	"%DISPENSE_TRANSACTION_STATUS_DISPENSED\x10\x04\x12&\n" +
 	"\"DISPENSE_TRANSACTION_STATUS_FAILED\x10\x05\x12)\n" +
 	"%DISPENSE_TRANSACTION_STATUS_CANCELLED\x10\x06\x12'\n" +
-	"#DISPENSE_TRANSACTION_STATUS_EXPIRED\x10\a2\xca\t\n" +
+	"#DISPENSE_TRANSACTION_STATUS_EXPIRED\x10\a*\xe3\x01\n" +
+	"\x17EmergencyDispenseStatus\x12)\n" +
+	"%EMERGENCY_DISPENSE_STATUS_UNSPECIFIED\x10\x00\x12$\n" +
+	" EMERGENCY_DISPENSE_STATUS_QUEUED\x10\x01\x12(\n" +
+	"$EMERGENCY_DISPENSE_STATUS_DISPENSING\x10\x02\x12'\n" +
+	"#EMERGENCY_DISPENSE_STATUS_DISPENSED\x10\x03\x12$\n" +
+	" EMERGENCY_DISPENSE_STATUS_FAILED\x10\x04*\xa8\x01\n" +
+	"\x1bEmergencyOperatorAuthMethod\x12.\n" +
+	"*EMERGENCY_OPERATOR_AUTH_METHOD_UNSPECIFIED\x10\x00\x12'\n" +
+	"#EMERGENCY_OPERATOR_AUTH_METHOD_CARD\x10\x01\x120\n" +
+	",EMERGENCY_OPERATOR_AUTH_METHOD_EMPLOYEE_CODE\x10\x022\x9a\f\n" +
 	"\x11DispensingService\x12x\n" +
 	"\x11ListPrescriptions\x120.medisync.dispensing.v1.ListPrescriptionsRequest\x1a1.medisync.dispensing.v1.ListPrescriptionsResponse\x12r\n" +
 	"\x0fGetPrescription\x12..medisync.dispensing.v1.GetPrescriptionRequest\x1a/.medisync.dispensing.v1.GetPrescriptionResponse\x12]\n" +
@@ -2300,7 +3037,9 @@ const file_medisync_dispensing_v1_dispensing_proto_rawDesc = "" +
 	"\x16GetDispenseTransaction\x125.medisync.dispensing.v1.GetDispenseTransactionRequest\x1a6.medisync.dispensing.v1.GetDispenseTransactionResponse\x12\x8d\x01\n" +
 	"\x18ListDispenseTransactions\x127.medisync.dispensing.v1.ListDispenseTransactionsRequest\x1a8.medisync.dispensing.v1.ListDispenseTransactionsResponse\x12{\n" +
 	"\x12ListEmergencyDrugs\x121.medisync.dispensing.v1.ListEmergencyDrugsRequest\x1a2.medisync.dispensing.v1.ListEmergencyDrugsResponse\x12x\n" +
-	"\x11EmergencyDispense\x120.medisync.dispensing.v1.EmergencyDispenseRequest\x1a1.medisync.dispensing.v1.EmergencyDispenseResponseBdZbgithub.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1;dispensingv1b\x06proto3"
+	"\x11EmergencyDispense\x120.medisync.dispensing.v1.EmergencyDispenseRequest\x1a1.medisync.dispensing.v1.EmergencyDispenseResponse\x12\xa2\x01\n" +
+	"\x1fGetEmergencyDispenseTransaction\x12>.medisync.dispensing.v1.GetEmergencyDispenseTransactionRequest\x1a?.medisync.dispensing.v1.GetEmergencyDispenseTransactionResponse\x12\xa8\x01\n" +
+	"!ListEmergencyDispenseTransactions\x12@.medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest\x1aA.medisync.dispensing.v1.ListEmergencyDispenseTransactionsResponseBdZbgithub.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/dispensing/v1;dispensingv1b\x06proto3"
 
 var (
 	file_medisync_dispensing_v1_dispensing_proto_rawDescOnce sync.Once
@@ -2314,99 +3053,125 @@ func file_medisync_dispensing_v1_dispensing_proto_rawDescGZIP() []byte {
 	return file_medisync_dispensing_v1_dispensing_proto_rawDescData
 }
 
-var file_medisync_dispensing_v1_dispensing_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_medisync_dispensing_v1_dispensing_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_medisync_dispensing_v1_dispensing_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_medisync_dispensing_v1_dispensing_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_medisync_dispensing_v1_dispensing_proto_goTypes = []any{
-	(PrescriptionState)(0),                   // 0: medisync.dispensing.v1.PrescriptionState
-	(DispenseTransactionStatus)(0),           // 1: medisync.dispensing.v1.DispenseTransactionStatus
-	(*PrescriptionItem)(nil),                 // 2: medisync.dispensing.v1.PrescriptionItem
-	(*Prescription)(nil),                     // 3: medisync.dispensing.v1.Prescription
-	(*ListPrescriptionsRequest)(nil),         // 4: medisync.dispensing.v1.ListPrescriptionsRequest
-	(*ListPrescriptionsResponse)(nil),        // 5: medisync.dispensing.v1.ListPrescriptionsResponse
-	(*GetPrescriptionRequest)(nil),           // 6: medisync.dispensing.v1.GetPrescriptionRequest
-	(*GetPrescriptionResponse)(nil),          // 7: medisync.dispensing.v1.GetPrescriptionResponse
-	(*DispenseRequest)(nil),                  // 8: medisync.dispensing.v1.DispenseRequest
-	(*DispenseResponse)(nil),                 // 9: medisync.dispensing.v1.DispenseResponse
-	(*DispenseAllocation)(nil),               // 10: medisync.dispensing.v1.DispenseAllocation
-	(*DispenseTransactionItem)(nil),          // 11: medisync.dispensing.v1.DispenseTransactionItem
-	(*DispenseTransaction)(nil),              // 12: medisync.dispensing.v1.DispenseTransaction
-	(*PrepareDispenseRequest)(nil),           // 13: medisync.dispensing.v1.PrepareDispenseRequest
-	(*PrepareDispenseResponse)(nil),          // 14: medisync.dispensing.v1.PrepareDispenseResponse
-	(*ConfirmDispenseRequest)(nil),           // 15: medisync.dispensing.v1.ConfirmDispenseRequest
-	(*ConfirmDispenseResponse)(nil),          // 16: medisync.dispensing.v1.ConfirmDispenseResponse
-	(*CancelDispenseRequest)(nil),            // 17: medisync.dispensing.v1.CancelDispenseRequest
-	(*CancelDispenseResponse)(nil),           // 18: medisync.dispensing.v1.CancelDispenseResponse
-	(*GetDispenseTransactionRequest)(nil),    // 19: medisync.dispensing.v1.GetDispenseTransactionRequest
-	(*GetDispenseTransactionResponse)(nil),   // 20: medisync.dispensing.v1.GetDispenseTransactionResponse
-	(*ListDispenseTransactionsRequest)(nil),  // 21: medisync.dispensing.v1.ListDispenseTransactionsRequest
-	(*ListDispenseTransactionsResponse)(nil), // 22: medisync.dispensing.v1.ListDispenseTransactionsResponse
-	(*ListEmergencyDrugsRequest)(nil),        // 23: medisync.dispensing.v1.ListEmergencyDrugsRequest
-	(*EmergencyDrug)(nil),                    // 24: medisync.dispensing.v1.EmergencyDrug
-	(*ListEmergencyDrugsResponse)(nil),       // 25: medisync.dispensing.v1.ListEmergencyDrugsResponse
-	(*EmergencyDispenseRequest)(nil),         // 26: medisync.dispensing.v1.EmergencyDispenseRequest
-	(*EmergencyDispenseResponse)(nil),        // 27: medisync.dispensing.v1.EmergencyDispenseResponse
-	(*timestamppb.Timestamp)(nil),            // 28: google.protobuf.Timestamp
+	(PrescriptionState)(0),                            // 0: medisync.dispensing.v1.PrescriptionState
+	(DispenseTransactionStatus)(0),                    // 1: medisync.dispensing.v1.DispenseTransactionStatus
+	(EmergencyDispenseStatus)(0),                      // 2: medisync.dispensing.v1.EmergencyDispenseStatus
+	(EmergencyOperatorAuthMethod)(0),                  // 3: medisync.dispensing.v1.EmergencyOperatorAuthMethod
+	(*PrescriptionItem)(nil),                          // 4: medisync.dispensing.v1.PrescriptionItem
+	(*Prescription)(nil),                              // 5: medisync.dispensing.v1.Prescription
+	(*ListPrescriptionsRequest)(nil),                  // 6: medisync.dispensing.v1.ListPrescriptionsRequest
+	(*ListPrescriptionsResponse)(nil),                 // 7: medisync.dispensing.v1.ListPrescriptionsResponse
+	(*GetPrescriptionRequest)(nil),                    // 8: medisync.dispensing.v1.GetPrescriptionRequest
+	(*GetPrescriptionResponse)(nil),                   // 9: medisync.dispensing.v1.GetPrescriptionResponse
+	(*DispenseRequest)(nil),                           // 10: medisync.dispensing.v1.DispenseRequest
+	(*DispenseResponse)(nil),                          // 11: medisync.dispensing.v1.DispenseResponse
+	(*DispenseAllocation)(nil),                        // 12: medisync.dispensing.v1.DispenseAllocation
+	(*DispenseTransactionItem)(nil),                   // 13: medisync.dispensing.v1.DispenseTransactionItem
+	(*DispenseTransaction)(nil),                       // 14: medisync.dispensing.v1.DispenseTransaction
+	(*PrepareDispenseRequest)(nil),                    // 15: medisync.dispensing.v1.PrepareDispenseRequest
+	(*PrepareDispenseResponse)(nil),                   // 16: medisync.dispensing.v1.PrepareDispenseResponse
+	(*ConfirmDispenseRequest)(nil),                    // 17: medisync.dispensing.v1.ConfirmDispenseRequest
+	(*ConfirmDispenseResponse)(nil),                   // 18: medisync.dispensing.v1.ConfirmDispenseResponse
+	(*CancelDispenseRequest)(nil),                     // 19: medisync.dispensing.v1.CancelDispenseRequest
+	(*CancelDispenseResponse)(nil),                    // 20: medisync.dispensing.v1.CancelDispenseResponse
+	(*GetDispenseTransactionRequest)(nil),             // 21: medisync.dispensing.v1.GetDispenseTransactionRequest
+	(*GetDispenseTransactionResponse)(nil),            // 22: medisync.dispensing.v1.GetDispenseTransactionResponse
+	(*ListDispenseTransactionsRequest)(nil),           // 23: medisync.dispensing.v1.ListDispenseTransactionsRequest
+	(*ListDispenseTransactionsResponse)(nil),          // 24: medisync.dispensing.v1.ListDispenseTransactionsResponse
+	(*ListEmergencyDrugsRequest)(nil),                 // 25: medisync.dispensing.v1.ListEmergencyDrugsRequest
+	(*EmergencyDrug)(nil),                             // 26: medisync.dispensing.v1.EmergencyDrug
+	(*ListEmergencyDrugsResponse)(nil),                // 27: medisync.dispensing.v1.ListEmergencyDrugsResponse
+	(*EmergencyDispenseRequest)(nil),                  // 28: medisync.dispensing.v1.EmergencyDispenseRequest
+	(*EmergencyDispenseResponse)(nil),                 // 29: medisync.dispensing.v1.EmergencyDispenseResponse
+	(*EmergencyDispenseTransaction)(nil),              // 30: medisync.dispensing.v1.EmergencyDispenseTransaction
+	(*GetEmergencyDispenseTransactionRequest)(nil),    // 31: medisync.dispensing.v1.GetEmergencyDispenseTransactionRequest
+	(*GetEmergencyDispenseTransactionResponse)(nil),   // 32: medisync.dispensing.v1.GetEmergencyDispenseTransactionResponse
+	(*ListEmergencyDispenseTransactionsRequest)(nil),  // 33: medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest
+	(*ListEmergencyDispenseTransactionsResponse)(nil), // 34: medisync.dispensing.v1.ListEmergencyDispenseTransactionsResponse
+	(*timestamppb.Timestamp)(nil),                     // 35: google.protobuf.Timestamp
 }
 var file_medisync_dispensing_v1_dispensing_proto_depIdxs = []int32{
-	2,  // 0: medisync.dispensing.v1.Prescription.items:type_name -> medisync.dispensing.v1.PrescriptionItem
+	4,  // 0: medisync.dispensing.v1.Prescription.items:type_name -> medisync.dispensing.v1.PrescriptionItem
 	0,  // 1: medisync.dispensing.v1.Prescription.state:type_name -> medisync.dispensing.v1.PrescriptionState
-	28, // 2: medisync.dispensing.v1.Prescription.issued_at:type_name -> google.protobuf.Timestamp
-	28, // 3: medisync.dispensing.v1.Prescription.created_at:type_name -> google.protobuf.Timestamp
-	28, // 4: medisync.dispensing.v1.Prescription.updated_at:type_name -> google.protobuf.Timestamp
+	35, // 2: medisync.dispensing.v1.Prescription.issued_at:type_name -> google.protobuf.Timestamp
+	35, // 3: medisync.dispensing.v1.Prescription.created_at:type_name -> google.protobuf.Timestamp
+	35, // 4: medisync.dispensing.v1.Prescription.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 5: medisync.dispensing.v1.ListPrescriptionsRequest.states:type_name -> medisync.dispensing.v1.PrescriptionState
-	3,  // 6: medisync.dispensing.v1.ListPrescriptionsResponse.prescriptions:type_name -> medisync.dispensing.v1.Prescription
-	3,  // 7: medisync.dispensing.v1.GetPrescriptionResponse.prescription:type_name -> medisync.dispensing.v1.Prescription
-	3,  // 8: medisync.dispensing.v1.DispenseResponse.prescription:type_name -> medisync.dispensing.v1.Prescription
-	28, // 9: medisync.dispensing.v1.DispenseAllocation.expiry_date:type_name -> google.protobuf.Timestamp
-	28, // 10: medisync.dispensing.v1.DispenseAllocation.hardware_attempted_at:type_name -> google.protobuf.Timestamp
-	10, // 11: medisync.dispensing.v1.DispenseTransactionItem.allocations:type_name -> medisync.dispensing.v1.DispenseAllocation
+	5,  // 6: medisync.dispensing.v1.ListPrescriptionsResponse.prescriptions:type_name -> medisync.dispensing.v1.Prescription
+	5,  // 7: medisync.dispensing.v1.GetPrescriptionResponse.prescription:type_name -> medisync.dispensing.v1.Prescription
+	5,  // 8: medisync.dispensing.v1.DispenseResponse.prescription:type_name -> medisync.dispensing.v1.Prescription
+	35, // 9: medisync.dispensing.v1.DispenseAllocation.expiry_date:type_name -> google.protobuf.Timestamp
+	35, // 10: medisync.dispensing.v1.DispenseAllocation.hardware_attempted_at:type_name -> google.protobuf.Timestamp
+	12, // 11: medisync.dispensing.v1.DispenseTransactionItem.allocations:type_name -> medisync.dispensing.v1.DispenseAllocation
 	1,  // 12: medisync.dispensing.v1.DispenseTransaction.status:type_name -> medisync.dispensing.v1.DispenseTransactionStatus
-	11, // 13: medisync.dispensing.v1.DispenseTransaction.items:type_name -> medisync.dispensing.v1.DispenseTransactionItem
-	28, // 14: medisync.dispensing.v1.DispenseTransaction.sticker_scanned_at:type_name -> google.protobuf.Timestamp
-	28, // 15: medisync.dispensing.v1.DispenseTransaction.identity_confirmed_at:type_name -> google.protobuf.Timestamp
-	28, // 16: medisync.dispensing.v1.DispenseTransaction.queued_at:type_name -> google.protobuf.Timestamp
-	28, // 17: medisync.dispensing.v1.DispenseTransaction.started_at:type_name -> google.protobuf.Timestamp
-	28, // 18: medisync.dispensing.v1.DispenseTransaction.completed_at:type_name -> google.protobuf.Timestamp
-	28, // 19: medisync.dispensing.v1.DispenseTransaction.failed_at:type_name -> google.protobuf.Timestamp
-	28, // 20: medisync.dispensing.v1.DispenseTransaction.cancelled_at:type_name -> google.protobuf.Timestamp
-	28, // 21: medisync.dispensing.v1.DispenseTransaction.expires_at:type_name -> google.protobuf.Timestamp
-	28, // 22: medisync.dispensing.v1.DispenseTransaction.created_at:type_name -> google.protobuf.Timestamp
-	28, // 23: medisync.dispensing.v1.DispenseTransaction.updated_at:type_name -> google.protobuf.Timestamp
-	12, // 24: medisync.dispensing.v1.PrepareDispenseResponse.transaction:type_name -> medisync.dispensing.v1.DispenseTransaction
-	3,  // 25: medisync.dispensing.v1.PrepareDispenseResponse.prescription:type_name -> medisync.dispensing.v1.Prescription
-	12, // 26: medisync.dispensing.v1.ConfirmDispenseResponse.transaction:type_name -> medisync.dispensing.v1.DispenseTransaction
-	12, // 27: medisync.dispensing.v1.CancelDispenseResponse.transaction:type_name -> medisync.dispensing.v1.DispenseTransaction
-	12, // 28: medisync.dispensing.v1.GetDispenseTransactionResponse.transaction:type_name -> medisync.dispensing.v1.DispenseTransaction
+	13, // 13: medisync.dispensing.v1.DispenseTransaction.items:type_name -> medisync.dispensing.v1.DispenseTransactionItem
+	35, // 14: medisync.dispensing.v1.DispenseTransaction.sticker_scanned_at:type_name -> google.protobuf.Timestamp
+	35, // 15: medisync.dispensing.v1.DispenseTransaction.identity_confirmed_at:type_name -> google.protobuf.Timestamp
+	35, // 16: medisync.dispensing.v1.DispenseTransaction.queued_at:type_name -> google.protobuf.Timestamp
+	35, // 17: medisync.dispensing.v1.DispenseTransaction.started_at:type_name -> google.protobuf.Timestamp
+	35, // 18: medisync.dispensing.v1.DispenseTransaction.completed_at:type_name -> google.protobuf.Timestamp
+	35, // 19: medisync.dispensing.v1.DispenseTransaction.failed_at:type_name -> google.protobuf.Timestamp
+	35, // 20: medisync.dispensing.v1.DispenseTransaction.cancelled_at:type_name -> google.protobuf.Timestamp
+	35, // 21: medisync.dispensing.v1.DispenseTransaction.expires_at:type_name -> google.protobuf.Timestamp
+	35, // 22: medisync.dispensing.v1.DispenseTransaction.created_at:type_name -> google.protobuf.Timestamp
+	35, // 23: medisync.dispensing.v1.DispenseTransaction.updated_at:type_name -> google.protobuf.Timestamp
+	14, // 24: medisync.dispensing.v1.PrepareDispenseResponse.transaction:type_name -> medisync.dispensing.v1.DispenseTransaction
+	5,  // 25: medisync.dispensing.v1.PrepareDispenseResponse.prescription:type_name -> medisync.dispensing.v1.Prescription
+	14, // 26: medisync.dispensing.v1.ConfirmDispenseResponse.transaction:type_name -> medisync.dispensing.v1.DispenseTransaction
+	14, // 27: medisync.dispensing.v1.CancelDispenseResponse.transaction:type_name -> medisync.dispensing.v1.DispenseTransaction
+	14, // 28: medisync.dispensing.v1.GetDispenseTransactionResponse.transaction:type_name -> medisync.dispensing.v1.DispenseTransaction
 	1,  // 29: medisync.dispensing.v1.ListDispenseTransactionsRequest.statuses:type_name -> medisync.dispensing.v1.DispenseTransactionStatus
-	28, // 30: medisync.dispensing.v1.ListDispenseTransactionsRequest.created_from:type_name -> google.protobuf.Timestamp
-	28, // 31: medisync.dispensing.v1.ListDispenseTransactionsRequest.created_to:type_name -> google.protobuf.Timestamp
-	12, // 32: medisync.dispensing.v1.ListDispenseTransactionsResponse.transactions:type_name -> medisync.dispensing.v1.DispenseTransaction
-	24, // 33: medisync.dispensing.v1.ListEmergencyDrugsResponse.drugs:type_name -> medisync.dispensing.v1.EmergencyDrug
-	4,  // 34: medisync.dispensing.v1.DispensingService.ListPrescriptions:input_type -> medisync.dispensing.v1.ListPrescriptionsRequest
-	6,  // 35: medisync.dispensing.v1.DispensingService.GetPrescription:input_type -> medisync.dispensing.v1.GetPrescriptionRequest
-	8,  // 36: medisync.dispensing.v1.DispensingService.Dispense:input_type -> medisync.dispensing.v1.DispenseRequest
-	13, // 37: medisync.dispensing.v1.DispensingService.PrepareDispense:input_type -> medisync.dispensing.v1.PrepareDispenseRequest
-	15, // 38: medisync.dispensing.v1.DispensingService.ConfirmDispense:input_type -> medisync.dispensing.v1.ConfirmDispenseRequest
-	17, // 39: medisync.dispensing.v1.DispensingService.CancelDispense:input_type -> medisync.dispensing.v1.CancelDispenseRequest
-	19, // 40: medisync.dispensing.v1.DispensingService.GetDispenseTransaction:input_type -> medisync.dispensing.v1.GetDispenseTransactionRequest
-	21, // 41: medisync.dispensing.v1.DispensingService.ListDispenseTransactions:input_type -> medisync.dispensing.v1.ListDispenseTransactionsRequest
-	23, // 42: medisync.dispensing.v1.DispensingService.ListEmergencyDrugs:input_type -> medisync.dispensing.v1.ListEmergencyDrugsRequest
-	26, // 43: medisync.dispensing.v1.DispensingService.EmergencyDispense:input_type -> medisync.dispensing.v1.EmergencyDispenseRequest
-	5,  // 44: medisync.dispensing.v1.DispensingService.ListPrescriptions:output_type -> medisync.dispensing.v1.ListPrescriptionsResponse
-	7,  // 45: medisync.dispensing.v1.DispensingService.GetPrescription:output_type -> medisync.dispensing.v1.GetPrescriptionResponse
-	9,  // 46: medisync.dispensing.v1.DispensingService.Dispense:output_type -> medisync.dispensing.v1.DispenseResponse
-	14, // 47: medisync.dispensing.v1.DispensingService.PrepareDispense:output_type -> medisync.dispensing.v1.PrepareDispenseResponse
-	16, // 48: medisync.dispensing.v1.DispensingService.ConfirmDispense:output_type -> medisync.dispensing.v1.ConfirmDispenseResponse
-	18, // 49: medisync.dispensing.v1.DispensingService.CancelDispense:output_type -> medisync.dispensing.v1.CancelDispenseResponse
-	20, // 50: medisync.dispensing.v1.DispensingService.GetDispenseTransaction:output_type -> medisync.dispensing.v1.GetDispenseTransactionResponse
-	22, // 51: medisync.dispensing.v1.DispensingService.ListDispenseTransactions:output_type -> medisync.dispensing.v1.ListDispenseTransactionsResponse
-	25, // 52: medisync.dispensing.v1.DispensingService.ListEmergencyDrugs:output_type -> medisync.dispensing.v1.ListEmergencyDrugsResponse
-	27, // 53: medisync.dispensing.v1.DispensingService.EmergencyDispense:output_type -> medisync.dispensing.v1.EmergencyDispenseResponse
-	44, // [44:54] is the sub-list for method output_type
-	34, // [34:44] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	35, // 30: medisync.dispensing.v1.ListDispenseTransactionsRequest.created_from:type_name -> google.protobuf.Timestamp
+	35, // 31: medisync.dispensing.v1.ListDispenseTransactionsRequest.created_to:type_name -> google.protobuf.Timestamp
+	14, // 32: medisync.dispensing.v1.ListDispenseTransactionsResponse.transactions:type_name -> medisync.dispensing.v1.DispenseTransaction
+	26, // 33: medisync.dispensing.v1.ListEmergencyDrugsResponse.drugs:type_name -> medisync.dispensing.v1.EmergencyDrug
+	30, // 34: medisync.dispensing.v1.EmergencyDispenseResponse.transaction:type_name -> medisync.dispensing.v1.EmergencyDispenseTransaction
+	2,  // 35: medisync.dispensing.v1.EmergencyDispenseTransaction.status:type_name -> medisync.dispensing.v1.EmergencyDispenseStatus
+	35, // 36: medisync.dispensing.v1.EmergencyDispenseTransaction.queued_at:type_name -> google.protobuf.Timestamp
+	35, // 37: medisync.dispensing.v1.EmergencyDispenseTransaction.started_at:type_name -> google.protobuf.Timestamp
+	35, // 38: medisync.dispensing.v1.EmergencyDispenseTransaction.completed_at:type_name -> google.protobuf.Timestamp
+	35, // 39: medisync.dispensing.v1.EmergencyDispenseTransaction.failed_at:type_name -> google.protobuf.Timestamp
+	35, // 40: medisync.dispensing.v1.EmergencyDispenseTransaction.created_at:type_name -> google.protobuf.Timestamp
+	35, // 41: medisync.dispensing.v1.EmergencyDispenseTransaction.updated_at:type_name -> google.protobuf.Timestamp
+	3,  // 42: medisync.dispensing.v1.EmergencyDispenseTransaction.operator_auth_method:type_name -> medisync.dispensing.v1.EmergencyOperatorAuthMethod
+	30, // 43: medisync.dispensing.v1.GetEmergencyDispenseTransactionResponse.transaction:type_name -> medisync.dispensing.v1.EmergencyDispenseTransaction
+	2,  // 44: medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest.statuses:type_name -> medisync.dispensing.v1.EmergencyDispenseStatus
+	35, // 45: medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest.created_from:type_name -> google.protobuf.Timestamp
+	35, // 46: medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest.created_to:type_name -> google.protobuf.Timestamp
+	3,  // 47: medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest.operator_auth_methods:type_name -> medisync.dispensing.v1.EmergencyOperatorAuthMethod
+	30, // 48: medisync.dispensing.v1.ListEmergencyDispenseTransactionsResponse.transactions:type_name -> medisync.dispensing.v1.EmergencyDispenseTransaction
+	6,  // 49: medisync.dispensing.v1.DispensingService.ListPrescriptions:input_type -> medisync.dispensing.v1.ListPrescriptionsRequest
+	8,  // 50: medisync.dispensing.v1.DispensingService.GetPrescription:input_type -> medisync.dispensing.v1.GetPrescriptionRequest
+	10, // 51: medisync.dispensing.v1.DispensingService.Dispense:input_type -> medisync.dispensing.v1.DispenseRequest
+	15, // 52: medisync.dispensing.v1.DispensingService.PrepareDispense:input_type -> medisync.dispensing.v1.PrepareDispenseRequest
+	17, // 53: medisync.dispensing.v1.DispensingService.ConfirmDispense:input_type -> medisync.dispensing.v1.ConfirmDispenseRequest
+	19, // 54: medisync.dispensing.v1.DispensingService.CancelDispense:input_type -> medisync.dispensing.v1.CancelDispenseRequest
+	21, // 55: medisync.dispensing.v1.DispensingService.GetDispenseTransaction:input_type -> medisync.dispensing.v1.GetDispenseTransactionRequest
+	23, // 56: medisync.dispensing.v1.DispensingService.ListDispenseTransactions:input_type -> medisync.dispensing.v1.ListDispenseTransactionsRequest
+	25, // 57: medisync.dispensing.v1.DispensingService.ListEmergencyDrugs:input_type -> medisync.dispensing.v1.ListEmergencyDrugsRequest
+	28, // 58: medisync.dispensing.v1.DispensingService.EmergencyDispense:input_type -> medisync.dispensing.v1.EmergencyDispenseRequest
+	31, // 59: medisync.dispensing.v1.DispensingService.GetEmergencyDispenseTransaction:input_type -> medisync.dispensing.v1.GetEmergencyDispenseTransactionRequest
+	33, // 60: medisync.dispensing.v1.DispensingService.ListEmergencyDispenseTransactions:input_type -> medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest
+	7,  // 61: medisync.dispensing.v1.DispensingService.ListPrescriptions:output_type -> medisync.dispensing.v1.ListPrescriptionsResponse
+	9,  // 62: medisync.dispensing.v1.DispensingService.GetPrescription:output_type -> medisync.dispensing.v1.GetPrescriptionResponse
+	11, // 63: medisync.dispensing.v1.DispensingService.Dispense:output_type -> medisync.dispensing.v1.DispenseResponse
+	16, // 64: medisync.dispensing.v1.DispensingService.PrepareDispense:output_type -> medisync.dispensing.v1.PrepareDispenseResponse
+	18, // 65: medisync.dispensing.v1.DispensingService.ConfirmDispense:output_type -> medisync.dispensing.v1.ConfirmDispenseResponse
+	20, // 66: medisync.dispensing.v1.DispensingService.CancelDispense:output_type -> medisync.dispensing.v1.CancelDispenseResponse
+	22, // 67: medisync.dispensing.v1.DispensingService.GetDispenseTransaction:output_type -> medisync.dispensing.v1.GetDispenseTransactionResponse
+	24, // 68: medisync.dispensing.v1.DispensingService.ListDispenseTransactions:output_type -> medisync.dispensing.v1.ListDispenseTransactionsResponse
+	27, // 69: medisync.dispensing.v1.DispensingService.ListEmergencyDrugs:output_type -> medisync.dispensing.v1.ListEmergencyDrugsResponse
+	29, // 70: medisync.dispensing.v1.DispensingService.EmergencyDispense:output_type -> medisync.dispensing.v1.EmergencyDispenseResponse
+	32, // 71: medisync.dispensing.v1.DispensingService.GetEmergencyDispenseTransaction:output_type -> medisync.dispensing.v1.GetEmergencyDispenseTransactionResponse
+	34, // 72: medisync.dispensing.v1.DispensingService.ListEmergencyDispenseTransactions:output_type -> medisync.dispensing.v1.ListEmergencyDispenseTransactionsResponse
+	61, // [61:73] is the sub-list for method output_type
+	49, // [49:61] is the sub-list for method input_type
+	49, // [49:49] is the sub-list for extension type_name
+	49, // [49:49] is the sub-list for extension extendee
+	0,  // [0:49] is the sub-list for field type_name
 }
 
 func init() { file_medisync_dispensing_v1_dispensing_proto_init() }
@@ -2419,8 +3184,8 @@ func file_medisync_dispensing_v1_dispensing_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_medisync_dispensing_v1_dispensing_proto_rawDesc), len(file_medisync_dispensing_v1_dispensing_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   26,
+			NumEnums:      4,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

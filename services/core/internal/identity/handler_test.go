@@ -237,7 +237,7 @@ func TestHandlerLoginInactiveUser(t *testing.T) {
 func TestHandlerCardLoginSuccess(t *testing.T) {
 	store := &fakeUserStore{
 		usersByCardToken: map[string]*User{
-			"card-ok": {ID: "cu1", Username: "carduser", Role: RolePharmacist, Active: true},
+			"card-ok": {ID: "cu1", Username: "carduser", EmployeeCode: "EMP-CARD-1", Role: RolePharmacist, Active: true},
 		},
 	}
 	tm := &fakeTokenManager{
@@ -254,6 +254,21 @@ func TestHandlerCardLoginSuccess(t *testing.T) {
 	if resp.Msg.AccessToken != "jwt-card-handler" {
 		t.Errorf("AccessToken = %q", resp.Msg.AccessToken)
 	}
+	if resp.Msg.EmployeeCode != "EMP-CARD-1" {
+		t.Errorf("EmployeeCode = %q", resp.Msg.EmployeeCode)
+	}
+}
+
+func TestHandlerCardLoginRejectsDifferentProject(t *testing.T) {
+	projectID := "project-1"
+	store := &fakeUserStore{usersByCardToken: map[string]*User{
+		"card-ok": {ID: "cu1", Username: "carduser", EmployeeCode: "EMP-CARD-1", ProjectID: &projectID, Role: RoleNurse, Active: true},
+	}}
+	h := setupHandler(t, store, &fakeTokenManager{fixedToken: "jwt-card"})
+	_, err := h.CardLogin(context.Background(), connect.NewRequest(&identityv1.CardLoginRequest{
+		CardToken: "card-ok", ProjectId: "project-2",
+	}))
+	assertConnectCode(t, err, connect.CodePermissionDenied)
 }
 
 func TestHandlerCardLoginMissingToken(t *testing.T) {

@@ -2,19 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { DispenseTransactionStatus, PrescriptionState } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
+import { DispenseTransactionStatus, EmergencyDispenseStatus, EmergencyOperatorAuthMethod, PrescriptionState } from "@medisync/proto/medisync/dispensing/v1/dispensing_pb";
 
 vi.mock("../transport.ts", () => ({ transport: Symbol("transport") }));
 vi.mock("@connectrpc/connect-web", () => ({ createConnectTransport: () => Symbol("staff-transport") }));
 const logout = vi.fn();
 vi.mock("../auth.tsx", () => ({ useAuth: () => ({ state: { kiosk: { id: "k1", code: "00010001", displayName: "Demo Cabinet", projectId: "project-1" }, token: "kiosk-jwt" }, logout }) }));
 
-const { listSlots, cardLogin, prepareDispense, confirmDispense, cancelDispense, getDispenseTransaction, listDispenseTransactions } = vi.hoisted(() => ({
-  listSlots: vi.fn(), cardLogin: vi.fn(), prepareDispense: vi.fn(), confirmDispense: vi.fn(), cancelDispense: vi.fn(), getDispenseTransaction: vi.fn(), listDispenseTransactions: vi.fn(),
+const { listSlots, cardLogin, prepareDispense, confirmDispense, cancelDispense, getDispenseTransaction, listDispenseTransactions, listEmergencyDrugs, emergencyDispense, getEmergencyDispenseTransaction } = vi.hoisted(() => ({
+  listSlots: vi.fn(), cardLogin: vi.fn(), prepareDispense: vi.fn(), confirmDispense: vi.fn(), cancelDispense: vi.fn(), getDispenseTransaction: vi.fn(), listDispenseTransactions: vi.fn(), listEmergencyDrugs: vi.fn(), emergencyDispense: vi.fn(), getEmergencyDispenseTransaction: vi.fn(),
 }));
 vi.mock("@connectrpc/connect", async (original) => {
   const actual = await original<typeof import("@connectrpc/connect")>();
-  return { ...actual, createClient: () => ({ listSlots, cardLogin, prepareDispense, confirmDispense, cancelDispense, getDispenseTransaction, listDispenseTransactions }) };
+  return { ...actual, createClient: () => ({ listSlots, cardLogin, prepareDispense, confirmDispense, cancelDispense, getDispenseTransaction, listDispenseTransactions, listEmergencyDrugs, emergencyDispense, getEmergencyDispenseTransaction }) };
 });
 
 import WithdrawFlow from "../features/withdraw/WithdrawFlow";
@@ -47,6 +47,14 @@ const transaction = {
   items: [{ id: "item-1", sequenceNo: 1, drugCode: "PARA", drugName: "Paracetamol", requestedQuantity: 2, allocatedQuantity: 2, dispensedQuantity: 0, status: "RESERVED", allocations: [] }],
 };
 const transactionB = { ...transaction, dispenseId: "dispense-2", prescriptionId: "DEMO-RX-002", traceId: "trace-2" };
+const emergencyTransaction = {
+  dispenseId: "emergency-1", kioskCode: "00010001", projectId: "project-1",
+  hn: "HN0099", employeeCode: "EMP009", operatorUserId: "u9", operatorDisplayName: "Nurse Emergency",
+  slotCode: "S01", drugCode: "PARA", drugName: "Paracetamol", requestedQuantity: 1,
+  dispensedQuantity: 0, status: EmergencyDispenseStatus.QUEUED, reason: "", failureCode: "",
+  failureDetail: "", traceId: "emergency-trace-1",
+  operatorAuthMethod: EmergencyOperatorAuthMethod.EMPLOYEE_CODE,
+};
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
@@ -76,6 +84,8 @@ describe("sticker-driven withdrawal", () => {
     localStorage.clear();
     listSlots.mockResolvedValue({ slots: [slot] });
     listDispenseTransactions.mockResolvedValue({ transactions: [], totalCount: 0n });
+    listEmergencyDrugs.mockResolvedValue({ drugs: [{ slotCode: "S01", drugCode: "PARA", drugName: "Paracetamol", drugType: "tablet", quantity: 10, maxDispense: 2 }], totalCount: 1n });
+    emergencyDispense.mockResolvedValue({ transaction: emergencyTransaction });
     prepareDispense.mockResolvedValue({ prescription, transaction });
     cancelDispense.mockResolvedValue({ transaction: { ...transaction, status: DispenseTransactionStatus.CANCELLED } });
   });
@@ -112,6 +122,81 @@ describe("sticker-driven withdrawal", () => {
     const user = userEvent.setup(); prepareDispense.mockRejectedValueOnce(new ConnectError("not found", Code.NotFound));
     render(<WithdrawFlow />); await user.keyboard("UNKNOWN{Enter}");
     expect(await screen.findByText(/ไม่พบรายการ READY/)).toBeDefined();
+  });
+
+  it("allows manual employee code for an emergency without a prescription sticker", async () => {
+    const user = userEvent.setup();
+    render(<WithdrawFlow />);
+
+    await user.click(screen.getByRole("button", { name: "เปิดเบิกยาฉุกเฉิน" }));
+    expect(await screen.findByRole("dialog", { name: "เบิกยาฉุกเฉิน" })).toBeDefined();
+    expect(screen.getByText("ใช้เฉพาะการเบิกฉุกเฉินที่ไม่มี Prescription")).toBeDefined();
+    await user.click(screen.getByRole("tab", { name: "กรอกรหัสพนักงาน" }));
+    expect(listEmergencyDrugs).toHaveBeenCalledWith(expect.objectContaining({ kioskCode: "00010001" }));
+    const submit = screen.getByRole("button", { name: "ยืนยันและเริ่มจ่ายยาฉุกเฉิน" });
+    expect(submit).toHaveProperty("disabled", true);
+
+    await user.type(screen.getByLabelText(/HN ผู้ป่วย/), "HN0099");
+    await user.type(screen.getByLabelText(/รหัสพนักงานผู้เบิก/), "emp009");
+    expect(submit).toHaveProperty("disabled", false);
+    await user.click(submit);
+
+    await waitFor(() => expect(emergencyDispense).toHaveBeenCalledWith(expect.objectContaining({
+      kioskCode: "00010001", hn: "HN0099", employeeCode: "EMP009",
+      slotCode: "S01", drugCode: "PARA", quantity: 1,
+    })));
+    expect(screen.getByText("รายการอยู่ในคิวตู้ยา")).toBeDefined();
+    expect(cardLogin).not.toHaveBeenCalled();
+  });
+
+  it("verifies a staff card normally and records CARD authentication", async () => {
+    cardLogin.mockResolvedValueOnce({
+      accessToken: "emergency-staff-jwt",
+      employeeCode: "EMP009",
+      user: { id: "u9", displayName: "Nurse Emergency", active: true, role: 3, wardIds: ["WARD-1"], projectId: "project-1" },
+    });
+    emergencyDispense.mockResolvedValueOnce({ transaction: { ...emergencyTransaction, operatorAuthMethod: EmergencyOperatorAuthMethod.CARD } });
+    const user = userEvent.setup();
+    render(<WithdrawFlow />);
+
+    await user.click(screen.getByRole("button", { name: "เปิดเบิกยาฉุกเฉิน" }));
+    await user.type(screen.getByLabelText(/HN ผู้ป่วย/), "HN0099");
+    const cardInput = screen.getByLabelText("สแกนบัตรเจ้าหน้าที่");
+    await user.click(cardInput);
+    await user.type(cardInput, "CARD-009");
+    await user.keyboard("{Enter}");
+
+    expect(await screen.findByText("ยืนยันบัตรแล้ว")).toBeDefined();
+    expect(screen.getByText("Nurse Emergency · EMP009")).toBeDefined();
+    expect(cardLogin).toHaveBeenCalledWith(expect.objectContaining({ cardToken: "CARD-009", projectId: "project-1" }));
+    const submit = screen.getByRole("button", { name: "ยืนยันและเริ่มจ่ายยาฉุกเฉิน" });
+    expect(submit).toHaveProperty("disabled", false);
+    await user.click(submit);
+
+    await waitFor(() => expect(emergencyDispense).toHaveBeenCalledWith(expect.objectContaining({
+      kioskCode: "00010001", hn: "HN0099", employeeCode: "EMP009",
+    })));
+    expect(screen.getByText("สแกนบัตรเจ้าหน้าที่")).toBeDefined();
+  });
+
+  it("routes a kiosktester card scan into the open emergency flow", async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    cardLogin.mockResolvedValueOnce({
+      accessToken: "emergency-staff-jwt",
+      employeeCode: "EMP009",
+      user: { id: "u9", displayName: "Nurse Emergency", active: true, role: 3, wardIds: ["WARD-1"], projectId: "project-1" },
+    });
+    const user = userEvent.setup();
+    render(<WithdrawFlow />);
+    await user.click(screen.getByRole("button", { name: "เปิดเบิกยาฉุกเฉิน" }));
+    await user.type(screen.getByLabelText(/HN ผู้ป่วย/), "HN0099");
+
+    const source = FakeEventSource.instances[FakeEventSource.instances.length - 1];
+    act(() => source.emit({ id: 9, kioskCode: "00010001", type: "scan_card", cardToken: "CARD-009" }));
+
+    expect(await screen.findByText("ยืนยันบัตรแล้ว")).toBeDefined();
+    expect(cardLogin).toHaveBeenCalledWith(expect.objectContaining({ cardToken: "CARD-009", projectId: "project-1" }));
+    expect(prepareDispense).not.toHaveBeenCalledWith(expect.objectContaining({ stickerCode: "CARD-009" }));
   });
 
   it("does not open a cart or request identity when this kiosk has insufficient stock", async () => {

@@ -135,6 +135,24 @@ func (c *CompletionConsumer) handleCompleted(ctx context.Context, msg jetstream.
 		return fmt.Errorf("begin completion: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
+	emergency, err := getEmergencyTransaction(ctx, tx, event.DispenseId, true)
+	if err != nil {
+		return fmt.Errorf("identify emergency completion: %w", err)
+	}
+	if emergency != nil {
+		record, applied, err := c.store.FinalizeEmergencySuccess(ctx, tx, event.DispenseId, event.KioskCode, event.HardwareResponse, outcomes)
+		if err != nil {
+			return fmt.Errorf("finalize emergency dispense success: %w", err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit emergency completion: %w", err)
+		}
+		if applied {
+			c.writeEmergencyAudit(record, "emergency_dispense.completed", map[string]any{"kiosk_code": event.KioskCode, "hardware_response": event.HardwareResponse})
+			c.publishEmergencyStockChanges(ctx, record)
+		}
+		return nil
+	}
 	record, applied, err := c.store.FinalizeTransactionSuccess(ctx, tx, event.DispenseId, event.KioskCode, event.HardwareResponse, outcomes)
 	if err != nil {
 		return fmt.Errorf("finalize dispense success: %w", err)
@@ -172,11 +190,6 @@ func (c *CompletionConsumer) handleFailed(ctx context.Context, msg jetstream.Msg
 		return nil
 	}
 
-	c.log.Warn("dispense.failed: marking prescription failed",
-		"prescription_id", event.PrescriptionId,
-		"reason", event.Reason,
-	)
-
 	outcomes := make(map[string]bool, len(event.Results))
 	for _, result := range event.Results {
 		outcomes[result.AllocationId] = result.Success
@@ -186,6 +199,28 @@ func (c *CompletionConsumer) handleFailed(ctx context.Context, msg jetstream.Msg
 		return fmt.Errorf("begin failure: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
+	emergency, err := getEmergencyTransaction(ctx, tx, event.DispenseId, true)
+	if err != nil {
+		return fmt.Errorf("identify emergency failure: %w", err)
+	}
+	if emergency != nil {
+		record, applied, err := c.store.FinalizeEmergencyFailure(ctx, tx, event.DispenseId, event.KioskCode, event.Reason, event.Detail, outcomes)
+		if err != nil {
+			return fmt.Errorf("finalize emergency dispense failure: %w", err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit emergency failure: %w", err)
+		}
+		if applied {
+			c.writeEmergencyAudit(record, "emergency_dispense.failed", map[string]any{"kiosk_code": event.KioskCode, "reason": event.Reason, "detail": event.Detail})
+			c.publishEmergencyStockChanges(ctx, record)
+		}
+		return nil
+	}
+	c.log.Warn("dispense.failed: marking prescription failed",
+		"prescription_id", event.PrescriptionId,
+		"reason", event.Reason,
+	)
 	record, applied, err := c.store.FinalizeTransactionFailure(ctx, tx, event.DispenseId, event.KioskCode, event.Reason, event.Detail, outcomes)
 	if err != nil {
 		return fmt.Errorf("finalize dispense failure: %w", err)
@@ -208,6 +243,13 @@ func (c *CompletionConsumer) writeTransactionAudit(record *TransactionRecord, ac
 	_ = c.audit.Write(context.Background(), audit.Entry{TraceID: record.TraceID, Entity: "dispense_transaction", Action: action, EntityID: record.ID, ProjectID: record.ProjectID, Actor: "system", Detail: detail})
 }
 
+func (c *CompletionConsumer) writeEmergencyAudit(record *EmergencyTransactionRecord, action string, detail any) {
+	if c.audit == nil || record == nil {
+		return
+	}
+	_ = c.audit.Write(context.Background(), audit.Entry{TraceID: record.TraceID, Entity: "emergency_dispense_transaction", Action: action, EntityID: record.ID, ProjectID: record.ProjectID, Actor: record.EmployeeCode, Detail: detail})
+}
+
 func (c *CompletionConsumer) publishStockChanges(ctx context.Context, record *TransactionRecord) {
 	if c.js == nil || record == nil {
 		return
@@ -222,6 +264,22 @@ func (c *CompletionConsumer) publishStockChanges(ctx context.Context, record *Tr
 			if _, err := c.js.Publish(ctx, natsx.SubjectStockChanged, payload); err != nil {
 				c.log.Warn("publish stock.changed failed", "error", err.Error())
 			}
+		}
+	}
+}
+
+func (c *CompletionConsumer) publishEmergencyStockChanges(ctx context.Context, record *EmergencyTransactionRecord) {
+	if c.js == nil || record == nil {
+		return
+	}
+	for _, allocation := range record.Allocations {
+		if allocation.DispensedQuantity <= 0 {
+			continue
+		}
+		event := &eventsv1.StockChanged{SlotCode: allocation.SlotCode, DrugCode: record.DrugCode, Delta: -allocation.DispensedQuantity, Reason: eventsv1.StockChangeReason_STOCK_CHANGE_REASON_EMERGENCY_DISPENSE, TraceId: record.TraceID, KioskCode: record.KioskCode, DispenseId: record.ID}
+		payload, _ := protojson.Marshal(event)
+		if _, err := c.js.Publish(ctx, natsx.SubjectStockChanged, payload); err != nil {
+			c.log.Warn("publish emergency stock.changed failed", "error", err.Error())
 		}
 	}
 }

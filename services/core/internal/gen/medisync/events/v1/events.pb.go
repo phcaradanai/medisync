@@ -25,10 +25,11 @@ const (
 type StockChangeReason int32
 
 const (
-	StockChangeReason_STOCK_CHANGE_REASON_UNSPECIFIED StockChangeReason = 0
-	StockChangeReason_STOCK_CHANGE_REASON_DISPENSE    StockChangeReason = 1
-	StockChangeReason_STOCK_CHANGE_REASON_REFILL      StockChangeReason = 2
-	StockChangeReason_STOCK_CHANGE_REASON_ADJUST      StockChangeReason = 3
+	StockChangeReason_STOCK_CHANGE_REASON_UNSPECIFIED        StockChangeReason = 0
+	StockChangeReason_STOCK_CHANGE_REASON_DISPENSE           StockChangeReason = 1
+	StockChangeReason_STOCK_CHANGE_REASON_REFILL             StockChangeReason = 2
+	StockChangeReason_STOCK_CHANGE_REASON_ADJUST             StockChangeReason = 3
+	StockChangeReason_STOCK_CHANGE_REASON_EMERGENCY_DISPENSE StockChangeReason = 4
 )
 
 // Enum value maps for StockChangeReason.
@@ -38,12 +39,14 @@ var (
 		1: "STOCK_CHANGE_REASON_DISPENSE",
 		2: "STOCK_CHANGE_REASON_REFILL",
 		3: "STOCK_CHANGE_REASON_ADJUST",
+		4: "STOCK_CHANGE_REASON_EMERGENCY_DISPENSE",
 	}
 	StockChangeReason_value = map[string]int32{
-		"STOCK_CHANGE_REASON_UNSPECIFIED": 0,
-		"STOCK_CHANGE_REASON_DISPENSE":    1,
-		"STOCK_CHANGE_REASON_REFILL":      2,
-		"STOCK_CHANGE_REASON_ADJUST":      3,
+		"STOCK_CHANGE_REASON_UNSPECIFIED":        0,
+		"STOCK_CHANGE_REASON_DISPENSE":           1,
+		"STOCK_CHANGE_REASON_REFILL":             2,
+		"STOCK_CHANGE_REASON_ADJUST":             3,
+		"STOCK_CHANGE_REASON_EMERGENCY_DISPENSE": 4,
 	}
 )
 
@@ -1362,12 +1365,13 @@ const file_medisync_events_v1_events_proto_rawDesc = "" +
 	"\tslot_code\x18\x01 \x01(\tR\bslotCode\x12\x1b\n" +
 	"\tdrug_code\x18\x02 \x01(\tR\bdrugCode\x12\x1a\n" +
 	"\bquantity\x18\x03 \x01(\x05R\bquantity\x12\x1c\n" +
-	"\tthreshold\x18\x04 \x01(\x05R\tthreshold*\x9a\x01\n" +
+	"\tthreshold\x18\x04 \x01(\x05R\tthreshold*\xc6\x01\n" +
 	"\x11StockChangeReason\x12#\n" +
 	"\x1fSTOCK_CHANGE_REASON_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cSTOCK_CHANGE_REASON_DISPENSE\x10\x01\x12\x1e\n" +
 	"\x1aSTOCK_CHANGE_REASON_REFILL\x10\x02\x12\x1e\n" +
-	"\x1aSTOCK_CHANGE_REASON_ADJUST\x10\x03B\\ZZgithub.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1;eventsv1b\x06proto3"
+	"\x1aSTOCK_CHANGE_REASON_ADJUST\x10\x03\x12*\n" +
+	"&STOCK_CHANGE_REASON_EMERGENCY_DISPENSE\x10\x04B\\ZZgithub.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1;eventsv1b\x06proto3"
 
 var (
 	file_medisync_events_v1_events_proto_rawDescOnce sync.Once

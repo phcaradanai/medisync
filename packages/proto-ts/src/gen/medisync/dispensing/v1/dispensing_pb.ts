@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file medisync/dispensing/v1/dispensing.proto.
  */
 export const file_medisync_dispensing_v1_dispensing: GenFile = /*@__PURE__*/
-  fileDesc("CidtZWRpc3luYy9kaXNwZW5zaW5nL3YxL2Rpc3BlbnNpbmcucHJvdG8SFm1lZGlzeW5jLmRpc3BlbnNpbmcudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIpcDCgxQcmVzY3JpcHRpb24SCgoCaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhUKDXNvdXJjZV9zeXN0ZW0YAyABKAkSCgoCaG4YBCABKAkSFAoMcGF0aWVudF9uYW1lGAUgASgJEg8KB3dhcmRfaWQYBiABKAkSNwoFaXRlbXMYByADKAsyKC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvbkl0ZW0SOAoFc3RhdGUYCCABKA4yKS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvblN0YXRlEhYKDmZhaWx1cmVfcmVhc29uGAkgASgJEi0KCWlzc3VlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAijQEKGExpc3RQcmVzY3JpcHRpb25zUmVxdWVzdBIPCgd3YXJkX2lkGAEgASgJEjkKBnN0YXRlcxgCIAMoDjIpLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uU3RhdGUSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkihgEKGUxpc3RQcmVzY3JpcHRpb25zUmVzcG9uc2USOwoNcHJlc2NyaXB0aW9ucxgBIAMoCzIkLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt0b3RhbF9jb3VudBgDIAEoAyIkChZHZXRQcmVzY3JpcHRpb25SZXF1ZXN0EgoKAmlkGAEgASgJIlUKF0dldFByZXNjcmlwdGlvblJlc3BvbnNlEjoKDHByZXNjcmlwdGlvbhgBIAEoCzIkLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uIjwKD0Rpc3BlbnNlUmVxdWVzdBIXCg9wcmVzY3JpcHRpb25faWQYASABKAkSEAoIdHJhY2VfaWQYAiABKAkiTgoQRGlzcGVuc2VSZXNwb25zZRI6CgxwcmVzY3JpcHRpb24YASABKAsyJC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvbiK3AwoSRGlzcGVuc2VBbGxvY2F0aW9uEgoKAmlkGAEgASgJEhEKCXNsb3RfY29kZRgCIAEoCRIQCghiYXRjaF9pZBgDIAEoCRISCgpsb3RfbnVtYmVyGAQgASgJEi8KC2V4cGlyeV9kYXRlGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghxdWFudGl0eRgGIAEoBRIaChJkaXNwZW5zZWRfcXVhbnRpdHkYByABKAUSDwoHZG9vcl9ubxgIIAEoBRIWCg5oYXJkd2FyZV9sYXllchgJIAEoBRIVCg1jaGFubmVsX3N0YXJ0GAogASgFEhMKC2NoYW5uZWxfZW5kGAsgASgFEg4KBnN0YXR1cxgMIAEoCRI5ChVoYXJkd2FyZV9hdHRlbXB0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGhhcmR3YXJlX3N1Y2Nlc3MYDiABKAgSFwoPaGFyZHdhcmVfZGV0YWlsGA8gASgJEhkKEWhhcmR3YXJlX3Jlc3BvbnNlGBAgASgJEg8KB3Nsb3RfaWQYESABKAkihQIKF0Rpc3BlbnNlVHJhbnNhY3Rpb25JdGVtEgoKAmlkGAEgASgJEhMKC3NlcXVlbmNlX25vGAIgASgFEhEKCWRydWdfY29kZRgDIAEoCRIRCglkcnVnX25hbWUYBCABKAkSGgoScmVxdWVzdGVkX3F1YW50aXR5GAUgASgFEhoKEmFsbG9jYXRlZF9xdWFudGl0eRgGIAEoBRIaChJkaXNwZW5zZWRfcXVhbnRpdHkYByABKAUSDgoGc3RhdHVzGAggASgJEj8KC2FsbG9jYXRpb25zGAkgAygLMioubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZUFsbG9jYXRpb24i3wYKE0Rpc3BlbnNlVHJhbnNhY3Rpb24SEwoLZGlzcGVuc2VfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhUKDXNvdXJjZV9zeXN0ZW0YAyABKAkSEgoKa2lvc2tfY29kZRgEIAEoCRIYChBvcGVyYXRvcl91c2VyX2lkGAUgASgJEh0KFW9wZXJhdG9yX2Rpc3BsYXlfbmFtZRgGIAEoCRJBCgZzdGF0dXMYByABKA4yMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlVHJhbnNhY3Rpb25TdGF0dXMSEAoIdHJhY2VfaWQYCCABKAkSFAoMZmFpbHVyZV9jb2RlGAkgASgJEhYKDmZhaWx1cmVfZGV0YWlsGAogASgJEj4KBWl0ZW1zGAsgAygLMi8ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZVRyYW5zYWN0aW9uSXRlbRI2ChJzdGlja2VyX3NjYW5uZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjkKFWlkZW50aXR5X2NvbmZpcm1lZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJcXVldWVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpzdGFydGVkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYECABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWZhaWxlZF9hdBgRIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMY2FuY2VsbGVkX2F0GBIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpleHBpcmVzX2F0GBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpjcmVhdGVkX2F0GBQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJAChZQcmVwYXJlRGlzcGVuc2VSZXF1ZXN0EhQKDHN0aWNrZXJfY29kZRgBIAEoCRIQCgh0cmFjZV9pZBgCIAEoCSKXAQoXUHJlcGFyZURpc3BlbnNlUmVzcG9uc2USQAoLdHJhbnNhY3Rpb24YASABKAsyKy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlVHJhbnNhY3Rpb24SOgoMcHJlc2NyaXB0aW9uGAIgASgLMiQubWVkaXN5bmMuZGlzcGVuc2luZy52MS5QcmVzY3JpcHRpb24iLQoWQ29uZmlybURpc3BlbnNlUmVxdWVzdBITCgtkaXNwZW5zZV9pZBgBIAEoCSJbChdDb25maXJtRGlzcGVuc2VSZXNwb25zZRJACgt0cmFuc2FjdGlvbhgBIAEoCzIrLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRGlzcGVuc2VUcmFuc2FjdGlvbiI8ChVDYW5jZWxEaXNwZW5zZVJlcXVlc3QSEwoLZGlzcGVuc2VfaWQYASABKAkSDgoGcmVhc29uGAIgASgJIloKFkNhbmNlbERpc3BlbnNlUmVzcG9uc2USQAoLdHJhbnNhY3Rpb24YASABKAsyKy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlVHJhbnNhY3Rpb24iNAodR2V0RGlzcGVuc2VUcmFuc2FjdGlvblJlcXVlc3QSEwoLZGlzcGVuc2VfaWQYASABKAkiYgoeR2V0RGlzcGVuc2VUcmFuc2FjdGlvblJlc3BvbnNlEkAKC3RyYW5zYWN0aW9uGAEgASgLMisubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZVRyYW5zYWN0aW9uItoCCh9MaXN0RGlzcGVuc2VUcmFuc2FjdGlvbnNSZXF1ZXN0EhIKCmtpb3NrX2NvZGUYASABKAkSQwoIc3RhdHVzZXMYAiADKA4yMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlVHJhbnNhY3Rpb25TdGF0dXMSFwoPcHJlc2NyaXB0aW9uX2lkGAMgASgJEhgKEG9wZXJhdG9yX3VzZXJfaWQYBCABKAkSMAoMY3JlYXRlZF9mcm9tGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpjcmVhdGVkX3RvGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCglwYWdlX3NpemUYByABKAUSEgoKcGFnZV90b2tlbhgIIAEoCRIPCgdzbG90X2lkGAkgASgJEhEKCWRydWdfY29kZRgKIAEoCSKTAQogTGlzdERpc3BlbnNlVHJhbnNhY3Rpb25zUmVzcG9uc2USQQoMdHJhbnNhY3Rpb25zGAEgAygLMisubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZVRyYW5zYWN0aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt0b3RhbF9jb3VudBgDIAEoAyJUChlMaXN0RW1lcmdlbmN5RHJ1Z3NSZXF1ZXN0EhAKCGtpb3NrX2lkGAEgASgJEhEKCXBhZ2Vfc2l6ZRgCIAEoBRISCgpwYWdlX3Rva2VuGAMgASgJIpQBCg1FbWVyZ2VuY3lEcnVnEg8KB3Nsb3RfaWQYASABKAkSEQoJc2xvdF9jb2RlGAIgASgJEhEKCWRydWdfY29kZRgDIAEoCRIRCglkcnVnX25hbWUYBCABKAkSEQoJZHJ1Z190eXBlGAUgASgJEhAKCHF1YW50aXR5GAYgASgFEhQKDG1heF9kaXNwZW5zZRgHIAEoBSKAAQoaTGlzdEVtZXJnZW5jeURydWdzUmVzcG9uc2USNAoFZHJ1Z3MYASADKAsyJS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkVtZXJnZW5jeURydWcSEwoLdG90YWxfY291bnQYAiABKAMSFwoPbmV4dF9wYWdlX3Rva2VuGAMgASgJIoYBChhFbWVyZ2VuY3lEaXNwZW5zZVJlcXVlc3QSEAoIa2lvc2tfaWQYASABKAkSEgoKY2FyZF90b2tlbhgCIAEoCRIPCgdzbG90X2lkGAMgASgJEhEKCWRydWdfY29kZRgEIAEoCRIQCghxdWFudGl0eRgFIAEoBRIOCgZyZWFzb24YBiABKAkieAoZRW1lcmdlbmN5RGlzcGVuc2VSZXNwb25zZRITCgtkaXNwZW5zZV9pZBgBIAEoCRIRCglzbG90X2NvZGUYAiABKAkSEQoJZHJ1Z19uYW1lGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEg4KBnN0YXR1cxgFIAEoCSqcAgoRUHJlc2NyaXB0aW9uU3RhdGUSIgoeUFJFU0NSSVBUSU9OX1NUQVRFX1VOU1BFQ0lGSUVEEAASHwobUFJFU0NSSVBUSU9OX1NUQVRFX1JFQ0VJVkVEEAESHAoYUFJFU0NSSVBUSU9OX1NUQVRFX1JFQURZEAISIQodUFJFU0NSSVBUSU9OX1NUQVRFX0RJU1BFTlNJTkcQAxIgChxQUkVTQ1JJUFRJT05fU1RBVEVfRElTUEVOU0VEEAQSHQoZUFJFU0NSSVBUSU9OX1NUQVRFX0ZBSUxFRBAFEiAKHFBSRVNDUklQVElPTl9TVEFURV9DQU5DRUxMRUQQBhIeChpQUkVTQ1JJUFRJT05fU1RBVEVfRVhQSVJFRBAHKvYCChlEaXNwZW5zZVRyYW5zYWN0aW9uU3RhdHVzEisKJ0RJU1BFTlNFX1RSQU5TQUNUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEjEKLURJU1BFTlNFX1RSQU5TQUNUSU9OX1NUQVRVU19BV0FJVElOR19JREVOVElUWRABEiYKIkRJU1BFTlNFX1RSQU5TQUNUSU9OX1NUQVRVU19RVUVVRUQQAhIqCiZESVNQRU5TRV9UUkFOU0FDVElPTl9TVEFUVVNfRElTUEVOU0lORxADEikKJURJU1BFTlNFX1RSQU5TQUNUSU9OX1NUQVRVU19ESVNQRU5TRUQQBBImCiJESVNQRU5TRV9UUkFOU0FDVElPTl9TVEFUVVNfRkFJTEVEEAUSKQolRElTUEVOU0VfVFJBTlNBQ1RJT05fU1RBVFVTX0NBTkNFTExFRBAGEicKI0RJU1BFTlNFX1RSQU5TQUNUSU9OX1NUQVRVU19FWFBJUkVEEAcyygkKEURpc3BlbnNpbmdTZXJ2aWNlEngKEUxpc3RQcmVzY3JpcHRpb25zEjAubWVkaXN5bmMuZGlzcGVuc2luZy52MS5MaXN0UHJlc2NyaXB0aW9uc1JlcXVlc3QaMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkxpc3RQcmVzY3JpcHRpb25zUmVzcG9uc2UScgoPR2V0UHJlc2NyaXB0aW9uEi4ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5HZXRQcmVzY3JpcHRpb25SZXF1ZXN0Gi8ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5HZXRQcmVzY3JpcHRpb25SZXNwb25zZRJdCghEaXNwZW5zZRInLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRGlzcGVuc2VSZXF1ZXN0GigubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZVJlc3BvbnNlEnIKD1ByZXBhcmVEaXNwZW5zZRIuLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlcGFyZURpc3BlbnNlUmVxdWVzdBovLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlcGFyZURpc3BlbnNlUmVzcG9uc2UScgoPQ29uZmlybURpc3BlbnNlEi4ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5Db25maXJtRGlzcGVuc2VSZXF1ZXN0Gi8ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5Db25maXJtRGlzcGVuc2VSZXNwb25zZRJvCg5DYW5jZWxEaXNwZW5zZRItLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuQ2FuY2VsRGlzcGVuc2VSZXF1ZXN0Gi4ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5DYW5jZWxEaXNwZW5zZVJlc3BvbnNlEocBChZHZXREaXNwZW5zZVRyYW5zYWN0aW9uEjUubWVkaXN5bmMuZGlzcGVuc2luZy52MS5HZXREaXNwZW5zZVRyYW5zYWN0aW9uUmVxdWVzdBo2Lm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuR2V0RGlzcGVuc2VUcmFuc2FjdGlvblJlc3BvbnNlEo0BChhMaXN0RGlzcGVuc2VUcmFuc2FjdGlvbnMSNy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkxpc3REaXNwZW5zZVRyYW5zYWN0aW9uc1JlcXVlc3QaOC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkxpc3REaXNwZW5zZVRyYW5zYWN0aW9uc1Jlc3BvbnNlEnsKEkxpc3RFbWVyZ2VuY3lEcnVncxIxLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuTGlzdEVtZXJnZW5jeURydWdzUmVxdWVzdBoyLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuTGlzdEVtZXJnZW5jeURydWdzUmVzcG9uc2USeAoRRW1lcmdlbmN5RGlzcGVuc2USMC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkVtZXJnZW5jeURpc3BlbnNlUmVxdWVzdBoxLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRW1lcmdlbmN5RGlzcGVuc2VSZXNwb25zZUJkWmJnaXRodWIuY29tL2FkbS1jaHVyYTNpbnRlci9tZWRpc3luYy9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi9tZWRpc3luYy9kaXNwZW5zaW5nL3YxO2Rpc3BlbnNpbmd2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("CidtZWRpc3luYy9kaXNwZW5zaW5nL3YxL2Rpc3BlbnNpbmcucHJvdG8SFm1lZGlzeW5jLmRpc3BlbnNpbmcudjEiXwoQUHJlc2NyaXB0aW9uSXRlbRIRCglkcnVnX2NvZGUYASABKAkSEQoJZHJ1Z19uYW1lGAIgASgJEhAKCHF1YW50aXR5GAMgASgFEhMKC2Rvc2FnZV90ZXh0GAQgASgJIpcDCgxQcmVzY3JpcHRpb24SCgoCaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhUKDXNvdXJjZV9zeXN0ZW0YAyABKAkSCgoCaG4YBCABKAkSFAoMcGF0aWVudF9uYW1lGAUgASgJEg8KB3dhcmRfaWQYBiABKAkSNwoFaXRlbXMYByADKAsyKC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvbkl0ZW0SOAoFc3RhdGUYCCABKA4yKS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvblN0YXRlEhYKDmZhaWx1cmVfcmVhc29uGAkgASgJEi0KCWlzc3VlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAijQEKGExpc3RQcmVzY3JpcHRpb25zUmVxdWVzdBIPCgd3YXJkX2lkGAEgASgJEjkKBnN0YXRlcxgCIAMoDjIpLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uU3RhdGUSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkihgEKGUxpc3RQcmVzY3JpcHRpb25zUmVzcG9uc2USOwoNcHJlc2NyaXB0aW9ucxgBIAMoCzIkLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt0b3RhbF9jb3VudBgDIAEoAyIkChZHZXRQcmVzY3JpcHRpb25SZXF1ZXN0EgoKAmlkGAEgASgJIlUKF0dldFByZXNjcmlwdGlvblJlc3BvbnNlEjoKDHByZXNjcmlwdGlvbhgBIAEoCzIkLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuUHJlc2NyaXB0aW9uIjwKD0Rpc3BlbnNlUmVxdWVzdBIXCg9wcmVzY3JpcHRpb25faWQYASABKAkSEAoIdHJhY2VfaWQYAiABKAkiTgoQRGlzcGVuc2VSZXNwb25zZRI6CgxwcmVzY3JpcHRpb24YASABKAsyJC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXNjcmlwdGlvbiK3AwoSRGlzcGVuc2VBbGxvY2F0aW9uEgoKAmlkGAEgASgJEhEKCXNsb3RfY29kZRgCIAEoCRIQCghiYXRjaF9pZBgDIAEoCRISCgpsb3RfbnVtYmVyGAQgASgJEi8KC2V4cGlyeV9kYXRlGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghxdWFudGl0eRgGIAEoBRIaChJkaXNwZW5zZWRfcXVhbnRpdHkYByABKAUSDwoHZG9vcl9ubxgIIAEoBRIWCg5oYXJkd2FyZV9sYXllchgJIAEoBRIVCg1jaGFubmVsX3N0YXJ0GAogASgFEhMKC2NoYW5uZWxfZW5kGAsgASgFEg4KBnN0YXR1cxgMIAEoCRI5ChVoYXJkd2FyZV9hdHRlbXB0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGhhcmR3YXJlX3N1Y2Nlc3MYDiABKAgSFwoPaGFyZHdhcmVfZGV0YWlsGA8gASgJEhkKEWhhcmR3YXJlX3Jlc3BvbnNlGBAgASgJEg8KB3Nsb3RfaWQYESABKAkihQIKF0Rpc3BlbnNlVHJhbnNhY3Rpb25JdGVtEgoKAmlkGAEgASgJEhMKC3NlcXVlbmNlX25vGAIgASgFEhEKCWRydWdfY29kZRgDIAEoCRIRCglkcnVnX25hbWUYBCABKAkSGgoScmVxdWVzdGVkX3F1YW50aXR5GAUgASgFEhoKEmFsbG9jYXRlZF9xdWFudGl0eRgGIAEoBRIaChJkaXNwZW5zZWRfcXVhbnRpdHkYByABKAUSDgoGc3RhdHVzGAggASgJEj8KC2FsbG9jYXRpb25zGAkgAygLMioubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZUFsbG9jYXRpb24i3wYKE0Rpc3BlbnNlVHJhbnNhY3Rpb24SEwoLZGlzcGVuc2VfaWQYASABKAkSFwoPcHJlc2NyaXB0aW9uX2lkGAIgASgJEhUKDXNvdXJjZV9zeXN0ZW0YAyABKAkSEgoKa2lvc2tfY29kZRgEIAEoCRIYChBvcGVyYXRvcl91c2VyX2lkGAUgASgJEh0KFW9wZXJhdG9yX2Rpc3BsYXlfbmFtZRgGIAEoCRJBCgZzdGF0dXMYByABKA4yMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlVHJhbnNhY3Rpb25TdGF0dXMSEAoIdHJhY2VfaWQYCCABKAkSFAoMZmFpbHVyZV9jb2RlGAkgASgJEhYKDmZhaWx1cmVfZGV0YWlsGAogASgJEj4KBWl0ZW1zGAsgAygLMi8ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZVRyYW5zYWN0aW9uSXRlbRI2ChJzdGlja2VyX3NjYW5uZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjkKFWlkZW50aXR5X2NvbmZpcm1lZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJcXVldWVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpzdGFydGVkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYECABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWZhaWxlZF9hdBgRIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMY2FuY2VsbGVkX2F0GBIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpleHBpcmVzX2F0GBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpjcmVhdGVkX2F0GBQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJAChZQcmVwYXJlRGlzcGVuc2VSZXF1ZXN0EhQKDHN0aWNrZXJfY29kZRgBIAEoCRIQCgh0cmFjZV9pZBgCIAEoCSKXAQoXUHJlcGFyZURpc3BlbnNlUmVzcG9uc2USQAoLdHJhbnNhY3Rpb24YASABKAsyKy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlVHJhbnNhY3Rpb24SOgoMcHJlc2NyaXB0aW9uGAIgASgLMiQubWVkaXN5bmMuZGlzcGVuc2luZy52MS5QcmVzY3JpcHRpb24iLQoWQ29uZmlybURpc3BlbnNlUmVxdWVzdBITCgtkaXNwZW5zZV9pZBgBIAEoCSJbChdDb25maXJtRGlzcGVuc2VSZXNwb25zZRJACgt0cmFuc2FjdGlvbhgBIAEoCzIrLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRGlzcGVuc2VUcmFuc2FjdGlvbiI8ChVDYW5jZWxEaXNwZW5zZVJlcXVlc3QSEwoLZGlzcGVuc2VfaWQYASABKAkSDgoGcmVhc29uGAIgASgJIloKFkNhbmNlbERpc3BlbnNlUmVzcG9uc2USQAoLdHJhbnNhY3Rpb24YASABKAsyKy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlVHJhbnNhY3Rpb24iNAodR2V0RGlzcGVuc2VUcmFuc2FjdGlvblJlcXVlc3QSEwoLZGlzcGVuc2VfaWQYASABKAkiYgoeR2V0RGlzcGVuc2VUcmFuc2FjdGlvblJlc3BvbnNlEkAKC3RyYW5zYWN0aW9uGAEgASgLMisubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZVRyYW5zYWN0aW9uItoCCh9MaXN0RGlzcGVuc2VUcmFuc2FjdGlvbnNSZXF1ZXN0EhIKCmtpb3NrX2NvZGUYASABKAkSQwoIc3RhdHVzZXMYAiADKA4yMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlVHJhbnNhY3Rpb25TdGF0dXMSFwoPcHJlc2NyaXB0aW9uX2lkGAMgASgJEhgKEG9wZXJhdG9yX3VzZXJfaWQYBCABKAkSMAoMY3JlYXRlZF9mcm9tGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpjcmVhdGVkX3RvGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCglwYWdlX3NpemUYByABKAUSEgoKcGFnZV90b2tlbhgIIAEoCRIPCgdzbG90X2lkGAkgASgJEhEKCWRydWdfY29kZRgKIAEoCSKTAQogTGlzdERpc3BlbnNlVHJhbnNhY3Rpb25zUmVzcG9uc2USQQoMdHJhbnNhY3Rpb25zGAEgAygLMisubWVkaXN5bmMuZGlzcGVuc2luZy52MS5EaXNwZW5zZVRyYW5zYWN0aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt0b3RhbF9jb3VudBgDIAEoAyJsChlMaXN0RW1lcmdlbmN5RHJ1Z3NSZXF1ZXN0EhQKCGtpb3NrX2lkGAEgASgJQgIYARIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCRISCgpraW9za19jb2RlGAQgASgJIpQBCg1FbWVyZ2VuY3lEcnVnEg8KB3Nsb3RfaWQYASABKAkSEQoJc2xvdF9jb2RlGAIgASgJEhEKCWRydWdfY29kZRgDIAEoCRIRCglkcnVnX25hbWUYBCABKAkSEQoJZHJ1Z190eXBlGAUgASgJEhAKCHF1YW50aXR5GAYgASgFEhQKDG1heF9kaXNwZW5zZRgHIAEoBSKAAQoaTGlzdEVtZXJnZW5jeURydWdzUmVzcG9uc2USNAoFZHJ1Z3MYASADKAsyJS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkVtZXJnZW5jeURydWcSEwoLdG90YWxfY291bnQYAiABKAMSFwoPbmV4dF9wYWdlX3Rva2VuGAMgASgJIu4BChhFbWVyZ2VuY3lEaXNwZW5zZVJlcXVlc3QSFAoIa2lvc2tfaWQYASABKAlCAhgBEhYKCmNhcmRfdG9rZW4YAiABKAlCAhgBEhMKB3Nsb3RfaWQYAyABKAlCAhgBEhEKCWRydWdfY29kZRgEIAEoCRIQCghxdWFudGl0eRgFIAEoBRIOCgZyZWFzb24YBiABKAkSEgoKa2lvc2tfY29kZRgHIAEoCRIKCgJobhgIIAEoCRIVCg1lbXBsb3llZV9jb2RlGAkgASgJEhEKCXNsb3RfY29kZRgKIAEoCRIQCgh0cmFjZV9pZBgLIAEoCSLDAQoZRW1lcmdlbmN5RGlzcGVuc2VSZXNwb25zZRITCgtkaXNwZW5zZV9pZBgBIAEoCRIRCglzbG90X2NvZGUYAiABKAkSEQoJZHJ1Z19uYW1lGAMgASgJEhAKCHF1YW50aXR5GAQgASgFEg4KBnN0YXR1cxgFIAEoCRJJCgt0cmFuc2FjdGlvbhgGIAEoCzI0Lm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRW1lcmdlbmN5RGlzcGVuc2VUcmFuc2FjdGlvbiKsBgocRW1lcmdlbmN5RGlzcGVuc2VUcmFuc2FjdGlvbhITCgtkaXNwZW5zZV9pZBgBIAEoCRISCgpraW9za19jb2RlGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSCgoCaG4YBCABKAkSFQoNZW1wbG95ZWVfY29kZRgFIAEoCRIYChBvcGVyYXRvcl91c2VyX2lkGAYgASgJEh0KFW9wZXJhdG9yX2Rpc3BsYXlfbmFtZRgHIAEoCRIRCglzbG90X2NvZGUYCCABKAkSEQoJZHJ1Z19jb2RlGAkgASgJEhEKCWRydWdfbmFtZRgKIAEoCRIaChJyZXF1ZXN0ZWRfcXVhbnRpdHkYCyABKAUSGgoSZGlzcGVuc2VkX3F1YW50aXR5GAwgASgFEj8KBnN0YXR1cxgNIAEoDjIvLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRW1lcmdlbmN5RGlzcGVuc2VTdGF0dXMSDgoGcmVhc29uGA4gASgJEhQKDGZhaWx1cmVfY29kZRgPIAEoCRIWCg5mYWlsdXJlX2RldGFpbBgQIAEoCRIQCgh0cmFjZV9pZBgRIAEoCRItCglxdWV1ZWRfYXQYEiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnN0YXJ0ZWRfYXQYEyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgUIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJZmFpbGVkX2F0GBUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpjcmVhdGVkX2F0GBYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJRChRvcGVyYXRvcl9hdXRoX21ldGhvZBgYIAEoDjIzLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRW1lcmdlbmN5T3BlcmF0b3JBdXRoTWV0aG9kIj0KJkdldEVtZXJnZW5jeURpc3BlbnNlVHJhbnNhY3Rpb25SZXF1ZXN0EhMKC2Rpc3BlbnNlX2lkGAEgASgJInQKJ0dldEVtZXJnZW5jeURpc3BlbnNlVHJhbnNhY3Rpb25SZXNwb25zZRJJCgt0cmFuc2FjdGlvbhgBIAEoCzI0Lm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRW1lcmdlbmN5RGlzcGVuc2VUcmFuc2FjdGlvbiKUAwooTGlzdEVtZXJnZW5jeURpc3BlbnNlVHJhbnNhY3Rpb25zUmVxdWVzdBISCgpraW9za19jb2RlGAEgASgJEkEKCHN0YXR1c2VzGAIgAygOMi8ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5FbWVyZ2VuY3lEaXNwZW5zZVN0YXR1cxIKCgJobhgDIAEoCRIVCg1lbXBsb3llZV9jb2RlGAQgASgJEhEKCWRydWdfY29kZRgFIAEoCRIwCgxjcmVhdGVkX2Zyb20YBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCmNyZWF0ZWRfdG8YByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXBhZ2Vfc2l6ZRgIIAEoBRISCgpwYWdlX3Rva2VuGAkgASgJElIKFW9wZXJhdG9yX2F1dGhfbWV0aG9kcxgKIAMoDjIzLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRW1lcmdlbmN5T3BlcmF0b3JBdXRoTWV0aG9kIqUBCilMaXN0RW1lcmdlbmN5RGlzcGVuc2VUcmFuc2FjdGlvbnNSZXNwb25zZRJKCgx0cmFuc2FjdGlvbnMYASADKAsyNC5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkVtZXJnZW5jeURpc3BlbnNlVHJhbnNhY3Rpb24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJEhMKC3RvdGFsX2NvdW50GAMgASgDKpwCChFQcmVzY3JpcHRpb25TdGF0ZRIiCh5QUkVTQ1JJUFRJT05fU1RBVEVfVU5TUEVDSUZJRUQQABIfChtQUkVTQ1JJUFRJT05fU1RBVEVfUkVDRUlWRUQQARIcChhQUkVTQ1JJUFRJT05fU1RBVEVfUkVBRFkQAhIhCh1QUkVTQ1JJUFRJT05fU1RBVEVfRElTUEVOU0lORxADEiAKHFBSRVNDUklQVElPTl9TVEFURV9ESVNQRU5TRUQQBBIdChlQUkVTQ1JJUFRJT05fU1RBVEVfRkFJTEVEEAUSIAocUFJFU0NSSVBUSU9OX1NUQVRFX0NBTkNFTExFRBAGEh4KGlBSRVNDUklQVElPTl9TVEFURV9FWFBJUkVEEAcq9gIKGURpc3BlbnNlVHJhbnNhY3Rpb25TdGF0dXMSKwonRElTUEVOU0VfVFJBTlNBQ1RJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASMQotRElTUEVOU0VfVFJBTlNBQ1RJT05fU1RBVFVTX0FXQUlUSU5HX0lERU5USVRZEAESJgoiRElTUEVOU0VfVFJBTlNBQ1RJT05fU1RBVFVTX1FVRVVFRBACEioKJkRJU1BFTlNFX1RSQU5TQUNUSU9OX1NUQVRVU19ESVNQRU5TSU5HEAMSKQolRElTUEVOU0VfVFJBTlNBQ1RJT05fU1RBVFVTX0RJU1BFTlNFRBAEEiYKIkRJU1BFTlNFX1RSQU5TQUNUSU9OX1NUQVRVU19GQUlMRUQQBRIpCiVESVNQRU5TRV9UUkFOU0FDVElPTl9TVEFUVVNfQ0FOQ0VMTEVEEAYSJwojRElTUEVOU0VfVFJBTlNBQ1RJT05fU1RBVFVTX0VYUElSRUQQByrjAQoXRW1lcmdlbmN5RGlzcGVuc2VTdGF0dXMSKQolRU1FUkdFTkNZX0RJU1BFTlNFX1NUQVRVU19VTlNQRUNJRklFRBAAEiQKIEVNRVJHRU5DWV9ESVNQRU5TRV9TVEFUVVNfUVVFVUVEEAESKAokRU1FUkdFTkNZX0RJU1BFTlNFX1NUQVRVU19ESVNQRU5TSU5HEAISJwojRU1FUkdFTkNZX0RJU1BFTlNFX1NUQVRVU19ESVNQRU5TRUQQAxIkCiBFTUVSR0VOQ1lfRElTUEVOU0VfU1RBVFVTX0ZBSUxFRBAEKqgBChtFbWVyZ2VuY3lPcGVyYXRvckF1dGhNZXRob2QSLgoqRU1FUkdFTkNZX09QRVJBVE9SX0FVVEhfTUVUSE9EX1VOU1BFQ0lGSUVEEAASJwojRU1FUkdFTkNZX09QRVJBVE9SX0FVVEhfTUVUSE9EX0NBUkQQARIwCixFTUVSR0VOQ1lfT1BFUkFUT1JfQVVUSF9NRVRIT0RfRU1QTE9ZRUVfQ09ERRACMpoMChFEaXNwZW5zaW5nU2VydmljZRJ4ChFMaXN0UHJlc2NyaXB0aW9ucxIwLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuTGlzdFByZXNjcmlwdGlvbnNSZXF1ZXN0GjEubWVkaXN5bmMuZGlzcGVuc2luZy52MS5MaXN0UHJlc2NyaXB0aW9uc1Jlc3BvbnNlEnIKD0dldFByZXNjcmlwdGlvbhIuLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuR2V0UHJlc2NyaXB0aW9uUmVxdWVzdBovLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuR2V0UHJlc2NyaXB0aW9uUmVzcG9uc2USXQoIRGlzcGVuc2USJy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkRpc3BlbnNlUmVxdWVzdBooLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuRGlzcGVuc2VSZXNwb25zZRJyCg9QcmVwYXJlRGlzcGVuc2USLi5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXBhcmVEaXNwZW5zZVJlcXVlc3QaLy5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLlByZXBhcmVEaXNwZW5zZVJlc3BvbnNlEnIKD0NvbmZpcm1EaXNwZW5zZRIuLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuQ29uZmlybURpc3BlbnNlUmVxdWVzdBovLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuQ29uZmlybURpc3BlbnNlUmVzcG9uc2USbwoOQ2FuY2VsRGlzcGVuc2USLS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkNhbmNlbERpc3BlbnNlUmVxdWVzdBouLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuQ2FuY2VsRGlzcGVuc2VSZXNwb25zZRKHAQoWR2V0RGlzcGVuc2VUcmFuc2FjdGlvbhI1Lm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuR2V0RGlzcGVuc2VUcmFuc2FjdGlvblJlcXVlc3QaNi5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkdldERpc3BlbnNlVHJhbnNhY3Rpb25SZXNwb25zZRKNAQoYTGlzdERpc3BlbnNlVHJhbnNhY3Rpb25zEjcubWVkaXN5bmMuZGlzcGVuc2luZy52MS5MaXN0RGlzcGVuc2VUcmFuc2FjdGlvbnNSZXF1ZXN0GjgubWVkaXN5bmMuZGlzcGVuc2luZy52MS5MaXN0RGlzcGVuc2VUcmFuc2FjdGlvbnNSZXNwb25zZRJ7ChJMaXN0RW1lcmdlbmN5RHJ1Z3MSMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkxpc3RFbWVyZ2VuY3lEcnVnc1JlcXVlc3QaMi5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkxpc3RFbWVyZ2VuY3lEcnVnc1Jlc3BvbnNlEngKEUVtZXJnZW5jeURpc3BlbnNlEjAubWVkaXN5bmMuZGlzcGVuc2luZy52MS5FbWVyZ2VuY3lEaXNwZW5zZVJlcXVlc3QaMS5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkVtZXJnZW5jeURpc3BlbnNlUmVzcG9uc2USogEKH0dldEVtZXJnZW5jeURpc3BlbnNlVHJhbnNhY3Rpb24SPi5tZWRpc3luYy5kaXNwZW5zaW5nLnYxLkdldEVtZXJnZW5jeURpc3BlbnNlVHJhbnNhY3Rpb25SZXF1ZXN0Gj8ubWVkaXN5bmMuZGlzcGVuc2luZy52MS5HZXRFbWVyZ2VuY3lEaXNwZW5zZVRyYW5zYWN0aW9uUmVzcG9uc2USqAEKIUxpc3RFbWVyZ2VuY3lEaXNwZW5zZVRyYW5zYWN0aW9ucxJALm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuTGlzdEVtZXJnZW5jeURpc3BlbnNlVHJhbnNhY3Rpb25zUmVxdWVzdBpBLm1lZGlzeW5jLmRpc3BlbnNpbmcudjEuTGlzdEVtZXJnZW5jeURpc3BlbnNlVHJhbnNhY3Rpb25zUmVzcG9uc2VCZFpiZ2l0aHViLmNvbS9hZG0tY2h1cmEzaW50ZXIvbWVkaXN5bmMvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vbWVkaXN5bmMvZGlzcGVuc2luZy92MTtkaXNwZW5zaW5ndjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message medisync.dispensing.v1.PrescriptionItem
@@ -793,7 +793,8 @@ export const ListDispenseTransactionsResponseSchema: GenMessage<ListDispenseTran
  */
 export type ListEmergencyDrugsRequest = Message<"medisync.dispensing.v1.ListEmergencyDrugsRequest"> & {
   /**
-   * @generated from field: string kiosk_id = 1;
+   * @generated from field: string kiosk_id = 1 [deprecated = true];
+   * @deprecated
    */
   kioskId: string;
 
@@ -806,6 +807,11 @@ export type ListEmergencyDrugsRequest = Message<"medisync.dispensing.v1.ListEmer
    * @generated from field: string page_token = 3;
    */
   pageToken: string;
+
+  /**
+   * @generated from field: string kiosk_code = 4;
+   */
+  kioskCode: string;
 };
 
 /**
@@ -894,19 +900,22 @@ export const ListEmergencyDrugsResponseSchema: GenMessage<ListEmergencyDrugsResp
  */
 export type EmergencyDispenseRequest = Message<"medisync.dispensing.v1.EmergencyDispenseRequest"> & {
   /**
-   * @generated from field: string kiosk_id = 1;
+   * @generated from field: string kiosk_id = 1 [deprecated = true];
+   * @deprecated
    */
   kioskId: string;
 
   /**
-   * scanned user card
+   * Legacy only; ignored by the current flow.
    *
-   * @generated from field: string card_token = 2;
+   * @generated from field: string card_token = 2 [deprecated = true];
+   * @deprecated
    */
   cardToken: string;
 
   /**
-   * @generated from field: string slot_id = 3;
+   * @generated from field: string slot_id = 3 [deprecated = true];
+   * @deprecated
    */
   slotId: string;
 
@@ -921,11 +930,34 @@ export type EmergencyDispenseRequest = Message<"medisync.dispensing.v1.Emergency
   quantity: number;
 
   /**
-   * optional reason for audit
-   *
    * @generated from field: string reason = 6;
    */
   reason: string;
+
+  /**
+   * @generated from field: string kiosk_code = 7;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: string hn = 8;
+   */
+  hn: string;
+
+  /**
+   * @generated from field: string employee_code = 9;
+   */
+  employeeCode: string;
+
+  /**
+   * @generated from field: string slot_code = 10;
+   */
+  slotCode: string;
+
+  /**
+   * @generated from field: string trace_id = 11;
+   */
+  traceId: string;
 };
 
 /**
@@ -960,11 +992,14 @@ export type EmergencyDispenseResponse = Message<"medisync.dispensing.v1.Emergenc
   quantity: number;
 
   /**
-   * "DISPENSED" or "FAILED"
-   *
    * @generated from field: string status = 5;
    */
   status: string;
+
+  /**
+   * @generated from field: medisync.dispensing.v1.EmergencyDispenseTransaction transaction = 6;
+   */
+  transaction?: EmergencyDispenseTransaction | undefined;
 };
 
 /**
@@ -973,6 +1008,261 @@ export type EmergencyDispenseResponse = Message<"medisync.dispensing.v1.Emergenc
  */
 export const EmergencyDispenseResponseSchema: GenMessage<EmergencyDispenseResponse> = /*@__PURE__*/
   messageDesc(file_medisync_dispensing_v1_dispensing, 25);
+
+/**
+ * @generated from message medisync.dispensing.v1.EmergencyDispenseTransaction
+ */
+export type EmergencyDispenseTransaction = Message<"medisync.dispensing.v1.EmergencyDispenseTransaction"> & {
+  /**
+   * @generated from field: string dispense_id = 1;
+   */
+  dispenseId: string;
+
+  /**
+   * @generated from field: string kiosk_code = 2;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: string project_id = 3;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string hn = 4;
+   */
+  hn: string;
+
+  /**
+   * @generated from field: string employee_code = 5;
+   */
+  employeeCode: string;
+
+  /**
+   * @generated from field: string operator_user_id = 6;
+   */
+  operatorUserId: string;
+
+  /**
+   * @generated from field: string operator_display_name = 7;
+   */
+  operatorDisplayName: string;
+
+  /**
+   * @generated from field: string slot_code = 8;
+   */
+  slotCode: string;
+
+  /**
+   * @generated from field: string drug_code = 9;
+   */
+  drugCode: string;
+
+  /**
+   * @generated from field: string drug_name = 10;
+   */
+  drugName: string;
+
+  /**
+   * @generated from field: int32 requested_quantity = 11;
+   */
+  requestedQuantity: number;
+
+  /**
+   * @generated from field: int32 dispensed_quantity = 12;
+   */
+  dispensedQuantity: number;
+
+  /**
+   * @generated from field: medisync.dispensing.v1.EmergencyDispenseStatus status = 13;
+   */
+  status: EmergencyDispenseStatus;
+
+  /**
+   * @generated from field: string reason = 14;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: string failure_code = 15;
+   */
+  failureCode: string;
+
+  /**
+   * @generated from field: string failure_detail = 16;
+   */
+  failureDetail: string;
+
+  /**
+   * @generated from field: string trace_id = 17;
+   */
+  traceId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp queued_at = 18;
+   */
+  queuedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp started_at = 19;
+   */
+  startedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp completed_at = 20;
+   */
+  completedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp failed_at = 21;
+   */
+  failedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 22;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 23;
+   */
+  updatedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: medisync.dispensing.v1.EmergencyOperatorAuthMethod operator_auth_method = 24;
+   */
+  operatorAuthMethod: EmergencyOperatorAuthMethod;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.EmergencyDispenseTransaction.
+ * Use `create(EmergencyDispenseTransactionSchema)` to create a new message.
+ */
+export const EmergencyDispenseTransactionSchema: GenMessage<EmergencyDispenseTransaction> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 26);
+
+/**
+ * @generated from message medisync.dispensing.v1.GetEmergencyDispenseTransactionRequest
+ */
+export type GetEmergencyDispenseTransactionRequest = Message<"medisync.dispensing.v1.GetEmergencyDispenseTransactionRequest"> & {
+  /**
+   * @generated from field: string dispense_id = 1;
+   */
+  dispenseId: string;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.GetEmergencyDispenseTransactionRequest.
+ * Use `create(GetEmergencyDispenseTransactionRequestSchema)` to create a new message.
+ */
+export const GetEmergencyDispenseTransactionRequestSchema: GenMessage<GetEmergencyDispenseTransactionRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 27);
+
+/**
+ * @generated from message medisync.dispensing.v1.GetEmergencyDispenseTransactionResponse
+ */
+export type GetEmergencyDispenseTransactionResponse = Message<"medisync.dispensing.v1.GetEmergencyDispenseTransactionResponse"> & {
+  /**
+   * @generated from field: medisync.dispensing.v1.EmergencyDispenseTransaction transaction = 1;
+   */
+  transaction?: EmergencyDispenseTransaction | undefined;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.GetEmergencyDispenseTransactionResponse.
+ * Use `create(GetEmergencyDispenseTransactionResponseSchema)` to create a new message.
+ */
+export const GetEmergencyDispenseTransactionResponseSchema: GenMessage<GetEmergencyDispenseTransactionResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 28);
+
+/**
+ * @generated from message medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest
+ */
+export type ListEmergencyDispenseTransactionsRequest = Message<"medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest"> & {
+  /**
+   * @generated from field: string kiosk_code = 1;
+   */
+  kioskCode: string;
+
+  /**
+   * @generated from field: repeated medisync.dispensing.v1.EmergencyDispenseStatus statuses = 2;
+   */
+  statuses: EmergencyDispenseStatus[];
+
+  /**
+   * @generated from field: string hn = 3;
+   */
+  hn: string;
+
+  /**
+   * @generated from field: string employee_code = 4;
+   */
+  employeeCode: string;
+
+  /**
+   * @generated from field: string drug_code = 5;
+   */
+  drugCode: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_from = 6;
+   */
+  createdFrom?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_to = 7;
+   */
+  createdTo?: Timestamp | undefined;
+
+  /**
+   * @generated from field: int32 page_size = 8;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 9;
+   */
+  pageToken: string;
+
+  /**
+   * @generated from field: repeated medisync.dispensing.v1.EmergencyOperatorAuthMethod operator_auth_methods = 10;
+   */
+  operatorAuthMethods: EmergencyOperatorAuthMethod[];
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.ListEmergencyDispenseTransactionsRequest.
+ * Use `create(ListEmergencyDispenseTransactionsRequestSchema)` to create a new message.
+ */
+export const ListEmergencyDispenseTransactionsRequestSchema: GenMessage<ListEmergencyDispenseTransactionsRequest> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 29);
+
+/**
+ * @generated from message medisync.dispensing.v1.ListEmergencyDispenseTransactionsResponse
+ */
+export type ListEmergencyDispenseTransactionsResponse = Message<"medisync.dispensing.v1.ListEmergencyDispenseTransactionsResponse"> & {
+  /**
+   * @generated from field: repeated medisync.dispensing.v1.EmergencyDispenseTransaction transactions = 1;
+   */
+  transactions: EmergencyDispenseTransaction[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+
+  /**
+   * @generated from field: int64 total_count = 3;
+   */
+  totalCount: bigint;
+};
+
+/**
+ * Describes the message medisync.dispensing.v1.ListEmergencyDispenseTransactionsResponse.
+ * Use `create(ListEmergencyDispenseTransactionsResponseSchema)` to create a new message.
+ */
+export const ListEmergencyDispenseTransactionsResponseSchema: GenMessage<ListEmergencyDispenseTransactionsResponse> = /*@__PURE__*/
+  messageDesc(file_medisync_dispensing_v1_dispensing, 30);
 
 /**
  * Lifecycle: RECEIVED -> READY -> DISPENSING -> DISPENSED | FAILED.
@@ -1080,6 +1370,68 @@ export const DispenseTransactionStatusSchema: GenEnum<DispenseTransactionStatus>
   enumDesc(file_medisync_dispensing_v1_dispensing, 1);
 
 /**
+ * @generated from enum medisync.dispensing.v1.EmergencyDispenseStatus
+ */
+export enum EmergencyDispenseStatus {
+  /**
+   * @generated from enum value: EMERGENCY_DISPENSE_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: EMERGENCY_DISPENSE_STATUS_QUEUED = 1;
+   */
+  QUEUED = 1,
+
+  /**
+   * @generated from enum value: EMERGENCY_DISPENSE_STATUS_DISPENSING = 2;
+   */
+  DISPENSING = 2,
+
+  /**
+   * @generated from enum value: EMERGENCY_DISPENSE_STATUS_DISPENSED = 3;
+   */
+  DISPENSED = 3,
+
+  /**
+   * @generated from enum value: EMERGENCY_DISPENSE_STATUS_FAILED = 4;
+   */
+  FAILED = 4,
+}
+
+/**
+ * Describes the enum medisync.dispensing.v1.EmergencyDispenseStatus.
+ */
+export const EmergencyDispenseStatusSchema: GenEnum<EmergencyDispenseStatus> = /*@__PURE__*/
+  enumDesc(file_medisync_dispensing_v1_dispensing, 2);
+
+/**
+ * @generated from enum medisync.dispensing.v1.EmergencyOperatorAuthMethod
+ */
+export enum EmergencyOperatorAuthMethod {
+  /**
+   * @generated from enum value: EMERGENCY_OPERATOR_AUTH_METHOD_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: EMERGENCY_OPERATOR_AUTH_METHOD_CARD = 1;
+   */
+  CARD = 1,
+
+  /**
+   * @generated from enum value: EMERGENCY_OPERATOR_AUTH_METHOD_EMPLOYEE_CODE = 2;
+   */
+  EMPLOYEE_CODE = 2,
+}
+
+/**
+ * Describes the enum medisync.dispensing.v1.EmergencyOperatorAuthMethod.
+ */
+export const EmergencyOperatorAuthMethodSchema: GenEnum<EmergencyOperatorAuthMethod> = /*@__PURE__*/
+  enumDesc(file_medisync_dispensing_v1_dispensing, 3);
+
+/**
  * @generated from service medisync.dispensing.v1.DispensingService
  */
 export const DispensingService: GenService<{
@@ -1148,7 +1500,9 @@ export const DispensingService: GenService<{
     output: typeof ListDispenseTransactionsResponseSchema;
   },
   /**
-   * Emergency dispensing — sticker-less, card-verified.
+   * Emergency dispensing for medication without a prescription-generated
+   * sticker. HN identifies the patient and employee_code identifies the
+   * responsible operator; this does not create a prescription transaction.
    *
    * @generated from rpc medisync.dispensing.v1.DispensingService.ListEmergencyDrugs
    */
@@ -1164,6 +1518,22 @@ export const DispensingService: GenService<{
     methodKind: "unary";
     input: typeof EmergencyDispenseRequestSchema;
     output: typeof EmergencyDispenseResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.dispensing.v1.DispensingService.GetEmergencyDispenseTransaction
+   */
+  getEmergencyDispenseTransaction: {
+    methodKind: "unary";
+    input: typeof GetEmergencyDispenseTransactionRequestSchema;
+    output: typeof GetEmergencyDispenseTransactionResponseSchema;
+  },
+  /**
+   * @generated from rpc medisync.dispensing.v1.DispensingService.ListEmergencyDispenseTransactions
+   */
+  listEmergencyDispenseTransactions: {
+    methodKind: "unary";
+    input: typeof ListEmergencyDispenseTransactionsRequestSchema;
+    output: typeof ListEmergencyDispenseTransactionsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_medisync_dispensing_v1_dispensing, 0);

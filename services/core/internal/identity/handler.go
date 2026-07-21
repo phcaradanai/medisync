@@ -80,10 +80,14 @@ func (s *IdentityServer) CardLogin(ctx context.Context, req *connect.Request[ide
 	if err != nil {
 		return nil, authErrorToConnect(err)
 	}
+	if msg.ProjectId != "" && user.ProjectIDStr() != msg.ProjectId {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("card does not belong to the kiosk project"))
+	}
 	return connect.NewResponse(&identityv1.CardLoginResponse{
-		AccessToken: token,
-		ExpiresAt:   timestamppb.New(expiresAt),
-		User:        toProtoUser(user),
+		AccessToken:  token,
+		ExpiresAt:    timestamppb.New(expiresAt),
+		User:         toProtoUser(user),
+		EmployeeCode: user.EmployeeCode,
 	}), nil
 }
 

@@ -34,10 +34,11 @@ const (
 var defaultProjectID = "00000000-0000-0000-0000-000000000001"
 
 type demoUser struct {
-	Username    string
-	Password    string
-	DisplayName string
-	Role        string
+	Username     string
+	EmployeeCode string
+	Password     string
+	DisplayName  string
+	Role         string
 }
 
 type demoDrug struct {
@@ -55,6 +56,8 @@ type demoSlot struct {
 	Capacity     int    `json:"capacity"`
 	Quantity     int    `json:"quantity"`
 	LowThreshold int    `json:"low_threshold"`
+	Emergency    bool   `json:"emergency"`
+	EmergencyMax int    `json:"emergency_max"`
 }
 
 type demoRxItem struct {
@@ -66,9 +69,9 @@ type demoRxItem struct {
 
 var (
 	demoUsers = []demoUser{
-		{Username: "pharmacist", Password: "demo-pharmacist-2026", DisplayName: "Demo Pharmacist", Role: "PHARMACIST"},
-		{Username: "nurse", Password: "demo-nurse-2026", DisplayName: "Demo Nurse", Role: "NURSE"},
-		{Username: "refiller", Password: "demo-refiller-2026", DisplayName: "Demo Refiller", Role: "REFILLER"},
+		{Username: "pharmacist", EmployeeCode: "EMP-PHARM-001", Password: "demo-pharmacist-2026", DisplayName: "Demo Pharmacist", Role: "PHARMACIST"},
+		{Username: "nurse", EmployeeCode: "EMP-NURSE-001", Password: "demo-nurse-2026", DisplayName: "Demo Nurse", Role: "NURSE"},
+		{Username: "refiller", EmployeeCode: "EMP-REFILL-001", Password: "demo-refiller-2026", DisplayName: "Demo Refiller", Role: "REFILLER"},
 	}
 	demoDrugs = []demoDrug{
 		{Code: "DEMO-PARA500", Name: "Paracetamol 500 mg", GenericName: "พาราเซตามอล 500 มก.", Form: "tablet", Strength: "500 mg", Unit: "tablet"},
@@ -76,9 +79,9 @@ var (
 		{Code: "DEMO-OME20", Name: "Omeprazole 20 mg", GenericName: "โอมีพราโซล 20 มก.", Form: "capsule", Strength: "20 mg", Unit: "capsule"},
 	}
 	demoSlots = []demoSlot{
-		{Code: "S01", DrugCode: "DEMO-PARA500", Capacity: 100, Quantity: 80, LowThreshold: 20},
-		{Code: "S02", DrugCode: "DEMO-AMOX500", Capacity: 100, Quantity: 60, LowThreshold: 20},
-		{Code: "S03", DrugCode: "DEMO-OME20", Capacity: 50, Quantity: 45, LowThreshold: 10},
+		{Code: "S01", DrugCode: "DEMO-PARA500", Capacity: 100, Quantity: 80, LowThreshold: 20, Emergency: true, EmergencyMax: 2},
+		{Code: "S02", DrugCode: "DEMO-AMOX500", Capacity: 100, Quantity: 60, LowThreshold: 20, Emergency: true, EmergencyMax: 1},
+		{Code: "S03", DrugCode: "DEMO-OME20", Capacity: 50, Quantity: 45, LowThreshold: 10, EmergencyMax: 1},
 	}
 	demoRxItems = []demoRxItem{
 		{DrugCode: "DEMO-PARA500", DrugName: "Paracetamol 500 mg", Quantity: 2, DosageText: "รับประทานครั้งละ 1 เม็ด ทุก 6 ชั่วโมง เวลาปวดหรือมีไข้"},
@@ -141,6 +144,7 @@ func main() {
 func clearDemoData(ctx context.Context, pool *pgxpool.Pool) error {
 	cmds := []string{
 		`DELETE FROM medisync.dispense_transaction WHERE kiosk_code IN (SELECT code FROM medisync.kiosks WHERE display_name = 'Demo Cabinet K1')`,
+		`DELETE FROM medisync.emergency_dispense_transaction WHERE kiosk_code IN (SELECT code FROM medisync.kiosks WHERE display_name = 'Demo Cabinet K1')`,
 		`DELETE FROM medisync.slot WHERE cabinet_id IN (SELECT code FROM medisync.kiosks WHERE display_name = 'Demo Cabinet K1')`,
 		`DELETE FROM medisync.outbox WHERE subject LIKE 'medisync.demo%'`,
 		`DELETE FROM medisync.prescription WHERE source_system = '` + demoSource + `'`,
@@ -188,9 +192,10 @@ func seedUsers(ctx context.Context, pool *pgxpool.Pool, projectID string) error 
 		wardIDs := fmt.Sprintf(`{"%s"}`, demoWard)
 		pid = fmt.Sprintf(`'%s'`, projectID)
 		sql := fmt.Sprintf(
-			`INSERT INTO medisync.users (username,password_hash,display_name,role,ward_ids,project_id,active)
-			 VALUES ('%s','%s','%s','%s','%s',%s,true) ON CONFLICT (username) DO NOTHING`,
-			u.Username, hash, u.DisplayName, u.Role, wardIDs, pid)
+			`INSERT INTO medisync.users (username,employee_code,password_hash,display_name,role,ward_ids,project_id,active)
+			 VALUES ('%s','%s','%s','%s','%s','%s',%s,true)
+			 ON CONFLICT (username) DO UPDATE SET employee_code=EXCLUDED.employee_code`,
+			u.Username, u.EmployeeCode, hash, u.DisplayName, u.Role, wardIDs, pid)
 		if _, err := pool.Exec(ctx, sql); err != nil {
 			return fmt.Errorf("insert %q: %w", u.Username, err)
 		}
@@ -258,27 +263,28 @@ func seedSlots(ctx context.Context, pool *pgxpool.Pool, kioskCode string, drugID
 		err := pool.QueryRow(ctx,
 			`INSERT INTO medisync.slot
 		   (cabinet_id,code,drug_id,drug_code,drug_name,capacity,quantity,low_threshold,project_id,
-		    door_no,hardware_layer,channel_start,channel_end,reserved_quantity)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,1,$10,$11,$11,0)
+		    emergency_drug,emergency_max_quantity,door_no,hardware_layer,channel_start,channel_end,reserved_quantity)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,$12,$13,$13,0)
 		 ON CONFLICT (cabinet_id,code) DO UPDATE SET
 		   drug_id=EXCLUDED.drug_id, drug_code=EXCLUDED.drug_code,
 		   drug_name=EXCLUDED.drug_name, capacity=EXCLUDED.capacity,
-		   quantity=EXCLUDED.quantity, low_threshold=EXCLUDED.low_threshold,
-		   project_id=EXCLUDED.project_id, door_no=EXCLUDED.door_no,
+		   low_threshold=EXCLUDED.low_threshold,
+		   project_id=EXCLUDED.project_id, emergency_drug=EXCLUDED.emergency_drug,
+		   emergency_max_quantity=EXCLUDED.emergency_max_quantity, door_no=EXCLUDED.door_no,
 		   hardware_layer=EXCLUDED.hardware_layer, channel_start=EXCLUDED.channel_start,
-		   channel_end=EXCLUDED.channel_end, reserved_quantity=0, updated_at=now()
+		   channel_end=EXCLUDED.channel_end, updated_at=now()
 		 RETURNING id`,
 			kioskCode, s.Code, drugID, s.DrugCode, drugName,
-			s.Capacity, s.Quantity, s.LowThreshold, projectID, i+1, 1).Scan(&slotID)
+			s.Capacity, s.Quantity, s.LowThreshold, projectID,
+			s.Emergency, s.EmergencyMax, i+1, 1).Scan(&slotID)
 		if err != nil {
 			return fmt.Errorf("slot %q: %w", s.Code, err)
 		}
-		if _, err := pool.Exec(ctx, `DELETE FROM medisync.slot_batch WHERE slot_id=$1`, slotID); err != nil {
-			return fmt.Errorf("clear slot batches %q: %w", s.Code, err)
-		}
 		if _, err := pool.Exec(ctx,
 			`INSERT INTO medisync.slot_batch (slot_id,lot_number,quantity,reserved_quantity)
-			 VALUES ($1,$2,$3,0)`, slotID, demoPrefix+"LOT-"+s.Code, s.Quantity); err != nil {
+			 SELECT $1,$2,$3,0
+			 WHERE NOT EXISTS (SELECT 1 FROM medisync.slot_batch WHERE slot_id=$1)`,
+			slotID, demoPrefix+"LOT-"+s.Code, s.Quantity); err != nil {
 			return fmt.Errorf("slot batch %q: %w", s.Code, err)
 		}
 		fmt.Printf("  slot  %-5s %s (qty=%d)\n", s.Code, s.DrugCode, s.Quantity)
@@ -327,6 +333,7 @@ func printCredentials(projectID, kioskCode string) {
 	fmt.Println()
 	fmt.Println("── Prescription ──")
 	fmt.Printf("  ID: DEMO-RX-001  Ward: %s  Patient: HN100001\n", demoWard)
+	fmt.Println("  Emergency fallback: HN100001 / EMP-NURSE-001")
 	fmt.Println()
 	fmt.Println("── Reset & re-seed ──")
 	fmt.Printf("  go run ./cmd/demoseed --project=%s --reset\n", projectID)

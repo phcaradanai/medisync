@@ -21,6 +21,7 @@ import { parseKioskTesterCommand, subscribeToKioskTester, type KioskTesterComman
 import ShelfGrid, { getSlotPosition } from "../catalog/ShelfGrid.tsx";
 import DispensingStatusModal from "../dispensing/DispensingStatusModal.tsx";
 import DispenseProcessingOverlay from "../dispensing/DispenseProcessingOverlay.tsx";
+import EmergencyDispenseModal from "../emergency/EmergencyDispenseModal.tsx";
 
 export type ScannerState = "awaiting_scan" | "validating_sticker" | "scan_failed" | "request_loaded" | "awaiting_identity" | "verifying_identity" | "submitting_to_hardware" | "submission_uncertain" | "identity_failed" | "unauthorized";
 type QueueState = "queued" | "dispensing" | "completed" | "failed" | "unknown";
@@ -71,6 +72,8 @@ export default function WithdrawFlow() {
   const [queue, setQueue] = useState<QueueTransaction[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const [emergencyCardToken, setEmergencyCardToken] = useState("");
   const [activeTxnId, setActiveTxnId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState("");
@@ -172,14 +175,14 @@ export default function WithdrawFlow() {
   }, [queue]);
 
   useEffect(() => {
-    if (!["awaiting_scan", "scan_failed"].includes(workflow)) return;
+    if (emergencyOpen || !["awaiting_scan", "scan_failed"].includes(workflow)) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       if (event.key === "Enter") { const value = scannerBuffer.current; scannerBuffer.current = ""; if (value) { event.preventDefault(); void validateSticker(value); } }
       else if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) { scannerBuffer.current += event.key; if (scannerTimer.current) clearTimeout(scannerTimer.current); scannerTimer.current = window.setTimeout(() => { scannerBuffer.current = ""; }, 150); }
     };
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [workflow, validateSticker]);
+  }, [emergencyOpen, workflow, validateSticker]);
 
   const submitAfterIdentity = useCallback(async (token: string, user: User, request: Prescription, prepared: DispenseTransaction, generation: number) => {
     if (submitLock.current || generation !== requestGeneration.current) return;
@@ -229,22 +232,27 @@ export default function WithdrawFlow() {
   }, [kiosk.projectId, prescription, preparedTransaction, submitAfterIdentity]);
 
   useEffect(() => {
-    if (!["awaiting_identity", "identity_failed", "unauthorized"].includes(workflow)) return;
+    if (emergencyOpen || !["awaiting_identity", "identity_failed", "unauthorized"].includes(workflow)) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       if (event.key === "Enter") { const value = scannerBuffer.current; scannerBuffer.current = ""; if (value) { event.preventDefault(); void verifyIdentity(value); } }
       else if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) { scannerBuffer.current += event.key; if (scannerTimer.current) clearTimeout(scannerTimer.current); scannerTimer.current = window.setTimeout(() => { scannerBuffer.current = ""; }, 150); }
     };
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [workflow, verifyIdentity]);
+  }, [emergencyOpen, workflow, verifyIdentity]);
 
   // ── kiosktester integration ────────────────────────────────────────
   // The SSE bridge works for a kiosk opened independently in any tab or
   // browser. postMessage remains as a compatibility path for older testers.
   useEffect(() => {
     const handleCommand = (command: KioskTesterCommand) => {
-      if (command.type === "scan_sticker") void validateSticker(command.code);
-      else void verifyIdentity(command.cardToken);
+      if (command.type === "scan_sticker") {
+        if (!emergencyOpen) void validateSticker(command.code);
+      } else if (emergencyOpen) {
+        setEmergencyCardToken(command.cardToken);
+      } else {
+        void verifyIdentity(command.cardToken);
+      }
     };
     const onMessage = (event: MessageEvent) => {
       const command = parseKioskTesterCommand(event.data, kiosk.code);
@@ -256,7 +264,7 @@ export default function WithdrawFlow() {
       disconnectTester();
       window.removeEventListener("message", onMessage);
     };
-  }, [kiosk.code, validateSticker, verifyIdentity]);
+  }, [emergencyOpen, kiosk.code, validateSticker, verifyIdentity]);
 
   const requestedSlotIds = useMemo(() => { if (!prescription) return []; const codes = new Set(prescription.items.map((item) => item.drugCode)); return slots.filter((slot) => codes.has(slot.drugCode)).map((slot) => slot.id); }, [prescription, slots]);
   // Keep terminal transactions in memory long enough for the completion
@@ -269,6 +277,9 @@ export default function WithdrawFlow() {
   );
   const attentionCount = queue.filter((item) => item.state === "failed" || item.reconnecting).length;
   const step = stateStep(workflow);
+  const handleEmergencyDispensed = useCallback((slotCode: string, dispensed: number) => {
+    setSlots((current) => current.map((slot) => slot.code === slotCode ? { ...slot, quantity: Math.max(0, slot.quantity - dispensed) } : slot));
+  }, []);
 
   return <main className="withdraw-workflow withdraw-workflow--cabinet">
     {["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) && <h1 className="sr-only">สแกน Sticker เบิกยา</h1>}
@@ -277,7 +288,7 @@ export default function WithdrawFlow() {
       <section className="medical-header__brand" aria-label={`${kiosk.displayName} ${kiosk.code}`}><strong>ADM</strong><span>AUTOMATED DISPENSING MACHINE</span><b title={kiosk.displayName}>{kiosk.displayName}</b><small>{kiosk.code}</small></section>
       <section className="medical-header__card connection-card" aria-label="เครือข่าย วันและเวลา"><div className={`medical-header__network ${online ? "is-online" : "is-offline"}`}><span className="network-icon" aria-hidden="true"><StatusIcon name={online ? "network" : "offline"}/></span><div><strong>{online ? "ONLINE" : "OFFLINE"}</strong><small>{online ? "Connected" : "Disconnected"}</small></div></div><time dateTime={now.toISOString()}><strong>{now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</strong><span>{now.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}</span></time></section>
     </header>
-    <section className="cabinet-stage" aria-label="ผังตู้ยาสำหรับอ้างอิงตำแหน่งจริง"><header><div><strong>ผังตู้ยา</strong><span>อ้างอิงตำแหน่งยาจากตู้จริง · {kiosk.code}</span></div><span className={attentionCount ? "cabinet-stage__attention" : "cabinet-stage__ready"}><StatusIcon name={attentionCount ? "warning" : "check"}/>{attentionCount ? `ต้องตรวจสอบ ${attentionCount} คิว` : "พร้อมใช้งาน"}</span>{machineQueue.length > 0 && <button type="button" className="cabinet-stage__queue-btn" onClick={() => setStatusOpen(true)}>📋 สถานะคิว ({machineQueue.length})</button>}</header>{notice && <div className="queue-toast" role="status"><StatusIcon name="check"/>{notice}</div>}<ShelfGrid slots={slots} kioskCode={kiosk.code} variant="overview" requestedSlotIds={requestedSlotIds}/>{prescription && <div className="request-location-banner" role="status"><strong>{prescription.prescriptionId}</strong><span>{prescription.items.length} รายการยา · ตำแหน่งที่ Sticker ร้องขอแสดงด้วยเครื่องหมาย ★</span></div>}</section>
+    <section className="cabinet-stage" aria-label="ผังตู้ยาสำหรับอ้างอิงตำแหน่งจริง"><header><div><strong>ผังตู้ยา</strong><span>อ้างอิงตำแหน่งยาจากตู้จริง · {kiosk.code}</span></div><div className="cabinet-stage__actions"><span className={attentionCount ? "cabinet-stage__attention" : "cabinet-stage__ready"}><StatusIcon name={attentionCount ? "warning" : "check"}/>{attentionCount ? `ต้องตรวจสอบ ${attentionCount} คิว` : "พร้อมใช้งาน"}</span>{machineQueue.length > 0 && <button type="button" className="cabinet-stage__queue-btn" onClick={() => setStatusOpen(true)}>📋 สถานะคิว ({machineQueue.length})</button>}<button type="button" className="cabinet-stage__emergency-btn" onClick={() => { setEmergencyCardToken(""); setEmergencyOpen(true); }} aria-label="เปิดเบิกยาฉุกเฉิน" title="เบิกยาฉุกเฉิน"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.2 2 5.8 13h5.4L10.8 22l7.4-12h-5.4l.4-8Z"/></svg></button></div></header>{notice && <div className="queue-toast" role="status"><StatusIcon name="check"/>{notice}</div>}<ShelfGrid slots={slots} kioskCode={kiosk.code} variant="overview" requestedSlotIds={requestedSlotIds}/>{prescription && <div className="request-location-banner" role="status"><strong>{prescription.prescriptionId}</strong><span>{prescription.items.length} รายการยา · ตำแหน่งที่ Sticker ร้องขอแสดงด้วยเครื่องหมาย ★</span></div>}</section>
     <section className="withdraw-dock"><section className="withdraw-context">
       {["awaiting_scan", "validating_sticker", "scan_failed"].includes(workflow) ? <div className="sticker-scanner" aria-live="polite"><span className="step-number">1</span><div><h1><span>SCAN QR LABEL</span>สแกน Sticker เบิกยา</h1><p>นำ Sticker เบิกยาไว้เหนือเครื่องสแกน</p></div><div className="sticker-scanner__frame">{workflow === "validating_sticker" ? <><span className="spinner"/><strong>กำลังตรวจสอบ Sticker กับระบบ...</strong></> : <><DecorativeQr/><strong>วาง Sticker ที่จุดสแกน</strong><small>ระบบจะอ่านข้อมูลอัตโนมัติ</small><span className="scanner-ready-pill"><StatusIcon name="check"/>เครื่องสแกนพร้อมใช้งาน</span></>}</div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}</div>
       : <div className="request-review request-review--compact"><header><div><span>รายการเบิกยาที่ตรวจสอบแล้ว</span><strong>{prescription?.prescriptionId}</strong></div><span className="status-badge status-badge--success">✓ Backend ยืนยันรายการ</span></header><div className="patient-context"><span>ผู้ป่วยที่กำลังทำรายการ</span><strong>{prescription?.patientName}</strong><b>HN {prescription?.hn}</b><small>หอผู้ป่วย {prescription?.wardId}</small></div><div className="cart-ready-summary"><div><strong>{prescription?.items.length || 0} รายการยา</strong><span>เปิดตะกร้าเพื่อตรวจสอบตำแหน่ง จำนวน และความพร้อมก่อนยืนยันตัวตน</span></div><button type="button" onClick={() => setCartOpen(true)}>เปิดตะกร้ารายการยา</button></div>{message && <div className="withdraw-alert" role="alert">⚠ {message}</div>}{workflow === "submission_uncertain" && <button type="button" className="reconcile-button" onClick={() => prescription && void reconcile(prescription.id)}>ตรวจสอบสถานะอีกครั้ง</button>}</div>}
@@ -305,6 +316,7 @@ export default function WithdrawFlow() {
         onClose={() => setStatusOpen(false)}
       />
     )}
+    {emergencyOpen && <EmergencyDispenseModal kioskCode={kiosk.code} projectId={kiosk.projectId} kioskToken={auth!.token} externalCardToken={emergencyCardToken} onExternalCardConsumed={() => setEmergencyCardToken("")} onClose={() => setEmergencyOpen(false)} onDispensed={handleEmergencyDispensed}/>}
     {/* Live dispense status — only on the idle scan screen so it never covers
         the next scan/cart/identity step; the dispense keeps polling in the
         queue while hidden. Driven purely by real backend state. */}

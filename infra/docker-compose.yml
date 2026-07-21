@@ -50,7 +50,9 @@ services:
       PRINT_OPS_FAKE: "false"
       VENDING_ENDPOINTS_JSON: '{"00010001":"http://vending-00010001:3303"}'
       VENDING_API_BEARER_TOKEN: ${VENDING_API_BEARER_TOKEN:-dev-bearer-token}
-      FULFILLMENT_FAKE: ${FULFILLMENT_FAKE:-false}
+      # Local development has no serial cabinet attached. Override to false
+      # when the routed vending agent is connected to real hardware.
+      FULFILLMENT_FAKE: ${FULFILLMENT_FAKE:-true}
       VENDING_FAKE: ${VENDING_FAKE:-false}
     ports:
       - "8080:8080"

@@ -53,6 +53,8 @@ message CardLoginResponse {
   string access_token = 1;
   google.protobuf.Timestamp expires_at = 2;
   User user = 3;
+  // Stable project-scoped code used to attribute cabinet transactions.
+  string employee_code = 4;
 }
 
 message WhoAmIRequest {}

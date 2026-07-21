@@ -19,6 +19,7 @@ type User struct {
 	Username     string
 	PasswordHash string
 	DisplayName  string
+	EmployeeCode string
 	Role         Role
 	WardIDs      []string
 	Active       bool

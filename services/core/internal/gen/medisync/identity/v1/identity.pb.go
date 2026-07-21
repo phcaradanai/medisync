@@ -350,10 +350,12 @@ func (x *CardLoginRequest) GetProjectId() string {
 }
 
 type CardLoginResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	User          *User                  `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	ExpiresAt   *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	User        *User                  `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
+	// Stable project-scoped code used to attribute cabinet transactions.
+	EmployeeCode  string `protobuf:"bytes,4,opt,name=employee_code,json=employeeCode,proto3" json:"employee_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -407,6 +409,13 @@ func (x *CardLoginResponse) GetUser() *User {
 		return x.User
 	}
 	return nil
+}
+
+func (x *CardLoginResponse) GetEmployeeCode() string {
+	if x != nil {
+		return x.EmployeeCode
+	}
+	return ""
 }
 
 type WhoAmIRequest struct {
@@ -1503,12 +1512,13 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"card_token\x18\x01 \x01(\tR\tcardToken\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tR\tprojectId\"\xa1\x01\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\"\xc6\x01\n" +
 	"\x11CardLoginResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x129\n" +
 	"\n" +
 	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12.\n" +
-	"\x04user\x18\x03 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\x0f\n" +
+	"\x04user\x18\x03 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\x12#\n" +
+	"\remployee_code\x18\x04 \x01(\tR\femployeeCode\"\x0f\n" +
 	"\rWhoAmIRequest\"@\n" +
 	"\x0eWhoAmIResponse\x12.\n" +
 	"\x04user\x18\x01 \x01(\v2\x1a.medisync.identity.v1.UserR\x04user\"\x8d\x01\n" +

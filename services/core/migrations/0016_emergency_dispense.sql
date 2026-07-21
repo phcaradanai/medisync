@@ -1,5 +1,6 @@
 -- 0016: Emergency dispensing support
--- Enables sticker-less emergency medication access via card verification.
+-- Legacy card-verified emergency model. Superseded by migration 0022, whose
+-- flow is used when no prescription-generated sticker exists.
 
 -- Add emergency_access flag to users (who can access emergency meds)
 ALTER TABLE identity.users ADD COLUMN IF NOT EXISTS emergency_access BOOLEAN NOT NULL DEFAULT FALSE;

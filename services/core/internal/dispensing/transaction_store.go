@@ -26,11 +26,14 @@ const (
 )
 
 var (
-	ErrDispenseNotFound      = errors.New("dispense transaction not found")
-	ErrDispenseWrongKiosk    = errors.New("dispense transaction belongs to another kiosk")
-	ErrDispenseNotAwaitingID = errors.New("dispense transaction is not awaiting identity")
-	ErrDispenseExpired       = errors.New("dispense transaction expired")
-	ErrInsufficientStock     = errors.New("insufficient stock in this kiosk")
+	ErrDispenseNotFound           = errors.New("dispense transaction not found")
+	ErrDispenseWrongKiosk         = errors.New("dispense transaction belongs to another kiosk")
+	ErrDispenseNotAwaitingID      = errors.New("dispense transaction is not awaiting identity")
+	ErrDispenseExpired            = errors.New("dispense transaction expired")
+	ErrInsufficientStock          = errors.New("insufficient stock in this kiosk")
+	ErrEmergencyEmployeeNotFound  = errors.New("employee code is inactive or outside this project")
+	ErrEmergencyDrugNotConfigured = errors.New("drug is not configured for emergency dispense at this kiosk")
+	ErrEmergencyQuantityInvalid   = errors.New("emergency quantity is outside the configured limit")
 )
 
 type TransactionRecord struct {
@@ -424,7 +427,22 @@ func (s *Store) MarkTransactionStarted(ctx context.Context, dispenseID, kioskCod
 		return fmt.Errorf("mark dispense started: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return ErrDispenseNotFound
+		tag, err = s.db.Exec(ctx,
+			`UPDATE medisync.emergency_dispense_transaction
+			    SET status='DISPENSING',started_at=COALESCE(started_at,now()),updated_at=now()
+			  WHERE id=$1 AND kiosk_code=$2 AND status IN ('QUEUED','DISPENSING')`,
+			dispenseID, kioskCode)
+		if err != nil {
+			return fmt.Errorf("mark emergency dispense started: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrDispenseNotFound
+		}
+		_, _ = s.db.Exec(ctx,
+			`UPDATE medisync.emergency_dispense_allocation
+			    SET status='DISPENSING',updated_at=now()
+			  WHERE emergency_dispense_id=$1 AND status='RESERVED'`, dispenseID)
+		return nil
 	}
 	_, _ = s.db.Exec(ctx,
 		`UPDATE medisync.dispense_transaction_item SET status='DISPENSING', updated_at=now()
@@ -441,7 +459,15 @@ func (s *Store) TransactionExecutionStatus(ctx context.Context, dispenseID, kios
 		`SELECT status FROM medisync.dispense_transaction WHERE id=$1 AND kiosk_code=$2`,
 		dispenseID, kioskCode).Scan(&status); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", ErrDispenseNotFound
+			if emergencyErr := s.db.QueryRow(ctx,
+				`SELECT status FROM medisync.emergency_dispense_transaction WHERE id=$1 AND kiosk_code=$2`,
+				dispenseID, kioskCode).Scan(&status); emergencyErr != nil {
+				if errors.Is(emergencyErr, pgx.ErrNoRows) {
+					return "", ErrDispenseNotFound
+				}
+				return "", emergencyErr
+			}
+			return status, nil
 		}
 		return "", err
 	}
@@ -455,7 +481,13 @@ func (s *Store) LoadHardwareResults(ctx context.Context, dispenseID, kioskCode s
 		`SELECT a.id, a.hardware_success, a.hardware_detail
 		   FROM medisync.dispense_allocation a
 		   JOIN medisync.dispense_transaction d ON d.id=a.dispense_id
-		  WHERE a.dispense_id=$1 AND d.kiosk_code=$2 AND a.hardware_attempted_at IS NOT NULL`, dispenseID, kioskCode)
+		  WHERE a.dispense_id=$1 AND d.kiosk_code=$2 AND a.hardware_attempted_at IS NOT NULL
+		 UNION ALL
+		 SELECT a.id, a.hardware_success, a.hardware_detail
+		   FROM medisync.emergency_dispense_allocation a
+		   JOIN medisync.emergency_dispense_transaction d ON d.id=a.emergency_dispense_id
+		  WHERE a.emergency_dispense_id=$1 AND d.kiosk_code=$2 AND a.hardware_attempted_at IS NOT NULL`,
+		dispenseID, kioskCode)
 	if err != nil {
 		return nil, fmt.Errorf("load hardware results: %w", err)
 	}
@@ -492,7 +524,23 @@ func (s *Store) RecordHardwareResult(ctx context.Context, dispenseID, kioskCode 
 		return fmt.Errorf("record hardware result: %w", err)
 	}
 	if tag.RowsAffected() != 1 {
-		return ErrDispenseNotFound
+		tag, err = s.db.Exec(ctx,
+			`UPDATE medisync.emergency_dispense_allocation a
+			    SET hardware_attempted_at=COALESCE(a.hardware_attempted_at,now()),
+			        hardware_success=COALESCE(a.hardware_success,$1),
+			        hardware_detail=CASE WHEN a.hardware_success IS NULL THEN $2 ELSE a.hardware_detail END,
+			        hardware_response=CASE WHEN a.hardware_success IS NULL THEN $3::jsonb ELSE a.hardware_response END,
+			        updated_at=now()
+			   FROM medisync.emergency_dispense_transaction d
+			  WHERE a.id=$4 AND a.emergency_dispense_id=$5
+			    AND d.id=a.emergency_dispense_id AND d.kiosk_code=$6`,
+			result.Success, result.Detail, responseJSON, result.AllocationId, dispenseID, kioskCode)
+		if err != nil {
+			return fmt.Errorf("record emergency hardware result: %w", err)
+		}
+		if tag.RowsAffected() != 1 {
+			return ErrDispenseNotFound
+		}
 	}
 	return nil
 }
@@ -514,7 +562,21 @@ func (s *Store) MarkHardwareAttempt(ctx context.Context, dispenseID, kioskCode, 
 		return fmt.Errorf("mark hardware attempt: %w", err)
 	}
 	if tag.RowsAffected() != 1 {
-		return ErrDispenseNotFound
+		tag, err = s.db.Exec(ctx,
+			`UPDATE medisync.emergency_dispense_allocation a
+			    SET hardware_attempted_at=COALESCE(a.hardware_attempted_at,now()),
+			        hardware_detail=CASE WHEN a.hardware_attempted_at IS NULL THEN 'command dispatched; outcome pending' ELSE a.hardware_detail END,
+			        updated_at=now()
+			   FROM medisync.emergency_dispense_transaction d
+			  WHERE a.id=$1 AND a.emergency_dispense_id=$2
+			    AND d.id=a.emergency_dispense_id AND d.kiosk_code=$3`,
+			allocationID, dispenseID, kioskCode)
+		if err != nil {
+			return fmt.Errorf("mark emergency hardware attempt: %w", err)
+		}
+		if tag.RowsAffected() != 1 {
+			return ErrDispenseNotFound
+		}
 	}
 	return nil
 }

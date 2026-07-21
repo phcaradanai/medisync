@@ -88,9 +88,10 @@ func (s *Store) GetByCardToken(ctx context.Context, token string) (*User, error)
 	}
 	row := s.db.QueryRow(ctx,
 		`SELECT id, username, password_hash, display_name, role, ward_ids,
-		        project_id, active, created_at, updated_at
+		        project_id, active, created_at, updated_at,
+		        COALESCE(employee_code, upper(username))
 		   FROM medisync.users WHERE card_token_hash = $1`, hash)
-	return scanUser(row)
+	return scanCardUser(row)
 }
 
 // SetCardToken enrolls (or re-enrolls) a card token for the given user.
@@ -229,8 +230,8 @@ func (s *Store) CreateUser(ctx context.Context, username, passwordHash, displayN
 		wardIDs = []string{}
 	}
 	row := s.db.QueryRow(ctx,
-		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, project_id, active)
-		 VALUES ($1, $2, $3, $4, $5, $6, true)
+		`INSERT INTO medisync.users (username, password_hash, display_name, role, ward_ids, project_id, active, employee_code)
+		 VALUES ($1, $2, $3, $4, $5, $6, true, upper($1))
 		 ON CONFLICT (username) DO NOTHING
 		 RETURNING id, username, password_hash, display_name, role, ward_ids, project_id, active, created_at, updated_at`,
 		username, passwordHash, displayName, string(role), wardIDs, projectID)
@@ -321,6 +322,25 @@ func scanUser(row pgx.Row) (*User, error) {
 	}
 	if err != nil {
 		return nil, fmt.Errorf("scan user: %w", err)
+	}
+	u.CreatedAt = createdAt
+	u.UpdatedAt = updatedAt
+	return &u, nil
+}
+
+// scanCardUser loads the same safe user fields as scanUser plus the stable
+// employee code needed to attribute a card-authenticated cabinet action.
+func scanCardUser(row pgx.Row) (*User, error) {
+	var u User
+	var createdAt, updatedAt time.Time
+	err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName,
+		(*roleScanner)(&u.Role), &u.WardIDs, &u.ProjectID,
+		&u.Active, &createdAt, &updatedAt, &u.EmployeeCode)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("scan card user: %w", err)
 	}
 	u.CreatedAt = createdAt
 	u.UpdatedAt = updatedAt

@@ -495,11 +495,41 @@ func (s *DispensingServer) authorizeWard(claims *TokenClaims, wardID string) boo
 
 // ── Emergency Dispensing ───────────────────────────────────────────
 
-// ListEmergencyDrugs returns drugs marked as emergency-accessible.
+// ListEmergencyDrugs returns configured emergency stock for this kiosk only.
 func (s *DispensingServer) ListEmergencyDrugs(ctx context.Context, req *connect.Request[dispensingv1.ListEmergencyDrugsRequest]) (*connect.Response[dispensingv1.ListEmergencyDrugsResponse], error) {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
+	if claims.Role != "KIOSK" || claims.Subject == "" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
+	}
+	msg := req.Msg
+	if msg != nil && strings.TrimSpace(msg.KioskCode) != "" && strings.TrimSpace(msg.KioskCode) != claims.Subject {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrDispenseWrongKiosk)
+	}
+	pageSize := int32(50)
+	pageToken := ""
+	if msg != nil {
+		pageSize = pagination.NormalizePageSize(msg.PageSize)
+		pageToken = strings.TrimSpace(msg.PageToken)
+	}
+	var total int64
+	if err := s.pool.QueryRow(ctx,
+		`SELECT count(*) FROM medisync.slot
+		  WHERE cabinet_id=$1 AND project_id=$2 AND emergency_drug=true AND is_active=true`,
+		claims.Subject, claims.ProjectID).Scan(&total); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("count emergency drugs: %w", err))
+	}
 	rows, err := s.pool.Query(ctx,
-		`SELECT s.id, s.code, s.drug_code, COALESCE(s.drug_name,''), COALESCE(s.drug_type,''), s.quantity, s.capacity
-		   FROM medisync.slot s WHERE s.emergency_drug = TRUE AND s.quantity > 0 ORDER BY s.code`)
+		`SELECT s.code,s.drug_code,COALESCE(s.drug_name,''),COALESCE(s.drug_type,''),
+		        GREATEST(0,s.quantity-s.reserved_quantity),
+		        LEAST(s.emergency_max_quantity,GREATEST(0,s.quantity-s.reserved_quantity))
+		   FROM medisync.slot s
+		  WHERE s.cabinet_id=$1 AND s.project_id=$2 AND s.emergency_drug=true
+		    AND s.is_active=true AND s.code > $3
+		  ORDER BY s.code LIMIT $4`,
+		claims.Subject, claims.ProjectID, pageToken, pageSize+1)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query emergency: %w", err))
 	}
@@ -508,55 +538,183 @@ func (s *DispensingServer) ListEmergencyDrugs(ctx context.Context, req *connect.
 	var drugs []*dispensingv1.EmergencyDrug
 	for rows.Next() {
 		d := &dispensingv1.EmergencyDrug{}
-		if err := rows.Scan(&d.SlotId, &d.SlotCode, &d.DrugCode, &d.DrugName, &d.DrugType, &d.Quantity, &d.MaxDispense); err != nil {
-			continue
+		if err := rows.Scan(&d.SlotCode, &d.DrugCode, &d.DrugName, &d.DrugType, &d.Quantity, &d.MaxDispense); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("scan emergency drug: %w", err))
 		}
 		drugs = append(drugs, d)
 	}
-	return connect.NewResponse(&dispensingv1.ListEmergencyDrugsResponse{Drugs: drugs, TotalCount: int64(len(drugs))}), nil
+	if err := rows.Err(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("iterate emergency drugs: %w", err))
+	}
+	next := ""
+	if len(drugs) > int(pageSize) {
+		next = drugs[pageSize-1].SlotCode
+		drugs = drugs[:pageSize]
+	}
+	return connect.NewResponse(&dispensingv1.ListEmergencyDrugsResponse{Drugs: drugs, TotalCount: total, NextPageToken: next}), nil
 }
 
-// EmergencyDispense performs sticker-less dispensing after card verification.
+// EmergencyDispense creates a separate, hardware-backed emergency transaction.
 func (s *DispensingServer) EmergencyDispense(ctx context.Context, req *connect.Request[dispensingv1.EmergencyDispenseRequest]) (*connect.Response[dispensingv1.EmergencyDispenseResponse], error) {
+	caller, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
 	msg := req.Msg
+	if msg == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("emergency dispense request is required"))
+	}
 
-	// Verify card token against user
-	var userID string
-	err := s.pool.QueryRow(ctx,
-		`SELECT id FROM medisync.users WHERE card_token_hash = crypt($1, card_token_hash) AND emergency_access = TRUE`, msg.CardToken).Scan(&userID)
+	kiosk := caller
+	authMethod := EmergencyAuthEmployeeCode
+	employeeCode := strings.ToUpper(strings.TrimSpace(msg.EmployeeCode))
+	if caller.Role != "KIOSK" {
+		kiosk, err = s.authenticateNamed(req.Header(), "X-Kiosk-Authorization")
+		if err != nil {
+			return nil, err
+		}
+		if kiosk.Role != "KIOSK" || kiosk.Subject == "" {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
+		}
+		if caller.Subject == "" || caller.ProjectID == "" || caller.ProjectID != kiosk.ProjectID {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("card operator is outside this kiosk project"))
+		}
+		var cardEmployeeCode string
+		if err := s.pool.QueryRow(ctx,
+			`SELECT employee_code FROM medisync.users
+			  WHERE id=$1 AND project_id=$2 AND active=true AND employee_code IS NOT NULL`,
+			caller.Subject, caller.ProjectID).Scan(&cardEmployeeCode); err != nil {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("card operator is inactive or has no employee code"))
+		}
+		cardEmployeeCode = strings.ToUpper(strings.TrimSpace(cardEmployeeCode))
+		if employeeCode != "" && employeeCode != cardEmployeeCode {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("card identity does not match employee_code"))
+		}
+		employeeCode = cardEmployeeCode
+		authMethod = EmergencyAuthCard
+	}
+	if kiosk.Role != "KIOSK" || kiosk.Subject == "" {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("kiosk authentication required"))
+	}
+	if code := strings.TrimSpace(msg.KioskCode); code != "" && code != kiosk.Subject {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrDispenseWrongKiosk)
+	}
+	hn := strings.TrimSpace(msg.Hn)
+	slotCode := strings.TrimSpace(msg.SlotCode)
+	drugCode := strings.TrimSpace(msg.DrugCode)
+	reason := strings.TrimSpace(msg.Reason)
+	if hn == "" || len(hn) > 64 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("hn is required and must not exceed 64 characters"))
+	}
+	if employeeCode == "" || len(employeeCode) > 64 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("employee_code is required and must not exceed 64 characters"))
+	}
+	if slotCode == "" || drugCode == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("slot_code and drug_code are required"))
+	}
+	if len(reason) > 500 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("reason must not exceed 500 characters"))
+	}
+	traceID := strings.TrimSpace(msg.TraceId)
+	if traceID == "" {
+		traceID = uuid.New().String()
+	}
+	fullStore, ok := s.store.(*Store)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("transaction store unavailable"))
+	}
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid card or no emergency access"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("begin emergency dispense: %w", err))
 	}
-
-	// Verify slot exists and is emergency-accessible
-	var slotCode, drugName string
-	err = s.pool.QueryRow(ctx,
-		`SELECT code, drug_name FROM medisync.slot WHERE id = $1 AND emergency_drug = TRUE AND quantity >= $2`,
-		msg.SlotId, msg.Quantity).Scan(&slotCode, &drugName)
+	defer tx.Rollback(ctx) //nolint:errcheck
+	record, err := fullStore.CreateEmergencyTransaction(
+		ctx, tx, kiosk.Subject, kiosk.ProjectID, hn, employeeCode,
+		slotCode, drugCode, msg.Quantity, reason, traceID, authMethod,
+	)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("slot not available for emergency dispense"))
+		code := connect.CodeFailedPrecondition
+		if errors.Is(err, ErrEmergencyEmployeeNotFound) {
+			code = connect.CodePermissionDenied
+		} else if errors.Is(err, ErrDispenseWrongKiosk) {
+			code = connect.CodePermissionDenied
+		}
+		return nil, connect.NewError(code, err)
 	}
-
-	// Decrement stock
-	tag, err := s.pool.Exec(ctx,
-		`UPDATE medisync.slot SET quantity = quantity - $1, updated_at = now() WHERE id = $2 AND quantity >= $1`,
-		msg.Quantity, msg.SlotId)
-	if err != nil || tag.RowsAffected() == 0 {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("stock decrement failed"))
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("commit emergency dispense: %w", err))
 	}
-
-	// Log emergency
-	s.pool.Exec(ctx,
-		`INSERT INTO medisync.emergency_log (user_id, slot_id, drug_code, quantity, reason, kiosk_id) VALUES ($1,$2,$3,$4,$5,$6)`,
-		userID, msg.SlotId, msg.DrugCode, msg.Quantity, msg.Reason, msg.KioskId)
-
-	// Audit
-	s.writeAudit(ctx, audit.Entry{Actor: userID, Action: "emergency.dispense", Entity: "slot", EntityID: msg.SlotId})
-
+	s.writeAudit(ctx, audit.Entry{TraceID: record.TraceID, Actor: record.EmployeeCode, Action: "emergency_dispense.queued", Entity: "emergency_dispense_transaction", EntityID: record.ID, ProjectID: record.ProjectID, Detail: map[string]any{"kiosk_code": record.KioskCode, "hn": record.HN, "drug_code": record.DrugCode, "quantity": record.RequestedQuantity, "operator_auth_method": record.OperatorAuthMethod}})
 	return connect.NewResponse(&dispensingv1.EmergencyDispenseResponse{
-		DispenseId: userID[:8], SlotCode: slotCode, DrugName: drugName,
-		Quantity: msg.Quantity, Status: "DISPENSED",
+		DispenseId: record.ID, SlotCode: record.SlotCode, DrugName: record.DrugName,
+		Quantity: record.RequestedQuantity, Status: string(record.Status),
+		Transaction: toProtoEmergencyTransaction(record),
 	}), nil
+}
+
+func (s *DispensingServer) GetEmergencyDispenseTransaction(ctx context.Context, req *connect.Request[dispensingv1.GetEmergencyDispenseTransactionRequest]) (*connect.Response[dispensingv1.GetEmergencyDispenseTransactionResponse], error) {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
+	if req.Msg == nil || strings.TrimSpace(req.Msg.DispenseId) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("dispense_id is required"))
+	}
+	fullStore, ok := s.store.(*Store)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("transaction store unavailable"))
+	}
+	record, err := fullStore.GetEmergencyTransaction(ctx, strings.TrimSpace(req.Msg.DispenseId))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if record == nil || record.ProjectID != claims.ProjectID || (claims.Role == "KIOSK" && record.KioskCode != claims.Subject) {
+		return nil, connect.NewError(connect.CodeNotFound, ErrDispenseNotFound)
+	}
+	return connect.NewResponse(&dispensingv1.GetEmergencyDispenseTransactionResponse{Transaction: toProtoEmergencyTransaction(record)}), nil
+}
+
+func (s *DispensingServer) ListEmergencyDispenseTransactions(ctx context.Context, req *connect.Request[dispensingv1.ListEmergencyDispenseTransactionsRequest]) (*connect.Response[dispensingv1.ListEmergencyDispenseTransactionsResponse], error) {
+	claims, err := s.authenticate(req.Header())
+	if err != nil {
+		return nil, err
+	}
+	filter := EmergencyTransactionFilter{ProjectID: claims.ProjectID, PageSize: 50}
+	if msg := req.Msg; msg != nil {
+		filter.KioskCode, filter.HN = strings.TrimSpace(msg.KioskCode), strings.TrimSpace(msg.Hn)
+		filter.EmployeeCode, filter.DrugCode = strings.TrimSpace(msg.EmployeeCode), strings.TrimSpace(msg.DrugCode)
+		filter.PageSize, filter.PageToken = msg.PageSize, strings.TrimSpace(msg.PageToken)
+		if msg.CreatedFrom != nil {
+			value := msg.CreatedFrom.AsTime()
+			filter.CreatedFrom = &value
+		}
+		if msg.CreatedTo != nil {
+			value := msg.CreatedTo.AsTime()
+			filter.CreatedTo = &value
+		}
+		for _, status := range msg.Statuses {
+			filter.Statuses = append(filter.Statuses, protoEmergencyStatus(status))
+		}
+		for _, method := range msg.OperatorAuthMethods {
+			filter.AuthMethods = append(filter.AuthMethods, emergencyAuthMethodDomain(method))
+		}
+	}
+	if claims.Role == "KIOSK" {
+		filter.KioskCode = claims.Subject
+	}
+	fullStore, ok := s.store.(*Store)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("transaction store unavailable"))
+	}
+	records, next, total, err := fullStore.ListEmergencyTransactions(ctx, filter)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	result := make([]*dispensingv1.EmergencyDispenseTransaction, 0, len(records))
+	for _, record := range records {
+		result = append(result, toProtoEmergencyTransaction(record))
+	}
+	return connect.NewResponse(&dispensingv1.ListEmergencyDispenseTransactionsResponse{Transactions: result, NextPageToken: next, TotalCount: total}), nil
 }
 
 // writeAudit records an audit entry. Audit failures are logged but do not
@@ -692,6 +850,28 @@ func toProtoTransaction(record *TransactionRecord) *dispensingv1.DispenseTransac
 	return result
 }
 
+func emergencyAuthMethodProto(method string) dispensingv1.EmergencyOperatorAuthMethod {
+	switch method {
+	case EmergencyAuthCard:
+		return dispensingv1.EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_CARD
+	case EmergencyAuthEmployeeCode:
+		return dispensingv1.EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_EMPLOYEE_CODE
+	default:
+		return dispensingv1.EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_UNSPECIFIED
+	}
+}
+
+func emergencyAuthMethodDomain(method dispensingv1.EmergencyOperatorAuthMethod) string {
+	switch method {
+	case dispensingv1.EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_CARD:
+		return EmergencyAuthCard
+	case dispensingv1.EmergencyOperatorAuthMethod_EMERGENCY_OPERATOR_AUTH_METHOD_EMPLOYEE_CODE:
+		return EmergencyAuthEmployeeCode
+	default:
+		return ""
+	}
+}
+
 func optionalTimestamp(value *time.Time) *timestamppb.Timestamp {
 	if value == nil {
 		return nil
@@ -736,6 +916,56 @@ func protoTransactionStatus(status dispensingv1.DispenseTransactionStatus) Trans
 		return TransactionCancelled
 	case dispensingv1.DispenseTransactionStatus_DISPENSE_TRANSACTION_STATUS_EXPIRED:
 		return TransactionExpired
+	default:
+		return ""
+	}
+}
+
+func toProtoEmergencyTransaction(record *EmergencyTransactionRecord) *dispensingv1.EmergencyDispenseTransaction {
+	if record == nil {
+		return nil
+	}
+	return &dispensingv1.EmergencyDispenseTransaction{
+		DispenseId: record.ID, KioskCode: record.KioskCode, ProjectId: record.ProjectID,
+		Hn: record.HN, EmployeeCode: record.EmployeeCode,
+		OperatorUserId: record.OperatorUserID, OperatorDisplayName: record.OperatorDisplayName,
+		OperatorAuthMethod: emergencyAuthMethodProto(record.OperatorAuthMethod),
+		SlotCode:           record.SlotCode, DrugCode: record.DrugCode, DrugName: record.DrugName,
+		RequestedQuantity: record.RequestedQuantity, DispensedQuantity: record.DispensedQuantity,
+		Status: emergencyStatusProto(record.Status), Reason: record.Reason,
+		FailureCode: record.FailureCode, FailureDetail: record.FailureDetail,
+		TraceId: record.TraceID, QueuedAt: timestamppb.New(record.QueuedAt),
+		StartedAt: optionalTimestamp(record.StartedAt), CompletedAt: optionalTimestamp(record.CompletedAt),
+		FailedAt: optionalTimestamp(record.FailedAt), CreatedAt: timestamppb.New(record.CreatedAt),
+		UpdatedAt: timestamppb.New(record.UpdatedAt),
+	}
+}
+
+func emergencyStatusProto(status TransactionStatus) dispensingv1.EmergencyDispenseStatus {
+	switch status {
+	case TransactionQueued:
+		return dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_QUEUED
+	case TransactionDispensing:
+		return dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_DISPENSING
+	case TransactionDispensed:
+		return dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_DISPENSED
+	case TransactionFailed:
+		return dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_FAILED
+	default:
+		return dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_UNSPECIFIED
+	}
+}
+
+func protoEmergencyStatus(status dispensingv1.EmergencyDispenseStatus) TransactionStatus {
+	switch status {
+	case dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_QUEUED:
+		return TransactionQueued
+	case dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_DISPENSING:
+		return TransactionDispensing
+	case dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_DISPENSED:
+		return TransactionDispensed
+	case dispensingv1.EmergencyDispenseStatus_EMERGENCY_DISPENSE_STATUS_FAILED:
+		return TransactionFailed
 	default:
 		return ""
 	}
