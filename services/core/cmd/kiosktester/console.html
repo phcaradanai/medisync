@@ -191,6 +191,7 @@
       <div class="actions">
         <button class="btn-ghost" onclick="loadSlots()">🔄 โหลดยาในตู้</button>
         <button class="btn-ghost" onclick="loadPrescriptions()">📋 ดูรายการทั้งหมด</button>
+        <button class="btn-ghost" onclick="setupCards()">🔐 ลงทะเบียนบัตร</button>
       </div>
       <div class="actions">
         <button class="btn-primary" onclick="run('create')">① สร้าง sticker</button>
@@ -203,6 +204,21 @@
       <p class="hint">
         ① ส่ง NATS JetStream → ④ สแกนบัตร+Dispense → 🔄 poll จนจบ<br>
         หรือกด ▶ flow รวมทั้งหมด
+      </p>
+
+      <h2 style="margin-top: 16px;">🎯 Kiosk UI Integration</h2>
+      <p class="hint">เปิด kiosk app จริง แล้วส่งคำสั่งเข้า UI ผ่าน postMessage</p>
+      <div class="actions">
+        <button class="btn-ghost" onclick="openKiosk()">🖥️ เปิด Kiosk UI</button>
+        <button class="btn-warn" onclick="injectSticker()">📡 ส่ง sticker เข้า Kiosk</button>
+        <button class="btn-warn" onclick="injectCard()">📡 ส่งบัตรเข้า Kiosk</button>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick="fullFlow()">▶ สแกน sticker → สแกนบัตร (Kiosk UI)</button>
+      </div>
+      <p class="hint">
+        กด 🔐 ลงทะเบียนบัตรก่อนครั้งแรก → แล้วกด 🖥️ เปิด Kiosk → กด ▶ สแกน<br>
+        Kiosk UI จะแสดง popup ยาเข้าคิว + สแกนบัตร + จ่ายยาจริง
       </p>
 
       <div id="slots"></div>
@@ -392,6 +408,115 @@
   }
 
   function copyId(id) { navigator.clipboard && navigator.clipboard.writeText(id); }
+
+  // ── Kiosk UI integration (postMessage) ─────────────────────────────
+  let kioskWin = null;
+  const KIOSK_URL = "http://localhost:5173";
+
+  function openKiosk() {
+    kioskWin = window.open(KIOSK_URL, "medisync-kiosk", "width=1200,height=800");
+    if (!kioskWin) { appendLog("⚠️ ไม่สามารถเปิดหน้าต่าง Kiosk ได้ (popup blocked?)"); return; }
+    appendLog("🖥️ เปิด Kiosk UI ที่ " + KIOSK_URL);
+    appendLog("   หาก Kiosk ยังไม่ login ให้ login ด้วย DEMO-K1 / 123456 ก่อน");
+  }
+
+  function injectSticker() {
+    if (!kioskWin || kioskWin.closed) { appendLog("⚠️ เปิด Kiosk UI ก่อน (กดปุ่ม 🖥️)"); return; }
+    const code = $("pid").value.trim();
+    if (!code) { appendLog("⚠️ ต้องสร้าง sticker ก่อน (กด ① สร้าง sticker)"); return; }
+    kioskWin.postMessage({ type: "scan_sticker", code }, "*");
+    appendLog("📡 ส่ง scan_sticker: " + code + " เข้า Kiosk UI");
+  }
+
+  function injectCard() {
+    if (!kioskWin || kioskWin.closed) { appendLog("⚠️ เปิด Kiosk UI ก่อน (กดปุ่ม 🖥️)"); return; }
+    const role = $("role").value;
+    const cardToken = "card-" + role;
+    kioskWin.postMessage({ type: "scan_card", cardToken }, "*");
+    appendLog("📡 ส่ง scan_card: " + cardToken + " เข้า Kiosk UI");
+  }
+
+  async function setupCards() {
+    appendLog("🔐 กำลังลงทะเบียนบัตร...");
+    try {
+      const res = await fetch("/api/setup-cards", { method: "POST" });
+      const data = await res.json();
+      (data.log || []).forEach(l => appendLog(l));
+      if (data.error) appendLog("❌ " + data.error);
+    } catch (e) { appendLog("❌ " + e); }
+  }
+
+  async function fullFlow() {
+    // Step 1: create sticker via backend (NATS JetStream)
+    appendLog("── Kiosk UI Full Flow ──");
+    const createRes = await apiRun("create");
+    if (!createRes || !createRes.ok) return;
+
+    // Wait for core to process the NATS event
+    appendLog("⏳ รอ 2s ให้ core ประมวลผล NATS event...");
+    await sleep(2000);
+
+    // Step 2: inject sticker scan into kiosk UI
+    if (!kioskWin || kioskWin.closed) {
+      appendLog("⚠️ เปิด Kiosk UI ก่อน (กดปุ่ม 🖥️)");
+      return;
+    }
+    kioskWin.postMessage({ type: "scan_sticker", code: createRes.id }, "*");
+    appendLog("📡 ส่ง scan_sticker: " + createRes.id + " เข้า Kiosk UI");
+    appendLog("   → Kiosk UI ควรแสดง popup ยา + ตำแหน่งในตู้");
+
+    // Wait for user to see the popup
+    await sleep(3000);
+
+    // Step 3: inject card scan
+    const role = $("role").value;
+    const cardToken = "card-" + role;
+    kioskWin.postMessage({ type: "scan_card", cardToken }, "*");
+    appendLog("📡 ส่ง scan_card: " + cardToken + " เข้า Kiosk UI");
+    appendLog("   → Kiosk UI ควรยืนยันตัวตน + ส่ง Dispense + แสดงคิว");
+    appendLog("✅ ดูสถานะที่ Kiosk UI — ยาจะเข้าคิวและกำลังจ่าย");
+  }
+
+  async function apiRun(mode) {
+    setBadge("busy", "กำลังทำงาน…");
+    $("log").textContent = "…";
+    $("idout").innerHTML = "";
+    if (mode !== "poll") resetPipeline();
+    if (mode === "create" || mode === "flow") setStep("st-create", "active");
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ...body() }),
+      });
+      const data = await res.json();
+      const logs = data.log || [];
+      $("log").textContent = logs.join("\n") || data.error || "(no output)";
+      updatePipelineFromLog(logs);
+      if (data.id) {
+        $("pid").value = data.id;
+        $("idout").innerHTML = `<span class="idpill" onclick="copyId('${data.id}')">🏷️ ${data.id}</span>`;
+      }
+      if (data.state === "DISPENSED") setBadge("ok", "✅ DISPENSED");
+      else if (!data.ok) setBadge("err", "❌ " + (data.state || "ERROR"));
+      else setBadge("ok", data.state || "OK");
+      return data;
+    } catch (e) {
+      $("log").textContent = "เชื่อมต่อ tester ไม่ได้: " + e;
+      setBadge("err", "ERROR");
+      return null;
+    } finally {
+      document.querySelectorAll("button").forEach(b => b.disabled = false);
+    }
+  }
+
+  function appendLog(msg) {
+    const cur = $("log").textContent;
+    $("log").textContent = (cur === "พร้อมทำงาน กดปุ่มด้านซ้ายเพื่อเริ่ม…" ? "" : cur + "\n") + msg;
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
 </body>
 </html>

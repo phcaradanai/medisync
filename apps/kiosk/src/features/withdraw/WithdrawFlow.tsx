@@ -196,6 +196,24 @@ export default function WithdrawFlow() {
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
   }, [workflow, verifyIdentity]);
 
+  // ── kiosktester integration: receive simulated scans via postMessage ──
+  // The kiosktester console (port 8901) opens this kiosk in a new tab/window
+  // and postMessage {type:"scan_sticker", code:"RX-..."} or
+  // {type:"scan_card", cardToken:"card-pharmacist"} to drive the real UI.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data.type !== "string") return;
+      if (data.type === "scan_sticker" && typeof data.code === "string") {
+        void validateSticker(data.code);
+      } else if (data.type === "scan_card" && typeof data.cardToken === "string") {
+        void verifyIdentity(data.cardToken);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [validateSticker, verifyIdentity]);
+
   const requestedSlotIds = useMemo(() => { if (!prescription) return []; const codes = new Set(prescription.items.map((item) => item.drugCode)); return slots.filter((slot) => codes.has(slot.drugCode)).map((slot) => slot.id); }, [prescription, slots]);
   const attentionCount = queue.filter((item) => item.state === "failed" || item.reconnecting).length;
   const step = stateStep(workflow);

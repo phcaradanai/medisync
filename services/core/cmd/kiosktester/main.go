@@ -432,6 +432,16 @@ func serve(c config) error {
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"prescriptions": pres, "role": role})
 	})
+	mux.HandleFunc("/api/setup-cards", func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithTimeout(req.Context(), 30*time.Second)
+		defer cancel()
+		res, err := enrollDemoCards(ctx, c)
+		if err != nil {
+			writeJSON(w, http.StatusOK, res) // result has .Error field
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	})
 	mux.HandleFunc("/api/run", func(w http.ResponseWriter, req *http.Request) {
 		var body struct {
 			Mode, Cabinet, Ward, HN, Patient, Source, Drugs, ID, Staff, StaffPass, Role string
@@ -599,6 +609,70 @@ func listPrescriptions(ctx context.Context, core, token, wardID string) ([]presc
 	}
 	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/ListPrescriptions", token, body, &out)
 	return out.Prescriptions, err
+}
+
+// ── card token enrollment ────────────────────────────────────────────
+
+type user struct {
+	ID          string `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	Role        string `json:"role"`
+}
+
+func listUsers(ctx context.Context, core, token string) ([]user, error) {
+	var out struct {
+		Users []user `json:"users"`
+	}
+	err := connectCall(ctx, core, "medisync.identity.v1.IdentityService/ListUsers", token,
+		map[string]any{}, &out)
+	return out.Users, err
+}
+
+func setCardToken(ctx context.Context, core, adminToken, userID, cardToken string) error {
+	return connectCall(ctx, core, "medisync.identity.v1.IdentityService/SetCardToken", adminToken,
+		map[string]any{"userId": userID, "cardToken": cardToken}, nil)
+}
+
+// enrollDemoCards logs in as admin, finds pharmacist/nurse/refiller users,
+// and enrolls card tokens (card-pharmacist, card-nurse, card-refiller) so the
+// kiosk CardLogin path works for the simulated staff scan.
+func enrollDemoCards(ctx context.Context, c config) (*result, error) {
+	r := &result{OK: true}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	adminPass := c.staffPass
+	if adminPass == "" {
+		adminPass = "medisync-local-admin-2026"
+	}
+	adminTok, err := staffLogin(ctx, c.core, "admin", adminPass)
+	if err != nil {
+		return r.fail(fmt.Errorf("admin login: %w", err)), err
+	}
+
+	users, err := listUsers(ctx, c.core, adminTok)
+	if err != nil {
+		return r.fail(fmt.Errorf("list users: %w", err)), err
+	}
+
+	cardTokens := map[string]string{
+		"pharmacist": "card-pharmacist",
+		"nurse":      "card-nurse",
+		"refiller":   "card-refiller",
+	}
+	for _, u := range users {
+		tok, ok := cardTokens[u.Username]
+		if !ok {
+			continue
+		}
+		if err := setCardToken(ctx, c.core, adminTok, u.ID, tok); err != nil {
+			return r.fail(fmt.Errorf("set card token for %s: %w", u.Username, err)), err
+		}
+		r.log("✅ enrolled card %s → %s (%s)", tok, u.Username, u.Role)
+	}
+	r.log("การ์ดพร้อมใช้: สแกนบัตรที่ kiosk UI จะจำลอง cardLogin ผ่าน postMessage")
+	return r, nil
 }
 
 // connectCall POSTs a Connect unary JSON request and decodes the reply.
