@@ -85,18 +85,21 @@ export function ProjectsPage() {
     try {
       if (editingId) {
         await projectClient.updateProject(create(UpdateProjectRequestSchema, {
-          id: editingId, name: form.name.trim(), active: form.active,
+          id: editingId, name: form.name.trim(), displayName: form.displayName.trim(), active: form.active,
         }));
       } else {
         await projectClient.createProject(create(CreateProjectRequestSchema, {
-          name: form.name.trim(), slug: form.slug.trim() || undefined,
+          name: form.name.trim(), displayName: form.displayName.trim(),
         }));
       }
       setDrawerOpen(false); await load();
       setSaveNotice(editingId ? "บันทึกข้อมูลโครงการเรียบร้อยแล้ว" : "เพิ่มโครงการเรียบร้อยแล้ว");
       window.setTimeout(() => setSaveNotice(null), 4000);
     } catch (err: unknown) { setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ"); }
-    finally { setSaving(false); }
+    finally {
+      setSaving(false);
+      setDirty(false);
+    }
   }
   async function handleArchive(p: Project) {
     if (!confirm(`${p.active ? "ปิด" : "เปิด"}การใช้งานโครงการ "${p.name}" หรือไม่?`)) return;
@@ -107,8 +110,8 @@ export function ProjectsPage() {
   const columns: Column<Project>[] = [
     { key: "code", header: "รหัส", render: (p) => <span className="md-code">{p.code || "—"}</span> },
     { key: "name", header: "ชื่อโครงการ", render: (p) => p.name },
-    { key: "display", header: "ชื่อที่แสดง", render: (p) => p.displayName || "—" },
-    { key: "slug", header: "Slug", render: (p) => <span className="md-cell-muted">{p.slug || "—"}</span> },
+    { key: "display_name", header: "ชื่อที่แสดง", render: (p) => p.displayName || "—" },
+    // { key: "slug", header: "Slug", render: (p) => <span className="md-cell-muted">{p.slug || "—"}</span> },
     { key: "status", header: "สถานะ", render: (p) => <StatusBadge active={p.active} /> },
   ];
 
@@ -129,7 +132,7 @@ export function ProjectsPage() {
             <button className={`md-seg-btn${statusFilter === "all" ? " active" : ""}`} onClick={() => setStatusFilter("all")}>ทั้งหมด <span className="md-seg-num">{projects.length}</span></button>
             <button className={`md-seg-btn${statusFilter === "active" ? " active" : ""}`} onClick={() => setStatusFilter("active")}>ใช้งาน <span className="md-seg-num">{activeCount}</span></button>
           </div>
-          <button className="md-btn md-btn-primary" onClick={openCreate}><Icon.plus size={18} /> เพิ่มโครงการ</button>
+          {/* <button className="md-btn md-btn-primary" onClick={openCreate}><Icon.plus size={18} /> เพิ่มโครงการ</button> */}
         </div>
         <MasterTable rows={filtered} columns={columns} getId={(p) => p.id} loading={loading}
           onEdit={openEdit} onArchive={handleArchive} emptyText="ไม่พบโครงการ" />
@@ -154,11 +157,11 @@ export function ProjectsPage() {
               <input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="Chula Ward A" />
             </Field>
             <Field label="ชื่อที่แสดง" lead={<Icon.monitor size={18} />}>
-              <input value={form.displayName} onChange={(e) => setField("displayName", e.target.value)} placeholder="หอผู้ป่วยจุฬา A" disabled={!!editingId} />
+              <input value={form.displayName} onChange={(e) => setField("displayName", e.target.value)} placeholder="หอผู้ป่วยจุฬา A"  />
             </Field>
-            <Field label="Slug" lead={<Icon.link size={18} />}>
-              <input value={form.slug} onChange={(e) => setField("slug", e.target.value)} placeholder="chula-ward-a" disabled={!!editingId} />
-            </Field>
+            {/* <Field label="Slug" lead={<Icon.link size={18} />}>
+              <input value={form.slug} onChange={(e) => setField("slug", e.target.value)} placeholder="chula-ward-a"  />
+            </Field> */}
           </div>
         </DrawerSection>
 

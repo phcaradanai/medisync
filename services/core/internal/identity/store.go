@@ -440,13 +440,18 @@ func (s *Store) ListProjects(ctx context.Context, pageSize int32, pageToken stri
 }
 
 // UpdateProject modifies a project's name or active flag.
-func (s *Store) UpdateProject(ctx context.Context, id string, name *string, active *bool) (*Project, error) {
+func (s *Store) UpdateProject(ctx context.Context, id string, name *string, displayName *string, active *bool) (*Project, error) {
 	setClauses := []string{}
 	args := []any{id}
 	argIdx := 2
 	if name != nil {
 		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
 		args = append(args, *name)
+		argIdx++
+	}
+	if displayName != nil {
+		setClauses = append(setClauses, fmt.Sprintf("display_name = $%d", argIdx))
+		args = append(args, *displayName)
 		argIdx++
 	}
 	if active != nil {

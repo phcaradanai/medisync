@@ -8,6 +8,7 @@ import { InventoryPage } from "./features/inventory/InventoryPage";
 import { UsersPage } from "./features/users/UsersPage";
 import { DevicesPage } from "./features/devices/DevicesPage";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
+import { AuditLogPage } from "./features/audit/AuditLogPage";
 import { DispenseTransactionsPage } from "./features/reports/DispenseTransactionsPage";
 
 function AppShell() {
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="devices" element={<DevicesPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="inventory" element={<InventoryPage />} />
+          <Route path="audit" element={<AuditLogPage />} />
           <Route path="dispense-transactions" element={<DispenseTransactionsPage />} />
           {/* legacy redirects */}
           <Route path="master-data" element={<Navigate to="/dashboard" replace />} />

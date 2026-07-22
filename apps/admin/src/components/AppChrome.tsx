@@ -12,11 +12,14 @@ interface Section {
 
 const SECTIONS: Section[] = [
   { path: "/dashboard", title: "ภาพรวมระบบ · Dashboard", icon: Icon.grid },
-  { path: "/drugs", title: "ยา · Master Data", icon: Icon.pill },
   { path: "/projects", title: "โครงการ · Master Data", icon: Icon.folder },
+  { path: "/drugs", title: "ยา · Master Data", icon: Icon.pill },
   { path: "/devices", title: "อุปกรณ์ · ตู้ยา & Kiosk", icon: Icon.cabinet },
   { path: "/users", title: "ผู้ใช้งาน · Master Data", icon: Icon.users },
-  { path: "/inventory", title: "คลังยา · ดูอย่างเดียว", icon: Icon.inventory },
+  { path: "/audit", title: "ประวัติการใช้งาน · Audit Log", icon: Icon.database },
+
+  //ปิดไว้ก่อน
+  // { path: "/inventory", title: "คลังยา · ดูอย่างเดียว", icon: Icon.inventory },
   { path: "/dispense-transactions", title: "รายงาน · Dispense Transactions", icon: Icon.clock },
 ];
 
@@ -47,8 +50,8 @@ export function AppChrome() {
           <active.icon size={22} /> {active.title}
         </div>
         <div className="md-topbar-actions">
-          <button className="md-icon-btn" title="การแจ้งเตือน"><Icon.bell size={20} /></button>
-          <button className="md-icon-btn" title="ช่วยเหลือ"><Icon.help size={20} /></button>
+          {/* <button className="md-icon-btn" title="การแจ้งเตือน"><Icon.bell size={20} /></button>
+          <button className="md-icon-btn" title="ช่วยเหลือ"><Icon.help size={20} /></button> */}
           <div className="md-avatar" title={userName}>{initials(userName)}</div>
         </div>
       </header>

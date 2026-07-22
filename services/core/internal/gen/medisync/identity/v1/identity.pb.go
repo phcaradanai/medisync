@@ -1085,6 +1085,7 @@ type CreateProjectRequest struct {
 	//
 	// Deprecated: Marked as deprecated in medisync/identity/v1/identity.proto.
 	Code          string `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+	DisplayName   string `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1141,6 +1142,13 @@ func (x *CreateProjectRequest) GetCode() string {
 	return ""
 }
 
+func (x *CreateProjectRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
 type CreateProjectResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Project       *Project               `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
@@ -1190,6 +1198,7 @@ type UpdateProjectRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Active        *bool                  `protobuf:"varint,3,opt,name=active,proto3,oneof" json:"active,omitempty"`
+	DisplayName   *string                `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1243,6 +1252,13 @@ func (x *UpdateProjectRequest) GetActive() bool {
 		return *x.Active
 	}
 	return false
+}
+
+func (x *UpdateProjectRequest) GetDisplayName() string {
+	if x != nil && x.DisplayName != nil {
+		return *x.DisplayName
+	}
+	return ""
 }
 
 type UpdateProjectResponse struct {
@@ -1574,19 +1590,22 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x12\n" +
 	"\x04code\x18\a \x01(\tR\x04code\x12!\n" +
-	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"V\n" +
+	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"y\n" +
 	"\x14CreateProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x16\n" +
-	"\x04code\x18\x03 \x01(\tB\x02\x18\x01R\x04code\"P\n" +
+	"\x04code\x18\x03 \x01(\tB\x02\x18\x01R\x04code\x12!\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\"P\n" +
 	"\x15CreateProjectResponse\x127\n" +
-	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"p\n" +
+	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"\xa9\x01\n" +
 	"\x14UpdateProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
-	"\x06active\x18\x03 \x01(\bH\x01R\x06active\x88\x01\x01B\a\n" +
+	"\x06active\x18\x03 \x01(\bH\x01R\x06active\x88\x01\x01\x12&\n" +
+	"\fdisplay_name\x18\x04 \x01(\tH\x02R\vdisplayName\x88\x01\x01B\a\n" +
 	"\x05_nameB\t\n" +
-	"\a_active\"P\n" +
+	"\a_activeB\x0f\n" +
+	"\r_display_name\"P\n" +
 	"\x15UpdateProjectResponse\x127\n" +
 	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"[\n" +
 	"\x13ListProjectsRequest\x12D\n" +

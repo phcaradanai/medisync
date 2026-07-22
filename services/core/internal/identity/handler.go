@@ -473,7 +473,8 @@ func (s *ProjectServer) UpdateProject(ctx context.Context, req *connect.Request[
 		n := msg.GetName()
 		name = &n
 	}
-	p, err := s.store.UpdateProject(ctx, msg.Id, name, msg.Active)
+
+	p, err := s.store.UpdateProject(ctx, msg.Id, name, msg.DisplayName, msg.Active)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update project: %w", err))
 	}

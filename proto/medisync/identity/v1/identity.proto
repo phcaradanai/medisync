@@ -157,6 +157,7 @@ message CreateProjectRequest {
   string slug = 2;
   // Deprecated input. The server generates an immutable four-digit code.
   string code = 3 [deprecated = true];
+  string display_name = 4;
 }
 
 message CreateProjectResponse {
@@ -167,6 +168,7 @@ message UpdateProjectRequest {
   string id = 1;
   optional string name = 2;
   optional bool active = 3;
+  optional string display_name = 4;
 }
 
 message UpdateProjectResponse {
