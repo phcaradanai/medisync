@@ -228,6 +228,38 @@ There is no Prometheus exporter, log aggregation, or alerting configured. Add at
 
 The dispensing flow depends on `vending-3d-ctl-agent` and `print_ops` reaching the internal network. These services are not part of this Compose file; ensure they are accessible or provide fake adapters for development.
 
+### Remote cabinet scanner over VPN
+
+The cabinet agent and the kiosk UI do not connect directly. The agent publishes
+the scanner envelope to the central NATS JetStream, Core routes it by the
+immutable kiosk code, and the authenticated kiosk browser receives its own SSE
+stream.
+
+Configure the cabinet stack with the same code used by the kiosk database row:
+
+```bash
+KIOSK_CODE=00010001 \
+MEDISYNC_NATS_URL=nats://<server-vpn-ip>:4222 \
+VENDING_API_BEARER_TOKEN=<shared-agent-token> \
+docker compose -f docker-compose.vending.yml up -d --force-recreate
+```
+
+`MEDISYNC_NATS_URL` must point to the server/VPN address, never `localhost` on
+the cabinet PC. The central stack must route the same cabinet back to the
+agent's published port and disable fake fulfillment when testing hardware:
+
+```bash
+VENDING_00010001_URL=http://<cabinet-vpn-ip>:6811 \
+VENDING_API_BEARER_TOKEN=<shared-agent-token> \
+FULFILLMENT_FAKE=false \
+docker compose up -d --force-recreate medisync-core medisync-kiosk
+```
+
+Verify the agent health response reports `nats.enabled=true`,
+`nats.isConnected=true`, and `nats.kioskCode=00010001`. The browser must be
+logged into that same code and have the Withdraw page open before scanning;
+scanner events are live-only and are not replayed to a later session.
+
 ## Cleanup
 
 ```bash
