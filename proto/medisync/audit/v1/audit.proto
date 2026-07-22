@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package medisync.audit.v1;
+
+import "google/protobuf/timestamp.proto";
+import "medisync/common/v1/pagination.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/audit/v1;auditv1";
+
+// ── Message types ────────────────────────────────────────────────────
+
+message AuditEntry {
+  string id = 1;
+  string trace_id = 2;
+  string actor = 3;
+  string action = 4;
+  string entity = 5;
+  string entity_id = 6;
+  string project_id = 7;
+  string detail = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message ListAuditLogsRequest {
+  string project_id = 1;
+  medisync.common.v1.CursorPagination pagination = 2;
+}
+
+message ListAuditLogsResponse {
+  repeated AuditEntry entries = 1;
+  int64 total_count = 2;
+  string next_page_token = 3;
+}
+
+// ── Service ──────────────────────────────────────────────────────────
+
+service AuditService {
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+}

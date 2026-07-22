@@ -1,0 +1,28 @@
+node_modules/
+dist/
+*.log
+*.exe
+*.tsbuildinfo
+
+# Real environment files — NEVER tracked, NEVER committed.
+.env
+.env.*
+# Allow the public example templates that contain no secrets.
+!.env.example
+!.env.production.example
+
+# IDE / AI tooling
+.claude/
+.codex/
+.cursor/
+.omc/
+.impeccable/
+
+# Git worktrees (kanban task isolation)
+.worktrees/
+
+# Build output
+services/core/bin/
+/test-write.txt
+/worker-reports/
+/scripts/env/.test-tmp/

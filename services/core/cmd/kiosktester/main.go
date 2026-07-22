@@ -1,0 +1,840 @@
+// Command kiosktester drives the kiosk withdraw/dispense flow end-to-end
+// against a running core, exactly the way real hardware would.
+//
+// Modes:
+//
+//	create  — publish rx.prescription.created to NATS (the real hospital
+//	          producer path). Items are drawn from a chosen cabinet's real
+//	          slots so the kiosk cart resolves drug positions. Prints a
+//	          scannable prescription_id (the "sticker").
+//	confirm — log in as the selected kiosk, prepare/reserve after sticker scan,
+//	          log in as staff, then confirm with both identities and poll the
+//	          durable dispense transaction until DISPENSED/FAILED.
+//	flow    — create then confirm back-to-back = full E2E like hardware.
+//	serve   — a tiny local web console: change values in a form and click to
+//	          run create / confirm / flow. Does the NATS + core work
+//	          server-side (a browser cannot reach NATS directly).
+//
+// Dev/testing only. Reuses the same wire contracts as production.
+//
+//	go run ./cmd/kiosktester -mode=serve
+//	go run ./cmd/kiosktester -mode=flow -kiosk-code=00010001
+package main
+
+import (
+	"bytes"
+	"context"
+	_ "embed"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	neturl "net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	eventsv1 "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
+)
+
+func main() {
+	cfg := parseFlags()
+	if err := run(cfg); err != nil {
+		log.Fatal(err)
+	}
+}
+
+type config struct {
+	mode      string
+	addr      string
+	core      string
+	natsURL   string
+	kioskURL  string
+	kioskCode string
+	kioskPIN  string
+	staff     string
+	staffPass string
+	staffRole string
+	cabinet   string
+	ward      string
+	hn        string
+	patient   string
+	source    string
+	drugsFlag string
+	items     int
+	fixedID   string
+	timeout   time.Duration
+}
+
+func parseFlags() config {
+	var c config
+	flag.StringVar(&c.mode, "mode", "create", "create | confirm | flow | serve")
+	flag.StringVar(&c.addr, "addr", ":8899", "serve mode: listen address")
+	flag.StringVar(&c.core, "core", "http://localhost:8080", "core Connect API base URL")
+	flag.StringVar(&c.natsURL, "nats", "nats://localhost:4222", "NATS server URL")
+	flag.StringVar(&c.kioskURL, "kiosk-url", "", "kiosk web app URL opened by the console shortcut (empty = derive from core host: same hostname, port 5173)")
+	flag.StringVar(&c.kioskCode, "kiosk-code", "00010001", "immutable 8-digit kiosk code")
+	flag.StringVar(&c.kioskPIN, "kiosk-pin", "123456", "kiosk PIN")
+	flag.StringVar(&c.staff, "staff", "pharmacist", "staff username for the confirm step (pharmacist | nurse | refiller)")
+	flag.StringVar(&c.staffPass, "staff-pass", "", "staff password (default: demo-<role>-2026)")
+	flag.StringVar(&c.staffRole, "role", "auto", "label for the simulated scan: PHARMACIST | NURSE | REFILLER (auto = infer from username)")
+	flag.StringVar(&c.cabinet, "cabinet", "", "deprecated alias for -kiosk-code")
+	flag.StringVar(&c.ward, "ward", "WARD-3A", "ward id stamped on the prescription")
+	flag.StringVar(&c.hn, "hn", "HN900001", "patient hospital number")
+	flag.StringVar(&c.patient, "patient", "ผู้ป่วยทดสอบ Kiosk", "patient name")
+	flag.StringVar(&c.source, "source", "kiosktester", "source_system (idempotency key with prescription_id)")
+	flag.StringVar(&c.drugsFlag, "drugs", "", "explicit items CODE:qty,CODE:qty (default: auto-pick from cabinet)")
+	flag.IntVar(&c.items, "items", 2, "number of drugs to auto-pick when -drugs is empty")
+	flag.StringVar(&c.fixedID, "id", "", "prescription_id: fixed id to create, or the id to confirm")
+	flag.DurationVar(&c.timeout, "timeout", 25*time.Second, "how long to poll for a terminal dispense state")
+	flag.Parse()
+	return c
+}
+
+func run(c config) error {
+	if strings.TrimSpace(c.cabinet) != "" {
+		c.kioskCode = strings.TrimSpace(c.cabinet)
+	}
+	c.cabinet = c.kioskCode
+	if c.kioskURL == "" {
+		c.kioskURL = deriveKioskURL(c.core)
+	}
+	switch c.mode {
+	case "serve":
+		return serve(c)
+	case "create":
+		res := createPrescription(context.Background(), c, c.fixedID)
+		fmt.Print(res.text())
+		return res.Err
+	case "confirm":
+		if c.fixedID == "" {
+			return fmt.Errorf("-mode=confirm requires -id=<prescription_id>")
+		}
+		res := confirmPrescription(context.Background(), c, c.fixedID)
+		fmt.Print(res.text())
+		return res.Err
+	case "poll":
+		if c.fixedID == "" {
+			return fmt.Errorf("-mode=poll requires -id=<internal_id>")
+		}
+		res := pollPrescription(context.Background(), c, c.fixedID)
+		fmt.Print(res.text())
+		return res.Err
+	case "flow":
+		cr := createPrescription(context.Background(), c, c.fixedID)
+		fmt.Print(cr.text())
+		if cr.Err != nil {
+			return cr.Err
+		}
+		time.Sleep(1500 * time.Millisecond)
+		cf := confirmPrescription(context.Background(), c, cr.ID)
+		fmt.Print(cf.text())
+		if cf.Err != nil {
+			return cf.Err
+		}
+		if cf.State != "DISPENSED" {
+			pl := pollPrescription(context.Background(), c, cf.ID)
+			fmt.Print(pl.text())
+			return pl.Err
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown -mode=%q (want create|confirm|poll|flow|serve)", c.mode)
+	}
+}
+
+// ── Result types (shared by CLI + web) ───────────────────────────────
+
+type result struct {
+	OK    bool     `json:"ok"`
+	ID    string   `json:"id,omitempty"`
+	State string   `json:"state,omitempty"`
+	Log   []string `json:"log"`
+	Err   error    `json:"-"`
+	Error string   `json:"error,omitempty"`
+}
+
+func (r *result) log(format string, a ...any) { r.Log = append(r.Log, fmt.Sprintf(format, a...)) }
+func (r *result) fail(err error) *result {
+	r.OK = false
+	r.Err = err
+	r.Error = err.Error()
+	r.log("❌ %s", err.Error())
+	return r
+}
+func (r *result) text() string { return strings.Join(r.Log, "\n") + "\n" }
+
+// ── create ───────────────────────────────────────────────────────────
+
+func createPrescription(ctx context.Context, c config, fixedID string) *result {
+	r := &result{OK: true}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	kioskTok, _, err := kioskLogin(ctx, c.core, c.kioskCode, c.kioskPIN)
+	if err != nil {
+		return r.fail(fmt.Errorf("kiosk login: %w", err))
+	}
+	slots, err := listSlots(ctx, c.core, kioskTok, c.kioskCode)
+	if err != nil {
+		return r.fail(fmt.Errorf("list slots: %w", err))
+	}
+	items, err := chooseItems(slots, c.drugsFlag, c.items)
+	if err != nil {
+		return r.fail(err)
+	}
+
+	id := fixedID
+	if id == "" {
+		id = fmt.Sprintf("RX-%s", time.Now().Format("20060102-150405"))
+	}
+	issuedAt := time.Now().UTC()
+	ev := &eventsv1.PrescriptionCreated{
+		PrescriptionId: id,
+		SourceSystem:   c.source,
+		ProjectCode:    c.kioskCode[:4],
+		Hn:             c.hn,
+		PatientName:    c.patient,
+		WardId:         c.ward,
+		IssuedAt:       timestamppb.New(issuedAt),
+		TraceId:        "kiosktester-" + id,
+	}
+	for _, it := range items {
+		qty, _ := it["quantity"].(int)
+		ev.Items = append(ev.Items, &eventsv1.PrescriptionItem{
+			DrugCode:   fmt.Sprintf("%v", it["drugCode"]),
+			DrugName:   fmt.Sprintf("%v", it["drugName"]),
+			Quantity:   int32(qty),
+			DosageText: fmt.Sprintf("%v", it["dosageText"]),
+		})
+	}
+	if err := publishPrescription(ctx, c.natsURL, c.source, id, ev); err != nil {
+		return r.fail(fmt.Errorf("publish to NATS JetStream: %w", err))
+	}
+
+	r.ID = id
+	r.log("✅ สร้างรายการเบิกยาแล้ว (READY) — สแกน/ป้อนรหัสนี้ที่ตู้")
+	r.log("   Prescription ID : %s", id)
+	r.log("   Ward            : %s", c.ward)
+	r.log("   Kiosk code      : %s", c.kioskCode)
+	r.log("   Items           : %s", itemsSummary(items))
+	return r
+}
+
+// chooseItems builds items from the explicit -drugs flag or by auto-picking
+// stocked drugs from the cabinet's real slots (names/codes come from core so
+// the kiosk cart resolves positions and stock).
+func chooseItems(slots []slot, drugsFlag string, want int) ([]map[string]any, error) {
+	byCode := map[string]slot{}
+	for _, s := range slots {
+		if s.DrugCode != "" {
+			byCode[s.DrugCode] = s
+		}
+	}
+
+	if strings.TrimSpace(drugsFlag) != "" {
+		var items []map[string]any
+		for _, part := range strings.Split(drugsFlag, ",") {
+			code, qtyStr, ok := strings.Cut(strings.TrimSpace(part), ":")
+			qty := 1
+			if ok {
+				if n, err := strconv.Atoi(strings.TrimSpace(qtyStr)); err == nil && n > 0 {
+					qty = n
+				}
+			}
+			s, found := byCode[strings.TrimSpace(code)]
+			if !found {
+				return nil, fmt.Errorf("drug %q not found in the selected cabinet's slots", code)
+			}
+			items = append(items, item(s, qty))
+		}
+		if len(items) == 0 {
+			return nil, fmt.Errorf("no valid items parsed from drugs=%q", drugsFlag)
+		}
+		return items, nil
+	}
+
+	var items []map[string]any
+	seen := map[string]bool{}
+	for _, s := range slots {
+		if len(items) >= want {
+			break
+		}
+		if s.DrugCode == "" || s.DrugName == "" || s.Quantity <= 0 || seen[s.DrugCode] {
+			continue
+		}
+		seen[s.DrugCode] = true
+		items = append(items, item(s, 1))
+	}
+	if len(items) == 0 {
+		return nil, fmt.Errorf("no stocked drugs found — seed demo data first (npm run seed:demo)")
+	}
+	return items, nil
+}
+
+func item(s slot, qty int) map[string]any {
+	return map[string]any{
+		"drugCode":   s.DrugCode,
+		"drugName":   s.DrugName,
+		"quantity":   qty,
+		"dosageText": "ทดสอบ: รับประทานตามแพทย์สั่ง",
+	}
+}
+
+// staffCredentials resolves the (username, password, role label) for the
+// simulated staff scan. Defaults match demoseed users:
+//
+//	pharmacist / demo-pharmacist-2026  → PHARMACIST (เบิกยา)
+//	nurse      / demo-nurse-2026       → NURSE      (เบิกยา)
+//	refiller   / demo-refiller-2026    → REFILLER   (หน้าจอเติมยา)
+func staffCredentials(c config) (username, password, role string) {
+	username = c.staff
+	if username == "" {
+		username = "pharmacist"
+	}
+	password = c.staffPass
+	if password == "" {
+		password = "demo-" + username + "-2026"
+	}
+	role = strings.ToUpper(strings.TrimSpace(c.staffRole))
+	if role == "" || role == "AUTO" {
+		switch username {
+		case "pharmacist":
+			role = "PHARMACIST"
+		case "nurse":
+			role = "NURSE"
+		case "refiller":
+			role = "REFILLER"
+		case "admin":
+			role = "ADMIN"
+		default:
+			role = "STAFF"
+		}
+	}
+	return username, password, role
+}
+
+// ── confirm (sticker prepare + staff identity + queue) ──────────────
+
+func confirmPrescription(ctx context.Context, c config, prescriptionID string) *result {
+	r := &result{OK: true, ID: prescriptionID}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	kioskTok, _, err := kioskLogin(ctx, c.core, c.kioskCode, c.kioskPIN)
+	if err != nil {
+		return r.fail(fmt.Errorf("kiosk login (%s): %w", c.kioskCode, err))
+	}
+	prepared, err := prepareDispense(ctx, c.core, kioskTok, prescriptionID)
+	if err != nil {
+		return r.fail(fmt.Errorf("prepare dispense at kiosk %s: %w", c.kioskCode, err))
+	}
+	r.log("🏷️  สแกน Sticker ที่ตู้ %s → transaction=%s", c.kioskCode, prepared.DispenseID)
+
+	username, password, role := staffCredentials(c)
+	staffTok, err := staffLogin(ctx, c.core, username, password)
+	if err != nil {
+		return r.fail(fmt.Errorf("staff login (%s/%s): %w", username, role, err))
+	}
+
+	r.log("👤 จำลองสแกนบัตรผู้ใช้: %s (role=%s)", username, role)
+	r.log("📤 ยืนยันตัวตนที่ตู้: ConfirmDispense(%s)", prepared.DispenseID)
+	tx, err := confirmDispense(ctx, c.core, staffTok, kioskTok, prepared.DispenseID)
+	if err != nil {
+		return r.fail(fmt.Errorf("confirm dispense: %w", err))
+	}
+	r.log("   → รับเข้าคิว state=%s (dispense id=%s, kiosk=%s)", shortTransactionState(tx.Status), tx.DispenseID, tx.KioskCode)
+	r.State = shortTransactionState(tx.Status)
+	r.ID = tx.DispenseID
+	if r.State == "DISPENSED" {
+		r.log("✅ จ่ายยาสำเร็จ")
+	} else if r.State == "FAILED" {
+		return r.fail(fmt.Errorf("dispense failed: %s", tx.FailureDetail))
+	} else {
+		r.log("   กด [ดูสถานะ] เพื่อ poll จนจบ")
+	}
+	return r
+}
+
+// ── poll (check status until terminal) ──────────────────────────────
+
+func pollPrescription(ctx context.Context, c config, internalID string) *result {
+	r := &result{OK: true, ID: internalID}
+	ctx, cancel := context.WithTimeout(ctx, c.timeout+5*time.Second)
+	defer cancel()
+
+	kioskTok, _, err := kioskLogin(ctx, c.core, c.kioskCode, c.kioskPIN)
+	if err != nil {
+		return r.fail(fmt.Errorf("kiosk login (%s): %w", c.kioskCode, err))
+	}
+
+	r.log("🔄 ตรวจสอบสถานะ: %s", internalID)
+	deadline := time.Now().Add(c.timeout)
+	last := ""
+	for time.Now().Before(deadline) {
+		cur, err := getDispenseTransaction(ctx, c.core, kioskTok, internalID)
+		if err != nil {
+			r.log("   … poll error: %v", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if cur.Status != last {
+			r.log("   → state=%s", shortTransactionState(cur.Status))
+			last = cur.Status
+		}
+		switch shortTransactionState(cur.Status) {
+		case "DISPENSED":
+			r.State = "DISPENSED"
+			r.log("✅ จ่ายยาสำเร็จ")
+			return r
+		case "FAILED":
+			r.State = "FAILED"
+			return r.fail(fmt.Errorf("dispense failed: %s", cur.FailureDetail))
+		}
+		time.Sleep(1 * time.Second)
+	}
+	r.State = shortTransactionState(last)
+	return r.fail(fmt.Errorf("timed out after %s (last=%s)", c.timeout, shortTransactionState(last)))
+}
+
+// ── web console (serve mode) ─────────────────────────────────────────
+
+//go:embed console.html
+var consoleHTML []byte
+
+func serve(c config) error {
+	mux := http.NewServeMux()
+	kioskBridge := newKioskCommandBroker()
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/" {
+			http.NotFound(w, req)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		html := strings.Replace(string(consoleHTML), "__KIOSK_URL__", c.kioskURL, 1)
+		w.Write([]byte(html))
+	})
+	mux.HandleFunc("/api/slots", func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
+		defer cancel()
+		kioskCode := strings.TrimSpace(req.URL.Query().Get("cabinet"))
+		if kioskCode == "" {
+			kioskCode = c.kioskCode
+		}
+		tok, _, err := kioskLogin(ctx, c.core, kioskCode, c.kioskPIN)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		slots, err := listSlots(ctx, c.core, tok, kioskCode)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"slots": slots})
+	})
+	mux.HandleFunc("/api/prescriptions", func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
+		defer cancel()
+		username, password, role := staffCredentials(c)
+		override(&username, req.URL.Query().Get("staff"))
+		tok, err := staffLogin(ctx, c.core, username, password)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		ward := req.URL.Query().Get("ward")
+		pres, err := listPrescriptions(ctx, c.core, tok, ward)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"prescriptions": pres, "role": role})
+	})
+	mux.HandleFunc("/api/setup-cards", func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithTimeout(req.Context(), 30*time.Second)
+		defer cancel()
+		res, err := enrollDemoCards(ctx, c)
+		if err != nil {
+			writeJSON(w, http.StatusOK, res) // result has .Error field
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	})
+	mux.HandleFunc("/api/kiosk-status", kioskBridge.handleStatus)
+	mux.HandleFunc("/api/kiosk-events", kioskBridge.handleEvents)
+	mux.HandleFunc("/api/kiosk-command", kioskBridge.handleCommand)
+	mux.HandleFunc("/api/run", func(w http.ResponseWriter, req *http.Request) {
+		var body struct {
+			Mode, Cabinet, Ward, HN, Patient, Source, Drugs, ID, Staff, StaffPass, Role string
+			Items                                                                       int
+		}
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
+		rc := c // per-request copy of the base config
+		override(&rc.cabinet, body.Cabinet)
+		override(&rc.kioskCode, body.Cabinet)
+		override(&rc.ward, body.Ward)
+		override(&rc.hn, body.HN)
+		override(&rc.patient, body.Patient)
+		override(&rc.source, body.Source)
+		override(&rc.staff, body.Staff)
+		override(&rc.staffPass, body.StaffPass)
+		override(&rc.staffRole, body.Role)
+		rc.drugsFlag = body.Drugs
+		if body.Items > 0 {
+			rc.items = body.Items
+		}
+
+		var res *result
+		switch body.Mode {
+		case "create":
+			res = createPrescription(req.Context(), rc, body.ID)
+		case "confirm":
+			if body.ID == "" {
+				res = (&result{}).fail(fmt.Errorf("ต้องมี Prescription ID สำหรับ confirm"))
+			} else {
+				res = confirmPrescription(req.Context(), rc, body.ID)
+			}
+		case "poll":
+			if body.ID == "" {
+				res = (&result{}).fail(fmt.Errorf("ต้องมี Internal ID สำหรับ poll"))
+			} else {
+				res = pollPrescription(req.Context(), rc, body.ID)
+			}
+		case "flow":
+			res = createPrescription(req.Context(), rc, body.ID)
+			if res.Err == nil {
+				id := res.ID
+				time.Sleep(1500 * time.Millisecond)
+				cf := confirmPrescription(req.Context(), rc, id)
+				res.Log = append(res.Log, cf.Log...)
+				if cf.Err != nil {
+					res.State, res.OK, res.Err, res.Error = cf.State, cf.OK, cf.Err, cf.Error
+					res.ID = id
+				} else {
+					// confirm returned immediately; poll to terminal
+					pl := pollPrescription(req.Context(), rc, cf.ID)
+					res.Log = append(res.Log, pl.Log...)
+					res.State, res.OK, res.Err, res.Error = pl.State, pl.OK, pl.Err, pl.Error
+					res.ID = id
+				}
+			}
+		default:
+			res = (&result{}).fail(fmt.Errorf("unknown mode %q", body.Mode))
+		}
+		writeJSON(w, http.StatusOK, res)
+	})
+
+	fmt.Printf("🖥️  Kiosk flow tester console: http://localhost%s\n", displayAddr(c.addr))
+	fmt.Printf("    core=%s  nats=%s  kiosk=%s  kioskUI=%s\n", c.core, c.natsURL, c.kioskCode, c.kioskURL)
+	return http.ListenAndServe(c.addr, mux)
+}
+
+func override(dst *string, v string) {
+	if strings.TrimSpace(v) != "" {
+		*dst = v
+	}
+}
+
+func displayAddr(addr string) string {
+	if strings.HasPrefix(addr, ":") {
+		return addr
+	}
+	return addr
+}
+
+// deriveKioskURL infers the kiosk web app URL from the core API URL.
+// It replaces the port with 5173 (Vite dev server default) and strips any
+// path.  e.g. http://localhost:8080 → http://localhost:5173,
+// http://192.168.1.50:8080 → http://192.168.1.50:5173.
+func deriveKioskURL(coreURL string) string {
+	u, err := neturl.Parse(coreURL)
+	if err != nil {
+		return "http://localhost:5173"
+	}
+	host := u.Hostname()
+	if host == "" {
+		host = "localhost"
+	}
+	return "http://" + host + ":5173"
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
+// ── core Connect JSON calls ──────────────────────────────────────────
+
+type slot struct {
+	ID        string `json:"id"`
+	Code      string `json:"code"`
+	CabinetID string `json:"cabinetId"`
+	DrugCode  string `json:"drugCode"`
+	DrugName  string `json:"drugName"`
+	Quantity  int    `json:"quantity"`
+	Capacity  int    `json:"capacity"`
+}
+
+type prescription struct {
+	ID             string `json:"id"`
+	PrescriptionID string `json:"prescriptionId"`
+	State          string `json:"state"`
+	FailureReason  string `json:"failureReason"`
+	WardID         string `json:"wardId"`
+	PatientName    string `json:"patientName"`
+	HN             string `json:"hn"`
+}
+
+type dispenseTransaction struct {
+	DispenseID          string `json:"dispenseId"`
+	PrescriptionID      string `json:"prescriptionId"`
+	KioskCode           string `json:"kioskCode"`
+	OperatorDisplayName string `json:"operatorDisplayName"`
+	Status              string `json:"status"`
+	FailureCode         string `json:"failureCode"`
+	FailureDetail       string `json:"failureDetail"`
+}
+
+func kioskLogin(ctx context.Context, core, code, pin string) (token, kioskID string, err error) {
+	var out struct {
+		AccessToken string `json:"accessToken"`
+		Kiosk       struct {
+			ID string `json:"id"`
+		} `json:"kiosk"`
+	}
+	err = connectCall(ctx, core, "medisync.kiosk.v1.KioskService/KioskLogin", "",
+		map[string]any{"code": code, "pin": pin}, &out)
+	return out.AccessToken, out.Kiosk.ID, err
+}
+
+func staffLogin(ctx context.Context, core, username, password string) (string, error) {
+	var out struct {
+		AccessToken string `json:"accessToken"`
+	}
+	err := connectCall(ctx, core, "medisync.identity.v1.IdentityService/Login", "",
+		map[string]any{"username": username, "password": password}, &out)
+	return out.AccessToken, err
+}
+
+func listSlots(ctx context.Context, core, token, cabinet string) ([]slot, error) {
+	var out struct {
+		Slots []slot `json:"slots"`
+	}
+	err := connectCall(ctx, core, "medisync.inventory.v1.InventoryService/ListSlots", token,
+		map[string]any{"cabinetId": cabinet, "lowOnly": false}, &out)
+	return out.Slots, err
+}
+
+func prepareDispense(ctx context.Context, core, kioskToken, prescriptionID string) (*dispenseTransaction, error) {
+	var out struct {
+		Transaction dispenseTransaction `json:"transaction"`
+	}
+	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/PrepareDispense", kioskToken,
+		map[string]any{"stickerCode": prescriptionID, "traceId": "kiosktester-prepare-" + prescriptionID + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)}, &out)
+	return &out.Transaction, err
+}
+
+func confirmDispense(ctx context.Context, core, staffToken, kioskToken, dispenseID string) (*dispenseTransaction, error) {
+	var out struct {
+		Transaction dispenseTransaction `json:"transaction"`
+	}
+	err := connectCallWithKiosk(ctx, core, "medisync.dispensing.v1.DispensingService/ConfirmDispense", staffToken, kioskToken,
+		map[string]any{"dispenseId": dispenseID}, &out)
+	return &out.Transaction, err
+}
+
+func getDispenseTransaction(ctx context.Context, core, token, dispenseID string) (*dispenseTransaction, error) {
+	var out struct {
+		Transaction dispenseTransaction `json:"transaction"`
+	}
+	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/GetDispenseTransaction", token,
+		map[string]any{"dispenseId": dispenseID}, &out)
+	return &out.Transaction, err
+}
+
+func listPrescriptions(ctx context.Context, core, token, wardID string) ([]prescription, error) {
+	var out struct {
+		Prescriptions []prescription `json:"prescriptions"`
+	}
+	body := map[string]any{"pageSize": 50}
+	if wardID != "" {
+		body["wardId"] = wardID
+	}
+	err := connectCall(ctx, core, "medisync.dispensing.v1.DispensingService/ListPrescriptions", token, body, &out)
+	return out.Prescriptions, err
+}
+
+// ── card token enrollment ────────────────────────────────────────────
+
+type user struct {
+	ID          string `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	Role        string `json:"role"`
+}
+
+func listUsers(ctx context.Context, core, token string) ([]user, error) {
+	var out struct {
+		Users []user `json:"users"`
+	}
+	err := connectCall(ctx, core, "medisync.identity.v1.IdentityService/ListUsers", token,
+		map[string]any{}, &out)
+	return out.Users, err
+}
+
+func setCardToken(ctx context.Context, core, adminToken, userID, cardToken string) error {
+	return connectCall(ctx, core, "medisync.identity.v1.IdentityService/SetCardToken", adminToken,
+		map[string]any{"userId": userID, "cardToken": cardToken}, nil)
+}
+
+// enrollDemoCards logs in as admin, finds pharmacist/nurse/refiller users,
+// and enrolls card tokens (card-pharmacist, card-nurse, card-refiller) so the
+// kiosk CardLogin path works for the simulated staff scan.
+func enrollDemoCards(ctx context.Context, c config) (*result, error) {
+	r := &result{OK: true}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	adminPass := c.staffPass
+	if adminPass == "" {
+		adminPass = "medisync-local-admin-2026"
+	}
+	adminTok, err := staffLogin(ctx, c.core, "admin", adminPass)
+	if err != nil {
+		return r.fail(fmt.Errorf("admin login: %w", err)), err
+	}
+
+	users, err := listUsers(ctx, c.core, adminTok)
+	if err != nil {
+		return r.fail(fmt.Errorf("list users: %w", err)), err
+	}
+
+	cardTokens := map[string]string{
+		"pharmacist": "card-pharmacist",
+		"nurse":      "card-nurse",
+		"refiller":   "card-refiller",
+	}
+	for _, u := range users {
+		tok, ok := cardTokens[u.Username]
+		if !ok {
+			continue
+		}
+		if err := setCardToken(ctx, c.core, adminTok, u.ID, tok); err != nil {
+			return r.fail(fmt.Errorf("set card token for %s: %w", u.Username, err)), err
+		}
+		r.log("✅ enrolled card %s → %s (%s)", tok, u.Username, u.Role)
+	}
+	r.log("การ์ดพร้อมใช้: Kiosk UI ที่เชื่อมกับ tester สามารถจำลอง cardLogin ได้")
+	return r, nil
+}
+
+// connectCall POSTs a Connect unary JSON request and decodes the reply.
+func connectCall(ctx context.Context, core, method, token string, body, out any) error {
+	return connectCallWithKiosk(ctx, core, method, token, "", body, out)
+}
+
+func connectCallWithKiosk(ctx context.Context, core, method, token, kioskToken string, body, out any) error {
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	url := strings.TrimRight(core, "/") + "/" + method
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	if kioskToken != "" {
+		req.Header.Set("X-Kiosk-Authorization", "Bearer "+kioskToken)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		var ce struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		}
+		if json.Unmarshal(raw, &ce) == nil && ce.Message != "" {
+			return fmt.Errorf("%s: %s (%s)", method, ce.Message, ce.Code)
+		}
+		return fmt.Errorf("%s: HTTP %d: %s", method, resp.StatusCode, strings.TrimSpace(string(raw)))
+	}
+	if out == nil {
+		return nil
+	}
+	return json.Unmarshal(raw, out)
+}
+
+// ── NATS producer (real rx.prescription.created path) ────────────────
+// Uses JetStream publish + protojson.Marshal — the exact same wire format the
+// production hospital feeder uses (see cmd/feeder). Plain NATS publish would
+// bypass the RX stream entirely and the dispensing consumer would never see it.
+
+func publishPrescription(ctx context.Context, url, source, id string, ev *eventsv1.PrescriptionCreated) error {
+	data, err := protojson.Marshal(ev)
+	if err != nil {
+		return fmt.Errorf("protojson marshal: %w", err)
+	}
+	nc, err := nats.Connect(url, nats.Name("medisync-kiosktester"))
+	if err != nil {
+		return fmt.Errorf("connect nats: %w", err)
+	}
+	defer nc.Drain()
+
+	js, err := jetstream.New(nc)
+	if err != nil {
+		return fmt.Errorf("jetstream: %w", err)
+	}
+
+	msg := nats.NewMsg(natsx.SubjectPrescriptionCreated)
+	msg.Data = data
+	msg.Header.Set("Nats-Msg-Id", source+"/"+id)
+	ack, err := js.PublishMsg(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("jetstream publish: %w", err)
+	}
+	_ = ack
+	return nil
+}
+
+// ── helpers ──────────────────────────────────────────────────────────
+
+func shortState(s string) string { return strings.TrimPrefix(s, "PRESCRIPTION_STATE_") }
+
+func shortTransactionState(s string) string {
+	return strings.TrimPrefix(s, "DISPENSE_TRANSACTION_STATUS_")
+}
+
+func orAny(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "(any)"
+	}
+	return s
+}
+
+func itemsSummary(items []map[string]any) string {
+	parts := make([]string, 0, len(items))
+	for _, it := range items {
+		parts = append(parts, fmt.Sprintf("%v×%v", it["drugCode"], it["quantity"]))
+	}
+	return strings.Join(parts, ", ")
+}

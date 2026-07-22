@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package medisync.common.v1;
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/common/v1;commonv1";
+
+// CursorPagination configures cursor-based list pagination.
+message CursorPagination {
+  // Number of results to return. Defaults to 50 and is capped at 200.
+  int32 page_size = 1;
+  // Opaque cursor returned by the preceding list response.
+  string page_token = 2;
+}

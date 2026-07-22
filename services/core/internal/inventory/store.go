@@ -1,0 +1,313 @@
+package inventory
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/audit"
+	"github.com/adm-chura3inter/medisync/services/core/internal/platform/pagination"
+)
+
+// dbConn is the narrow database interface for the inventory store.
+// *pgxpool.Pool satisfies this interface; tests inject a deterministic fake.
+type dbConn interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// Compile-time check that *pgxpool.Pool satisfies dbConn.
+var _ dbConn = (*pgxpool.Pool)(nil)
+
+// Store persists inventory slots to PostgreSQL. Pattern follows catalog.Store.
+type Store struct {
+	db          dbConn
+	auditWriter *audit.Writer
+}
+
+// NewStore creates a Store backed by a pgx connection pool with an
+// audit writer. Every mutation writes an audit log entry.
+func NewStore(pool *pgxpool.Pool, aw *audit.Writer) *Store {
+	return &Store{db: pool, auditWriter: aw}
+}
+
+// NewStoreWithDB creates a Store backed by an arbitrary dbConn with an
+// audit writer. Exported for use by integration and unit tests.
+func NewStoreWithDB(db dbConn, aw *audit.Writer) *Store {
+	return &Store{db: db, auditWriter: aw}
+}
+
+// ListSlots returns slots, optionally filtered by cabinet_id, low-stock status,
+// and project, using a created_at cursor.
+func (s *Store) ListSlots(ctx context.Context, cabinetID, projectID string, lowOnly bool, pageSize int32, pageToken string) ([]*Slot, string, int64, error) {
+	pageSize = pagination.NormalizePageSize(pageSize)
+	var whereClauses []string
+	args := []any{}
+	argIdx := 1
+
+	if cabinetID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("s.cabinet_id = $%d", argIdx))
+		args = append(args, cabinetID)
+		argIdx++
+	}
+	if projectID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("s.project_id = $%d", argIdx))
+		args = append(args, projectID)
+		argIdx++
+	}
+	if lowOnly {
+		whereClauses = append(whereClauses, "s.quantity <= s.low_threshold")
+	}
+
+	whereSQL := ""
+	if len(whereClauses) > 0 {
+		whereSQL = "WHERE "
+		for i, clause := range whereClauses {
+			if i > 0 {
+				whereSQL += " AND "
+			}
+			whereSQL += clause
+		}
+	}
+
+	var totalCount int64
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM medisync.slot s %s", whereSQL)
+	if err := s.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		return nil, "", 0, fmt.Errorf("count slots: %w", err)
+	}
+
+	if pageToken != "" {
+		cursorClause := fmt.Sprintf(
+			"(s.created_at, s.id) < (SELECT created_at, id FROM medisync.slot WHERE id = $%d)",
+			argIdx,
+		)
+		if whereSQL == "" {
+			whereSQL = "WHERE " + cursorClause
+		} else {
+			whereSQL += " AND " + cursorClause
+		}
+		args = append(args, pageToken)
+		argIdx++
+	}
+
+	query := fmt.Sprintf(
+		`SELECT s.id, s.cabinet_id, s.code, s.display_name, s.drug_id, s.drug_code, s.drug_name,
+		        s.capacity, s.quantity, s.low_threshold,
+		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
+		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL'),
+		        s.emergency_drug, s.emergency_max_quantity
+		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id %s
+		  ORDER BY s.created_at DESC, s.id DESC LIMIT $%d`, whereSQL, argIdx)
+	args = append(args, pageSize+1)
+
+	rows, err := s.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("list slots: %w", err)
+	}
+	defer rows.Close()
+
+	var slots []*Slot
+	for rows.Next() {
+		slot, err := scanSlot(rows)
+		if err != nil {
+			return nil, "", 0, err
+		}
+		slots = append(slots, slot)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, "", 0, fmt.Errorf("iterate slot rows: %w", err)
+	}
+
+	var nextPageToken string
+	if len(slots) > int(pageSize) {
+		nextPageToken = slots[pageSize-1].ID
+		slots = slots[:pageSize]
+	}
+	return slots, nextPageToken, totalCount, nil
+}
+
+// GetByID returns a Slot by UUID, or nil if not found.
+func (s *Store) GetByID(ctx context.Context, id string) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`SELECT s.id, s.cabinet_id, s.code, s.display_name, s.drug_id, s.drug_code, s.drug_name,
+		        s.capacity, s.quantity, s.low_threshold,
+		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
+		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL'),
+		        s.emergency_drug, s.emergency_max_quantity
+		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id WHERE s.id = $1`, id)
+	return scanSlot(row)
+}
+
+// GetByCabinetAndCode returns a Slot by cabinet_id + code, or nil if not found.
+func (s *Store) GetByCabinetAndCode(ctx context.Context, cabinetID, code string) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`SELECT s.id, s.cabinet_id, s.code, s.display_name, s.drug_id, s.drug_code, s.drug_name,
+		        s.capacity, s.quantity, s.low_threshold,
+		        s.project_id, s.expiry_date, s.shelf, s.row_num, s.created_at, s.updated_at,
+		        COALESCE(d.category, ''), COALESCE(d.manufacturer, ''), COALESCE(d.safety_classification, 'NORMAL'),
+		        s.emergency_drug, s.emergency_max_quantity
+		   FROM medisync.slot s LEFT JOIN medisync.drug d ON d.id::text = s.drug_id WHERE s.cabinet_id = $1 AND s.code = $2`, cabinetID, code)
+	return scanSlot(row)
+}
+
+// AssignDrug updates a slot's drug assignment fields. Returns the
+// updated slot, or nil if the slot does not exist.
+func (s *Store) AssignDrug(ctx context.Context, slotID, drugID, drugCode, drugName string, capacity, lowThreshold int32) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`UPDATE medisync.slot
+		   SET drug_id = $1, drug_code = $2, drug_name = $3,
+		       capacity = $4, low_threshold = $5,
+		       quantity = LEAST(quantity, $4), updated_at = now()
+		 WHERE id = $6
+		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		           capacity, quantity, low_threshold,
+		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL',
+		           emergency_drug, emergency_max_quantity`,
+		drugID, drugCode, drugName, capacity, lowThreshold, slotID)
+	return scanSlot(row)
+}
+
+// Refill atomically increments a slot's quantity. The UPDATE uses
+// quantity = quantity + $delta to prevent lost updates. Returns the
+// updated slot, or nil if not found. When the resulting quantity
+// would be negative, returns ErrInsufficientStock.
+func (s *Store) Refill(ctx context.Context, id string, delta int32, expiryDate *time.Time) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`UPDATE medisync.slot
+		   SET quantity = quantity + $1, expiry_date = COALESCE($2, expiry_date), updated_at = now()
+		 WHERE id = $3 AND quantity + $1 >= 0
+		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		           capacity, quantity, low_threshold,
+		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL',
+		           emergency_drug, emergency_max_quantity`,
+		delta, expiryDate, id)
+	slot, err := scanSlot(row)
+	if err != nil {
+		return nil, err
+	}
+	if slot == nil {
+		// Could be because the slot doesn't exist, or because the
+		// resulting quantity would be negative. Check existence.
+		existsRow := s.db.QueryRow(ctx, `SELECT id FROM medisync.slot WHERE id = $1`, id)
+		var existingID string
+		if err := existsRow.Scan(&existingID); errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil // slot not found
+		}
+		if err != nil {
+			return nil, fmt.Errorf("check slot existence: %w", err)
+		}
+		return nil, fmt.Errorf("refill slot %s: %w", id, ErrInsufficientStock)
+	}
+	return slot, nil
+}
+
+// CreateSlot inserts a new empty slot into a cabinet.
+func (s *Store) CreateSlot(ctx context.Context, cabinetID, code, displayName, projectID string, capacity, lowThreshold, shelf, rowNum int32, expiryDate *time.Time) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`INSERT INTO medisync.slot (cabinet_id, code, display_name, capacity, quantity, low_threshold, project_id, expiry_date, shelf, row_num)
+		 VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9)
+		 ON CONFLICT (cabinet_id, code) DO NOTHING
+		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		           capacity, quantity, low_threshold,
+		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL',
+		           emergency_drug, emergency_max_quantity`,
+		cabinetID, code, displayName, capacity, lowThreshold, projectID, expiryDate, shelf, rowNum)
+	slot, err := scanSlot(row)
+	if err != nil {
+		return nil, fmt.Errorf("create slot: %w", err)
+	}
+	if slot == nil {
+		return nil, ErrDuplicateSlot
+	}
+	return slot, nil
+}
+
+// AdjustStock atomically sets a slot's quantity to a new value.
+// Used for audit corrections; requires a reason which is recorded
+// in the audit log. Returns the updated slot, or nil if not found.
+func (s *Store) AdjustStock(ctx context.Context, id string, newQuantity int32) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`UPDATE medisync.slot
+		   SET quantity = $1, updated_at = now()
+		 WHERE id = $2
+		 RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		           capacity, quantity, low_threshold,
+		           project_id, expiry_date, shelf, row_num, created_at, updated_at, '', '', 'NORMAL',
+		           emergency_drug, emergency_max_quantity`,
+		newQuantity, id)
+	return scanSlot(row)
+}
+
+// UpdateEmergencyConfig persists emergency eligibility using immutable kiosk
+// and slot business codes. projectID prevents cross-tenant updates.
+func (s *Store) UpdateEmergencyConfig(ctx context.Context, kioskCode, slotCode, projectID string, enabled bool, maxQuantity int32) (*Slot, error) {
+	row := s.db.QueryRow(ctx,
+		`UPDATE medisync.slot
+		    SET emergency_drug=$1, emergency_max_quantity=$2, updated_at=now()
+		  WHERE cabinet_id=$3 AND code=$4 AND project_id=$5 AND is_active=true
+		  RETURNING id, cabinet_id, code, display_name, drug_id, drug_code, drug_name,
+		            capacity, quantity, low_threshold,
+		            project_id, expiry_date, shelf, row_num, created_at, updated_at,
+		            '', '', 'NORMAL', emergency_drug, emergency_max_quantity`,
+		enabled, maxQuantity, kioskCode, slotCode, projectID)
+	return scanSlot(row)
+}
+
+// writeAudit is a convenience method that writes an audit entry when the
+// auditWriter is configured. It is a no-op when auditWriter is nil.
+func (s *Store) writeAudit(ctx context.Context, e audit.Entry) {
+	if s.auditWriter == nil {
+		return
+	}
+	_ = s.auditWriter.Write(ctx, e)
+}
+
+// scanSlot maps a pgx.Row or pgx.Rows to a Slot.
+// Returns nil when the row is empty (pgx.ErrNoRows).
+func scanSlot(row pgx.Row) (*Slot, error) {
+	var slot Slot
+	var createdAt, updatedAt time.Time
+	err := row.Scan(&slot.ID, &slot.CabinetID, &slot.Code, &slot.DisplayName,
+		&slot.DrugID, &slot.DrugCode, &slot.DrugName,
+		&slot.Capacity, &slot.Quantity, &slot.LowThreshold,
+		&slot.ProjectID, &slot.ExpiryDate, &slot.Shelf, &slot.RowNum, &createdAt, &updatedAt,
+		&slot.Category, &slot.Manufacturer, &slot.SafetyClassification,
+		&slot.EmergencyDrug, &slot.EmergencyMaxQuantity)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("scan slot: %w", err)
+	}
+	slot.CreatedAt = createdAt
+	slot.UpdatedAt = updatedAt
+	return &slot, nil
+}
+
+// ---- Domain errors ----
+
+// ErrInsufficientStock is returned when a refill delta would result in
+// a negative quantity.
+var ErrInsufficientStock = errors.New("insufficient stock")
+
+// ErrDuplicateSlot is returned when a (cabinet_id, code) pair already exists.
+var ErrDuplicateSlot = errors.New("slot already exists in cabinet")
+
+// toJSON safely marshals a value to JSON bytes, returning {} on error.
+func toJSON(v any) json.RawMessage {
+	if v == nil {
+		return json.RawMessage("{}")
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return json.RawMessage("{}")
+	}
+	return b
+}

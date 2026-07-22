@@ -1,0 +1,40 @@
+# Environment files — must never land in Docker images.
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Dependencies
+node_modules/
+node_modules/.cache/
+
+# Build output (we rebuild in the Dockerfile)
+apps/*/dist/
+services/core/bin/
+
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# CI / tooling
+.omc/
+.impeccable/
+
+# Docs and assets not needed at runtime
+docs/
+*.md
+!README.md
+
+# Test artifacts
+**/*_test.go
+**/*.test
+coverage/
+coverage.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

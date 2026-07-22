@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package medisync.inventory.v1;
+
+import "google/protobuf/timestamp.proto";
+import "medisync/common/v1/pagination.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/inventory/v1;inventoryv1";
+
+message Slot {
+  string id = 1;
+  string cabinet_id = 2;
+  // Physical slot code as addressed by the vending hardware, e.g. "A01".
+  string code = 3;
+  // Drug currently assigned; empty when the slot is unassigned.
+  string drug_id = 4;
+  string drug_code = 5;
+  string drug_name = 6;
+  int32 capacity = 7;
+  int32 quantity = 8;
+  // stock.low event fires when quantity drops to or below this.
+  int32 low_threshold = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  string display_name = 11;
+  // Project this slot belongs to (multi-tenant).
+  string project_id = 12;
+  google.protobuf.Timestamp expiry_date = 13;
+  // Physical shelf position (1-5).
+  int32 shelf = 14;
+  // Physical row position within shelf (1-22).
+  int32 row_num = 15;
+  // Read-only metadata resolved from the assigned catalog drug.
+  string category = 16;
+  string manufacturer = 17;
+  string safety_classification = 18;
+  // Emergency eligibility is configured per physical kiosk slot.
+  bool emergency_drug = 19;
+  int32 emergency_max_quantity = 20;
+}
+
+message ListSlotsRequest {
+  string cabinet_id = 1;
+  // Only slots at or below their low threshold.
+  bool low_only = 2;
+  medisync.common.v1.CursorPagination pagination = 3;
+}
+
+message ListSlotsResponse {
+  repeated Slot slots = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
+}
+
+message AssignDrugRequest {
+  string slot_id = 1;
+  string drug_id = 2;
+  int32 capacity = 3;
+  int32 low_threshold = 4;
+}
+
+message AssignDrugResponse {
+  Slot slot = 1;
+}
+
+message RefillRequest {
+  string slot_id = 1;
+  // Units added in this refill; the server computes the new quantity.
+  int32 quantity_added = 2;
+  string trace_id = 3;
+  google.protobuf.Timestamp expiry_date = 4;
+}
+
+message RefillResponse {
+  Slot slot = 1;
+}
+
+// Correct a miscount found during audit; requires reason.
+message AdjustStockRequest {
+  string slot_id = 1;
+  int32 new_quantity = 2;
+  string reason = 3;
+  string trace_id = 4;
+}
+
+message AdjustStockResponse {
+  Slot slot = 1;
+}
+
+// Create a new slot in a cabinet. Requires admin role.
+message CreateSlotRequest {
+  string cabinet_id = 1;
+  string code = 2;
+  string display_name = 3;
+  int32 capacity = 4;
+  int32 low_threshold = 5;
+  // Required for SYSADMIN; project-scoped users inherit from JWT.
+  string project_id = 6;
+  google.protobuf.Timestamp expiry_date = 7;
+  int32 shelf = 8;
+  int32 row_num = 9;
+}
+
+message CreateSlotResponse {
+  Slot slot = 1;
+}
+
+// Admin-only configuration addressed by immutable business codes. Database
+// row IDs are deliberately not accepted because slots/cabinets may be rebuilt.
+message UpdateSlotEmergencyConfigRequest {
+  string kiosk_code = 1;
+  string slot_code = 2;
+  bool enabled = 3;
+  int32 max_quantity = 4;
+}
+
+message UpdateSlotEmergencyConfigResponse {
+  Slot slot = 1;
+}
+
+service InventoryService {
+  rpc ListSlots(ListSlotsRequest) returns (ListSlotsResponse);
+  rpc CreateSlot(CreateSlotRequest) returns (CreateSlotResponse);
+  rpc AssignDrug(AssignDrugRequest) returns (AssignDrugResponse);
+  rpc Refill(RefillRequest) returns (RefillResponse);
+  rpc AdjustStock(AdjustStockRequest) returns (AdjustStockResponse);
+  rpc UpdateSlotEmergencyConfig(UpdateSlotEmergencyConfigRequest) returns (UpdateSlotEmergencyConfigResponse);
+}

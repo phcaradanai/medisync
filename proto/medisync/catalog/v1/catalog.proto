@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package medisync.catalog.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/catalog/v1;catalogv1";
+
+message Drug {
+  string id = 1;
+  // Hospital drug code; unique, stable, used to match prescription items.
+  string code = 2;
+  string name = 3;
+  string generic_name = 4;
+  // Dosage form, e.g. "tablet", "capsule", "ampoule".
+  string form = 5;
+  string strength = 6;
+  // Dispensing unit, e.g. "tab", "amp", "bottle".
+  string unit = 7;
+  // Extra line printed on the medication sticker (warnings, storage).
+  string sticker_note = 8;
+  bool active = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  // Human-readable display name (Thai/English label).
+  string display_name = 12;
+  // Project this drug belongs to (multi-tenant).
+  string project_id = 13;
+  // Barcode for scanning during refill/withdraw.
+  string barcode = 14;
+  // Recommended maximum number of this drug stored in one cabinet slot.
+  int32 default_slot_capacity = 15;
+  // Medication category, e.g. analgesic or antibiotic.
+  string category = 16;
+  string manufacturer = 17;
+  // NORMAL, LASA, or HIGH_ALERT.
+  string safety_classification = 18;
+}
+
+message CreateDrugRequest {
+  string code = 1;
+  string name = 2;
+  string generic_name = 3;
+  string form = 4;
+  string strength = 5;
+  string unit = 6;
+  string sticker_note = 7;
+  string display_name = 8;
+  // Required for SYSADMIN; project-scoped users inherit from JWT.
+  string project_id = 9;
+  // Barcode for scanning.
+  string barcode = 10;
+  // Recommended maximum number stored in one cabinet slot.
+  int32 default_slot_capacity = 11;
+  string category = 12;
+  string manufacturer = 13;
+  // NORMAL, LASA, or HIGH_ALERT.
+  string safety_classification = 14;
+}
+
+message CreateDrugResponse {
+  Drug drug = 1;
+}
+
+message GetDrugRequest {
+  string id = 1;
+}
+
+message GetDrugResponse {
+  Drug drug = 1;
+}
+
+message GetByBarcodeRequest {
+  string barcode = 1;
+}
+
+message GetByBarcodeResponse {
+  Drug drug = 1;
+}
+
+message ListDrugsRequest {
+  // Case-insensitive match on code, name, or generic name. Empty lists all.
+  string query = 1;
+  bool include_inactive = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListDrugsResponse {
+  repeated Drug drugs = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
+}
+
+message UpdateDrugRequest {
+  Drug drug = 1;
+}
+
+message UpdateDrugResponse {
+  Drug drug = 1;
+}
+
+message DeactivateDrugRequest {
+  string id = 1;
+}
+
+message DeactivateDrugResponse {
+  Drug drug = 1;
+}
+
+service CatalogService {
+  rpc CreateDrug(CreateDrugRequest) returns (CreateDrugResponse);
+  rpc GetDrug(GetDrugRequest) returns (GetDrugResponse);
+  rpc GetByBarcode(GetByBarcodeRequest) returns (GetByBarcodeResponse);
+  rpc ListDrugs(ListDrugsRequest) returns (ListDrugsResponse);
+  rpc UpdateDrug(UpdateDrugRequest) returns (UpdateDrugResponse);
+  rpc DeactivateDrug(DeactivateDrugRequest) returns (DeactivateDrugResponse);
+}

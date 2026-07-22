@@ -1,0 +1,195 @@
+syntax = "proto3";
+
+package medisync.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/events/v1;eventsv1";
+
+// Payloads for NATS JetStream subjects. Wire format is protojson.
+// Subject registry lives in docs/EVENTS.md. Event messages are deliberately
+// self-contained (no imports from service protos) so external producers,
+// like the hospital prescription feeder, depend only on this file.
+
+message PrescriptionItem {
+  string drug_code = 1;
+  string drug_name = 2;
+  int32 quantity = 3;
+  string dosage_text = 4;
+}
+
+// Subject: rx.prescription.created
+// Producer: hospital prescription feeder (external team).
+// prescription_id + source_system is the idempotency key.
+message PrescriptionCreated {
+  string prescription_id = 1;
+  string source_system = 2;
+  string hn = 3;
+  string patient_name = 4;
+  string ward_id = 5;
+  repeated PrescriptionItem items = 6;
+  google.protobuf.Timestamp issued_at = 7;
+  string trace_id = 8;
+  // Immutable 4-digit business code of the destination project. Producers
+  // must not send a database UUID or a kiosk row ID.
+  string project_code = 9;
+}
+
+// Subject: medisync.dispense.requested
+message DispenseRequested {
+  string dispense_id = 1;
+  string prescription_id = 2;
+  string slot_code = 3;
+  int32 quantity = 4;
+  string trace_id = 5;
+  string kiosk_code = 6;
+  repeated DispenseAllocation allocations = 7;
+  string project_id = 8;
+}
+
+message DispenseAllocation {
+  string allocation_id = 1;
+  string item_id = 2;
+  string drug_code = 3;
+  string slot_code = 4;
+  string batch_id = 5;
+  int32 quantity = 6;
+  int32 door_no = 7;
+  int32 hardware_layer = 8;
+  int32 channel_start = 9;
+  int32 channel_end = 10;
+}
+
+message DispenseAllocationResult {
+  string allocation_id = 1;
+  bool success = 2;
+  string detail = 3;
+}
+
+// Subject: medisync.dispense.completed
+// Emitted only on hardware-confirmed success.
+message DispenseCompleted {
+  string dispense_id = 1;
+  string prescription_id = 2;
+  string slot_code = 3;
+  int32 quantity = 4;
+  google.protobuf.Timestamp completed_at = 5;
+  string trace_id = 6;
+  string kiosk_code = 7;
+  string hardware_response = 8;
+  repeated DispenseAllocationResult results = 9;
+}
+
+// Subject: medisync.dispense.failed
+message DispenseFailed {
+  string dispense_id = 1;
+  string prescription_id = 2;
+  string slot_code = 3;
+  // Machine-readable reason: "timeout", "jam", "agent_unreachable", ...
+  string reason = 4;
+  // Raw detail from the vending agent for diagnostics.
+  string detail = 5;
+  string trace_id = 6;
+  string kiosk_code = 7;
+  repeated DispenseAllocationResult results = 8;
+}
+
+// Subject: medisync.print.requested
+message PrintRequested {
+  string print_id = 1;
+  string prescription_id = 2;
+  string trace_id = 3;
+  string project_id = 4;
+}
+
+// Subject: medisync.print.completed
+// Published by sync-relay with REAL printer result (not fake).
+message PrintCompleted {
+  string print_id = 1;
+  string prescription_id = 2;
+  bool success = 3;
+  string detail = 4;
+  string trace_id = 5;
+  string project_id = 6;
+}
+
+// Subject: medisync.fulfillment.requested
+// Mirrors PrintRequested — the fulfillment anti-corruption layer consumes
+// this event and drives the vending-3d-ctl-agent hardware.
+message FulfillmentRequested {
+  string fulfillment_id = 1;
+  string prescription_id = 2;
+  string trace_id = 3;
+  string kiosk_code = 4;
+  repeated DispenseAllocation allocations = 5;
+  string project_id = 6;
+}
+
+// Subject: medisync.fulfillment.completed
+// Emitted after a hardware-confirmed dispense (or permanent failure).
+message FulfillmentCompleted {
+  string fulfillment_id = 1;
+  string prescription_id = 2;
+  bool success = 3;
+  string detail = 4;
+  string trace_id = 5;
+  string kiosk_code = 6;
+}
+
+enum StockChangeReason {
+  STOCK_CHANGE_REASON_UNSPECIFIED = 0;
+  STOCK_CHANGE_REASON_DISPENSE = 1;
+  STOCK_CHANGE_REASON_REFILL = 2;
+  STOCK_CHANGE_REASON_ADJUST = 3;
+  STOCK_CHANGE_REASON_EMERGENCY_DISPENSE = 4;
+}
+
+// Subject: medisync.stock.changed
+message StockChanged {
+  string slot_code = 1;
+  string drug_code = 2;
+  int32 delta = 3;
+  int32 quantity_after = 4;
+  StockChangeReason reason = 5;
+  string trace_id = 6;
+  string kiosk_code = 7;
+  string dispense_id = 8;
+}
+
+// Subject: medisync.stock.low
+message StockLow {
+  string slot_code = 1;
+  string drug_code = 2;
+  int32 quantity = 3;
+  int32 threshold = 4;
+}
+
+enum PrescriptionDispenseResultStatus {
+  PRESCRIPTION_DISPENSE_RESULT_STATUS_UNSPECIFIED = 0;
+  PRESCRIPTION_DISPENSE_RESULT_STATUS_DISPENSED = 1;
+  PRESCRIPTION_DISPENSE_RESULT_STATUS_FAILED = 2;
+}
+
+message PrescriptionDispenseItemResult {
+  string drug_code = 1;
+  int32 requested_quantity = 2;
+  int32 dispensed_quantity = 3;
+  string status = 4;
+}
+
+// Subject: rx.prescription.dispense_result
+// Core emits this exactly once through the transactional outbox when a normal
+// prescription dispense reaches its hardware-confirmed terminal result.
+// prescription_id + source_system routes the result to the originating system.
+message PrescriptionDispenseResult {
+  string prescription_id = 1;
+  string source_system = 2;
+  string dispense_id = 3;
+  string kiosk_code = 4;
+  PrescriptionDispenseResultStatus status = 5;
+  repeated PrescriptionDispenseItemResult items = 6;
+  string failure_code = 7;
+  string failure_detail = 8;
+  string trace_id = 9;
+  google.protobuf.Timestamp occurred_at = 10;
+}

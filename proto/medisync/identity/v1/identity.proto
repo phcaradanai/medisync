@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+package medisync.identity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "medisync/common/v1/pagination.proto";
+
+option go_package = "github.com/adm-chura3inter/medisync/services/core/internal/gen/medisync/identity/v1;identityv1";
+
+// Roles unchanged — SYSADMIN is not a separate proto role value.
+// Instead, sysadmin status is determined by role=ADMIN + project_id empty.
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_ADMIN = 1;
+  ROLE_PHARMACIST = 2;
+  ROLE_NURSE = 3;
+  ROLE_REFILLER = 4;
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  string display_name = 3;
+  Role role = 4;
+  // Wards this user may act in. Empty for ROLE_ADMIN means all wards.
+  repeated string ward_ids = 5;
+  bool active = 6;
+  google.protobuf.Timestamp created_at = 7;
+  // Project this user belongs to. Empty for SYSADMIN (cross-project).
+  string project_id = 8;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  User user = 3;
+}
+
+// Authenticate by QR/NFC card scanned at the kiosk.
+message CardLoginRequest {
+  string card_token = 1;
+  // Optional project scope override for kiosk card login.
+  // When set, the user must belong to this project.
+  string project_id = 2;
+}
+
+message CardLoginResponse {
+  string access_token = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  User user = 3;
+  // Stable project-scoped code used to attribute cabinet transactions.
+  string employee_code = 4;
+}
+
+message WhoAmIRequest {}
+
+message WhoAmIResponse {
+  User user = 1;
+}
+
+service IdentityService {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc CardLogin(CardLoginRequest) returns (CardLoginResponse);
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
+
+  // User management — project-scoped.
+  // SYSADMIN sees all users; project ADMIN sees only their project's users.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc SetCardToken(SetCardTokenRequest) returns (SetCardTokenResponse);
+}
+
+message ListUsersRequest {
+  // Optional search query — matches username or display_name (partial).
+  string query = 1;
+  // Filter by project. SYSADMIN can omit to see all.
+  // Project admins get this auto-populated by interceptor.
+  string project_id = 2;
+  medisync.common.v1.CursorPagination pagination = 3;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string password = 2;
+  string display_name = 3;
+  Role role = 4;
+  repeated string ward_ids = 5;
+  // Project to assign user to. Required for non-SYSADMIN users.
+  string project_id = 6;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  // Fields to update. Empty string / zero value means no change.
+  optional string display_name = 2;
+  optional Role role = 3;
+  optional bool active = 4;
+  repeated string ward_ids = 5;
+  // Move user to another project (SYSADMIN only).
+  optional string project_id = 6;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}
+
+message SetCardTokenRequest {
+  string user_id = 1;
+  string card_token = 2;
+}
+
+message SetCardTokenResponse {
+  User user = 1;
+}
+
+// ── Project management (SYSADMIN-only) ─────────────────────────
+
+message Project {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  bool active = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  string code = 7;
+  string display_name = 8;
+}
+
+// ProjectService is a separate service in the same proto package.
+// Only SYSADMIN can call these RPCs.
+service ProjectService {
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+  rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+}
+
+message CreateProjectRequest {
+  string name = 1;
+  // Optional; auto-generated from slug if empty.
+  string slug = 2;
+<<<<<<< HEAD
+  // Project code — set by SYSADMIN, visible to all.
+  string code = 3;
+
+  string display_name = 4;
+=======
+  // Deprecated input. The server generates an immutable four-digit code.
+  string code = 3 [deprecated = true];
+>>>>>>> main
+}
+
+message CreateProjectResponse {
+  Project project = 1;
+}
+
+message UpdateProjectRequest {
+  string id = 1;
+  optional string name = 2;
+  optional bool active = 3;
+  optional string display_name = 4;
+}
+
+message UpdateProjectResponse {
+  Project project = 1;
+}
+
+message ListProjectsRequest {
+  // SYSADMIN sees all. Project admins get back only their own project
+  // (auto-filtered by interceptor).
+  medisync.common.v1.CursorPagination pagination = 1;
+}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
+}
+
+message GetProjectRequest {
+  // SYSADMIN: any project; others: only own project.
+  string id = 1;
+}
+
+message GetProjectResponse {
+  Project project = 1;
+}

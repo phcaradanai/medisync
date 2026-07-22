@@ -1,0 +1,28 @@
+{
+  "name": "medisync",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "proto": "buf lint && buf generate",
+    "dev": "npm run dev:admin & npm run dev:kiosk",
+    "dev:kiosk": "npm run dev -w apps/kiosk",
+    "dev:admin": "npm run dev -w apps/admin",
+    "dev:all": "npm run infra:up && npm run dev",
+    "build": "npm run build --workspaces --if-present",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d --wait",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "core": "cd services/core && go run ./cmd/core",
+    "core:dev": "docker compose -f infra/docker-compose.yml up -d --wait postgres nats && npm run dev & npm run core",
+    "feeder": "cd services/core && go run ./cmd/feeder",
+    "test:core": "cd services/core && go test ./...",
+    "test:unit": "cd services/core && go test -count=1 ./cmd/feeder/ ./internal/dispensing/ ./internal/platform/audit/ ./internal/platform/config/",
+    "test:integration": "cd services/core && go test -tags=integration -count=1 ./internal/dispensing/ ./internal/inventory/ ./internal/platform/audit/",
+    "test:all": "bash scripts/test/run_all.sh",
+    "seed:demo": "cd services/core && go run ./cmd/demoseed",
+    "seed:demo-reset": "cd services/core && go run ./cmd/demoseed --reset",
+    "smoke:demo": "bash scripts/test/smoke_demo_seed.sh"
+  }
+}

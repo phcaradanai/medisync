@@ -1,0 +1,135 @@
+name: adm-chura3inter-server
+
+# ================================================================
+# Tier 1 — Central Server (deploy on datacenter / cloud VM)
+#   postgres + nats + core + admin + kiosk + printops-api + sync-relay
+#
+# All secrets use ${VAR:-default} — override via .env for production.
+# For cross-tier connectivity, set VENDING_URL to the cabinet IP.
+# ================================================================
+
+services:
+  # postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-medisync}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medisync}
+  #     POSTGRES_DB: ${POSTGRES_DB:-medisync}
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #     - .//infra/init:/docker-entrypoint-initdb.d
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-medisync} -d ${POSTGRES_DB:-medisync}"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 10
+  #   restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8222/healthz | grep -q ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ── MediSync Backend ──────────────────────────────────────────
+
+  core:
+    build:
+      context: .//services/core
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://medisync:medisync@postgres:5432/medisync?sslmode=disable}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      JWT_SECRET: ${JWT_SECRET:-medisync-dev-secret-change-in-production}
+      JWT_EXPIRY_SECONDS: ${JWT_EXPIRY_SECONDS:-3600}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-medisync-local-admin-2026}
+      CARD_TOKEN_HMAC_KEY: ${CARD_TOKEN_HMAC_KEY:-medisync-dev-card-hmac-change-in-prod}
+      HTTP_ADDR: :8080
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      STARTUP_TIMEOUT_SECONDS: "60"
+      PRINT_OPS_URL: http://printops-api:3001
+      PRINT_OPS_API_KEY: ${PRINT_OPS_API_KEY:-printops-dev-apikey-2026}
+      PRINT_OPS_FAKE: "false"
+      VENDING_URL: ${VENDING_URL:-http://localhost:3303}
+      VENDING_API_BEARER_TOKEN: ${VENDING_API_BEARER_TOKEN:-dev-bearer-token}
+      FULFILLMENT_FAKE: "false"
+      VENDING_FAKE: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      # postgres:
+        # condition: service_healthy
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # admin:
+  #   build:
+  #     context: ./
+  #     dockerfile: apps/admin/Dockerfile
+  #   ports:
+  #     - "5176:80"
+  #   depends_on:
+  #     - core
+  #   restart: unless-stopped
+
+  # kiosk:
+  #   build:
+  #     context: ./
+  #     dockerfile: apps/kiosk/Dockerfile
+  #   ports:
+  #     - "5175:80"
+  #   depends_on:
+  #     - core
+  #   restart: unless-stopped
+
+  # ── PrintOps API (central print gateway) ─────────────────────
+
+  # printops-api:
+  #   build:
+  #     context: ./print_ops
+  #     dockerfile: infra/docker/Dockerfile.api
+  #   environment:
+  #     PORT: "3001"
+  #     JWT_SECRET: ${PRINTOPS_JWT_SECRET:-change-me-in-production}
+  #     API_KEY: ${PRINT_OPS_API_KEY:-printops-dev-apikey-2026}
+  #     NODE_ENV: production
+  #   ports:
+  #     - "3001:3001"
+  #   restart: unless-stopped
+
+  # ── Sync Relay (bridges print results back to mediSync) ──────
+
+  # sync-relay:
+  #   build:
+  #     context: ./services/sync-relay
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     NATS_URL: ${NATS_URL:-nats://nats:4222}
+  #     PRINTOPS_URL: http://printops-api:3001
+  #     PRINTOPS_API_KEY: ${PRINT_OPS_API_KEY:-printops-dev-apikey-2026}
+  #     POLL_INTERVAL_SECONDS: "5"
+  #     CURSOR_DB_PATH: /data/sync-relay.db
+  #     LOG_LEVEL: ${LOG_LEVEL:-info}
+  #   volumes:
+  #     - sync-relay-data:/data
+  #   depends_on:
+  #     - core
+  #     - printops-api
+  #   restart: unless-stopped
+
+volumes:
+  # postgres-data:
+  nats-data:
+  # sync-relay-data:

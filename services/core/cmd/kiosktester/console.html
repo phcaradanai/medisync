@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kiosk Flow Tester</title>
+<style>
+  :root {
+    --ink: #1e293b; --muted: #64748b; --line: #e6e9f0; --surface: #fff;
+    --bg: #f3f4fb; --brand: linear-gradient(135deg, #3b82f6, #7c5cff);
+    --ok: #22b95a; --ok-bg: #eafaf0; --err: #ef4444; --err-bg: #fdecec;
+    --busy: #2563eb; --warn: #f59e0b; --warn-bg: #fef3c7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: system-ui, "Noto Sans Thai", sans-serif; line-height: 1.5;
+    padding: 24px; max-width: 1080px; margin: 0 auto;
+  }
+  h1 { font-size: 1.5rem; margin: 0; }
+  .sub { color: var(--muted); font-size: .9rem; margin: 2px 0 0; }
+  .brandbar {
+    display: flex; align-items: center; gap: 14px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; margin-bottom: 18px;
+  }
+  .logo {
+    font-size: 1.8rem; font-weight: 800; letter-spacing: .04em;
+    background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 18px;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  label { display: block; font-size: .8rem; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
+  input, select {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+    font-size: .95rem; font-family: inherit; color: var(--ink); background: var(--surface);
+  }
+  input:focus, select:focus { outline: none; border-color: var(--busy); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  button {
+    border: none; border-radius: 11px; padding: 11px 16px; font-weight: 800; font-size: .95rem;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-ghost { background: #f1f5f9; color: var(--ink); border: 1px solid var(--line); }
+  .btn-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid #fcd34d; }
+  .btn-ok { background: var(--ok-bg); color: var(--ok); border: 1px solid #86efac; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .hint { font-size: .75rem; color: var(--muted); margin-top: 6px; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 800; font-size: .85rem; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.err { background: var(--err-bg); color: var(--err); }
+  .badge.busy { background: #e0edff; color: var(--busy); }
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 14px;
+    font-size: .82rem; white-space: pre-wrap; word-break: break-word; margin: 12px 0 0;
+    min-height: 80px; max-height: 300px; overflow: auto;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .85rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 700; }
+  tr.pick { cursor: pointer; }
+  tr.pick:hover { background: #f1f5f9; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .idpill {
+    font-family: ui-monospace, monospace; background: #eef2ff; border: 1px solid #d9e0ff;
+    border-radius: 8px; padding: 4px 8px; display: inline-block; margin-top: 8px; cursor: pointer;
+  }
+
+  /* Flow pipeline */
+  .pipeline { display: flex; align-items: center; gap: 4px; margin: 6px 0; flex-wrap: wrap; }
+  .step {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px;
+    font-size: .8rem; font-weight: 700; background: #f1f5f9; color: var(--muted);
+    border: 1px solid var(--line); transition: all .3s;
+  }
+  .step.active { background: #e0edff; color: var(--busy); border-color: var(--busy); }
+  .step.done { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+  .step.fail { background: var(--err-bg); color: var(--err); border-color: var(--err); }
+  .arrow { color: var(--muted); font-size: .9rem; }
+
+  /* Role badge */
+  .role-tag {
+    display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .75rem;
+    font-weight: 800; margin-left: 8px;
+  }
+  .role-tag.pharm { background: #e0edff; color: #2563eb; }
+  .role-tag.nurse { background: #f0fdf4; color: #16a34a; }
+  .role-tag.refill { background: var(--warn-bg); color: var(--warn); }
+
+  /* State badges for table */
+  .st { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: .75rem; font-weight: 700; }
+  .st.received { background: #f1f5f9; color: var(--muted); }
+  .st.ready { background: #e0edff; color: var(--busy); }
+  .st dispensing { background: var(--warn-bg); color: var(--warn); }
+  .st.dispensed { background: var(--ok-bg); color: var(--ok); }
+  .st.failed { background: var(--err-bg); color: var(--err); }
+</style>
+</head>
+<body>
+  <div class="brandbar">
+    <span class="logo">ADM</span>
+    <div>
+      <h1>Kiosk Flow Tester</h1>
+      <p class="sub">จำลองสแกน sticker → สแกนบัตร → ดูสถานะ — กดแยกทีละ step หรือรัน flow รวม</p>
+    </div>
+  </div>
+
+  <!-- Flow pipeline -->
+  <div class="card">
+    <h2>Flow Pipeline</h2>
+    <div class="pipeline" id="pipeline">
+      <span class="step" id="st-create">① สร้าง sticker</span>
+      <span class="arrow">→</span>
+      <span class="step" id="st-received">② รับเข้าระบบ</span>
+      <span class="arrow">→</span>
+      <span class="step" id="st-ready">③ พร้อมจ่าย</span>
+      <span class="arrow">→</span>
+      <span class="step" id="st-scan">④ สแกนบัตร</span>
+      <span class="arrow">→</span>
+      <span class="step" id="st-dispensing">⑤ กำลังจ่าย</span>
+      <span class="arrow">→</span>
+      <span class="step" id="st-done">⑥ จ่ายเสร็จ</span>
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- Left: form + actions -->
+    <div class="card">
+      <h2>ตั้งค่ารายการ</h2>
+      <div class="row">
+        <div>
+          <label>Kiosk code (ปลายทาง)</label>
+          <input id="cabinet" value="00010001" inputmode="numeric" maxlength="8" />
+        </div>
+        <div>
+          <label>Ward</label>
+          <input id="ward" value="WARD-3A" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>HN</label>
+          <input id="hn" value="HN900001" />
+        </div>
+        <div>
+          <label>ชื่อผู้ป่วย</label>
+          <input id="patient" value="ผู้ป่วยทดสอบ Kiosk" />
+        </div>
+      </div>
+      <label>ยา (เว้นว่าง = auto จากตู้) — CODE:จำนวน, คั่นด้วย ,</label>
+      <input id="drugs" placeholder="DEMO-PARA500:2, DEMO-AMOX500:3" />
+      <div class="row3">
+        <div>
+          <label>จำนวนยา auto</label>
+          <input id="items" type="number" value="2" min="1" />
+        </div>
+        <div>
+          <label>Prescription ID</label>
+          <input id="pid" placeholder="เว้นว่าง = ใหม่" />
+        </div>
+        <div>
+          <label>Internal ID (poll)</label>
+          <input id="iid" placeholder="สำหรับ poll" />
+        </div>
+      </div>
+
+      <h2 style="margin-top: 16px;">จำลองสแกนบัตรผู้ใช้ <span id="roleTag"></span></h2>
+      <div class="row">
+        <div>
+          <label>บทบาท (Role)</label>
+          <select id="role" onchange="onRoleChange()">
+            <option value="pharmacist">เภสัชกร (PHARMACIST) — เบิกยา</option>
+            <option value="nurse">พยาบาล (NURSE) — เบิกยา</option>
+            <option value="refiller">เจ้าหน้าที่เติมยา (REFILLER)</option>
+            <option value="admin">ผู้ดูแลระบบ (ADMIN)</option>
+          </select>
+        </div>
+        <div>
+          <label>Username (override)</label>
+          <input id="staffUser" placeholder="auto จาก role" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-ghost" onclick="loadSlots()">🔄 โหลดยาในตู้</button>
+        <button class="btn-ghost" onclick="loadPrescriptions()">📋 ดูรายการทั้งหมด</button>
+        <button class="btn-ghost" onclick="setupCards()">🔐 ลงทะเบียนบัตร</button>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick="run('create')">① สร้าง sticker</button>
+        <button class="btn-warn" onclick="run('confirm')">④ สแกนบัตร + Dispense</button>
+        <button class="btn-ok" onclick="run('poll')">🔄 Poll สถานะ</button>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick="run('flow')">▶ รัน E2E flow รวม</button>
+      </div>
+      <p class="hint">
+        ① ส่ง NATS JetStream → ④ สแกนบัตร+Dispense → 🔄 poll จนจบ<br>
+        หรือกด ▶ flow รวมทั้งหมด
+      </p>
+
+      <h2 style="margin-top: 16px;">🎯 Kiosk UI Integration <span id="kioskStatus"><span class="badge busy">กำลังตรวจ…</span></span></h2>
+      <p class="hint">คำสั่งจะส่งเฉพาะ Kiosk UI ที่ login ด้วย code เดียวกับช่อง Kiosk code เท่านั้น</p>
+      <div class="actions">
+        <button class="btn-ghost" onclick="openKiosk()">🖥️ เปิด Kiosk UI (ทางลัด)</button>
+        <button class="btn-warn" onclick="injectSticker()">📡 ส่ง sticker เข้า Kiosk</button>
+        <button class="btn-warn" onclick="injectCard()">📡 ส่งบัตรเข้า Kiosk</button>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick="fullFlow()">▶ สแกน sticker → สแกนบัตร (Kiosk UI)</button>
+      </div>
+      <p class="hint">
+        กด 🔐 ลงทะเบียนบัตรก่อนครั้งแรก → เปิดหรือ reload Kiosk ที่ URL ปกติ → กด ▶ สแกน<br>
+        ไม่จำเป็นต้องเปิด Kiosk ด้วยปุ่มในหน้านี้
+      </p>
+
+      <div id="slots"></div>
+      <div id="prescriptions"></div>
+    </div>
+
+    <!-- Right: result -->
+    <div class="card">
+      <h2>ผลลัพธ์ <span id="badge"></span></h2>
+      <div id="idout"></div>
+      <pre id="log">พร้อมทำงาน กดปุ่มด้านซ้ายเพื่อเริ่ม…</pre>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let lastInternalId = "";
+
+  function body() {
+    const role = $("role").value;
+    return {
+      cabinet: $("cabinet").value.trim(),
+      ward: $("ward").value.trim(),
+      hn: $("hn").value.trim(),
+      patient: $("patient").value.trim(),
+      drugs: $("drugs").value.trim(),
+      items: parseInt($("items").value, 10) || 2,
+      id: $("pid").value.trim(),
+      source: "kiosktester",
+      staff: $("staffUser").value.trim() || role,
+      staffPass: "",
+      role: "auto",
+    };
+  }
+
+  function onRoleChange() {
+    const role = $("role").value;
+    const tags = {
+      pharmacist: '<span class="role-tag pharm">เบิกยา</span>',
+      nurse:      '<span class="role-tag nurse">เบิกยา</span>',
+      refiller:   '<span class="role-tag refill">เติมยาในตู้</span>',
+      admin:      '<span class="role-tag pharm">Admin</span>',
+    };
+    $("roleTag").innerHTML = tags[role] || "";
+    $("staffUser").placeholder = role;
+  }
+  onRoleChange();
+
+  function setBadge(kind, text) {
+    $("badge").innerHTML = text ? `<span class="badge ${kind}">${text}</span>` : "";
+  }
+
+  function resetPipeline() {
+    ["st-create","st-received","st-ready","st-scan","st-dispensing","st-done"].forEach(id => {
+      $(id).className = "step";
+    });
+  }
+  function setStep(id, state) { $(id).className = "step " + state; }
+
+  function updatePipelineFromLog(logLines) {
+    const text = logLines.join("\n");
+    if (text.includes("สร้างรายการเบิกยา")) setStep("st-create", "done");
+    if (text.includes("รับเข้าคิว") || text.includes("state=RECEIVED") || text.includes("state=READY")) {
+      setStep("st-received", "done");
+      setStep("st-ready", "done");
+    }
+    if (text.includes("จำลองสแกนบัตร")) setStep("st-scan", "done");
+    if (text.includes("state=DISPENSING")) setStep("st-dispensing", "active");
+    if (text.includes("จ่ายยาสำเร็จ")) {
+      setStep("st-dispensing", "done");
+      setStep("st-done", "done");
+    }
+    if (text.includes("❌") || text.includes("FAILED")) {
+      ["st-create","st-received","st-ready","st-scan","st-dispensing","st-done"].forEach(id => {
+        if ($(id).className === "step active") $(id).className = "step fail";
+      });
+    }
+  }
+
+  async function run(mode) {
+    setBadge("busy", "กำลังทำงาน…");
+    $("log").textContent = "…";
+    $("idout").innerHTML = "";
+    if (mode !== "poll") resetPipeline();
+    if (mode === "create" || mode === "flow") setStep("st-create", "active");
+    if (mode === "confirm") setStep("st-scan", "active");
+    if (mode === "poll") setStep("st-dispensing", "active");
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    try {
+      // For poll mode, use internal ID
+      const payload = { mode, ...body() };
+      if (mode === "poll") {
+        payload.id = $("iid").value.trim() || lastInternalId;
+        if (!payload.id) { throw new Error("ต้องมี Internal ID สำหรับ poll"); }
+      }
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      const logs = data.log || [];
+      $("log").textContent = logs.join("\n") || data.error || "(no output)";
+      updatePipelineFromLog(logs);
+      if (data.id) {
+        if (mode === "create" || mode === "flow" || mode === "confirm") {
+          $("pid").value = data.id;
+        }
+        if (mode === "confirm" || mode === "flow" || mode === "poll") {
+          lastInternalId = data.id;
+          $("iid").value = data.id;
+        }
+        $("idout").innerHTML = `<span class="idpill" title="คลิกเพื่อคัดลอก" onclick="copyId('${data.id}')">🏷️ ${data.id}</span>`;
+      }
+      if (data.state === "DISPENSED") setBadge("ok", "✅ DISPENSED");
+      else if (!data.ok) setBadge("err", "❌ " + (data.state || "ERROR"));
+      else setBadge("ok", data.state || "OK");
+    } catch (e) {
+      $("log").textContent = "เชื่อมต่อ tester ไม่ได้: " + e;
+      setBadge("err", "ERROR");
+    } finally {
+      document.querySelectorAll("button").forEach(b => b.disabled = false);
+    }
+  }
+
+  async function loadSlots() {
+    $("slots").innerHTML = "<p class='hint'>กำลังโหลด…</p>";
+    try {
+      const res = await fetch("/api/slots?cabinet=" + encodeURIComponent($("cabinet").value.trim()));
+      const data = await res.json();
+      if (data.error) { $("slots").innerHTML = "<p class='hint'>ผิดพลาด: " + data.error + "</p>"; return; }
+      const rows = (data.slots || []).filter(s => s.drugCode).map(s => {
+        const low = s.quantity <= 0 ? "var(--err)" : "var(--ok)";
+        return `<tr class="pick" onclick="addDrug('${s.drugCode}')">
+          <td><span class="dot" style="background:${low}"></span>${s.code}</td>
+          <td>${s.drugName || ""}</td>
+          <td><code>${s.drugCode}</code></td>
+          <td>${s.quantity}/${s.capacity}</td></tr>`;
+      }).join("");
+      $("slots").innerHTML = rows
+        ? `<table><thead><tr><th>ช่อง</th><th>ยา</th><th>รหัส</th><th>คงเหลือ</th></tr></thead><tbody>${rows}</tbody></table>
+           <p class="hint">คลิกแถวเพื่อเพิ่มยาลงช่อง "ยา"</p>`
+        : "<p class='hint'>ไม่พบยาในตู้ (seed demo ก่อน)</p>";
+    } catch (e) {
+      $("slots").innerHTML = "<p class='hint'>โหลดไม่ได้: " + e + "</p>";
+    }
+  }
+
+  async function loadPrescriptions() {
+    $("prescriptions").innerHTML = "<p class='hint'>กำลังโหลด…</p>";
+    try {
+      const ward = $("ward").value.trim();
+      const res = await fetch("/api/prescriptions?ward=" + encodeURIComponent(ward));
+      const data = await res.json();
+      if (data.error) { $("prescriptions").innerHTML = "<p class='hint'>ผิดพลาด: " + data.error + "</p>"; return; }
+      const rows = (data.prescriptions || []).map(p => {
+        const st = shortState(p.state);
+        const cls = st.toLowerCase();
+        return `<tr class="pick" onclick="pickPres('${p.prescriptionId || ""}','${p.id || ""}')">
+          <td><span class="st ${cls}">${st}</span></td>
+          <td><code>${p.prescriptionId || ""}</code></td>
+          <td>${p.patientName || ""}</td>
+          <td>${p.wardId || ""}</td></tr>`;
+      }).join("");
+      $("prescriptions").innerHTML = rows
+        ? `<table><thead><tr><th>สถานะ</th><th>Prescription ID</th><th>ผู้ป่วย</th><th>Ward</th></tr></thead><tbody>${rows}</tbody></table>
+           <p class="hint">คลิกแถวเพื่อเลือก ID</p>`
+        : "<p class='hint'>ไม่มีรายการ</p>";
+    } catch (e) {
+      $("prescriptions").innerHTML = "<p class='hint'>โหลดไม่ได้: " + e + "</p>";
+    }
+  }
+
+  function shortState(s) { return (s || "").replace("PRESCRIPTION_STATE_", ""); }
+
+  function pickPres(presId, internalId) {
+    if (presId) $("pid").value = presId;
+    if (internalId) { $("iid").value = internalId; lastInternalId = internalId; }
+  }
+
+  function addDrug(code) {
+    const cur = $("drugs").value.trim();
+    const parts = cur ? cur.split(",").map(s => s.trim()).filter(Boolean) : [];
+    if (parts.some(p => p.split(":")[0].trim() === code)) return;
+    parts.push(code + ":1");
+    $("drugs").value = parts.join(", ");
+  }
+
+  function copyId(id) { navigator.clipboard && navigator.clipboard.writeText(id); }
+
+  // ── Kiosk UI integration (server-side code-targeted channel) ──────
+  const KIOSK_URL = "__KIOSK_URL__";
+
+  async function refreshKioskStatus() {
+    try {
+      const kioskCode = $("cabinet").value.trim();
+      const res = await fetch("/api/kiosk-status?kioskCode=" + encodeURIComponent(kioskCode));
+      const data = await res.json();
+      const count = Number(data.connected) || 0;
+      $("kioskStatus").innerHTML = count > 0
+        ? `<span class="badge ok">เชื่อมต่อ ${count} หน้า</span>`
+        : '<span class="badge err">ยังไม่เชื่อมต่อ</span>';
+    } catch {
+      $("kioskStatus").innerHTML = '<span class="badge err">ตรวจไม่ได้</span>';
+    }
+  }
+
+  refreshKioskStatus();
+  window.setInterval(refreshKioskStatus, 3000);
+
+  function openKiosk() {
+    const kioskWin = window.open(KIOSK_URL, "medisync-kiosk", "width=1200,height=800");
+    if (!kioskWin) { appendLog("⚠️ ไม่สามารถเปิดหน้าต่าง Kiosk ได้ (popup blocked?)"); return; }
+    appendLog("🖥️ เปิด Kiosk UI ที่ " + KIOSK_URL);
+    appendLog("   หาก Kiosk ยังไม่ login ให้ login ด้วย " + $("cabinet").value.trim() + " / 123456 ก่อน");
+  }
+
+  async function sendKioskCommand(command, description) {
+    try {
+      const res = await fetch("/api/kiosk-command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kioskCode: $("cabinet").value.trim(), ...command }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      appendLog(`📡 ${description}`);
+      if (data.recipients > 0) {
+		appendLog(`   → ส่งถึงตู้ ${$("cabinet").value.trim()} จำนวน ${data.recipients} หน้าต่าง`);
+        refreshKioskStatus();
+        return true;
+      }
+      appendLog("⚠️ ยังไม่มี Kiosk UI เชื่อมต่อ — เปิด/reload Kiosk แล้วลองอีกครั้ง");
+      return false;
+    } catch (error) {
+      appendLog("❌ ส่งคำสั่งเข้า Kiosk ไม่ได้: " + error);
+      return false;
+    }
+  }
+
+  async function injectSticker() {
+    const code = $("pid").value.trim();
+    if (!code) { appendLog("⚠️ ต้องสร้าง sticker ก่อน (กด ① สร้าง sticker)"); return; }
+    await sendKioskCommand(
+      { type: "scan_sticker", code },
+      "ส่ง scan_sticker ไปตู้ " + $("cabinet").value.trim() + ": " + code,
+    );
+  }
+
+  async function injectCard() {
+    const role = $("role").value;
+    const cardToken = "card-" + role;
+    await sendKioskCommand(
+      { type: "scan_card", cardToken },
+      "ส่ง scan_card ไปตู้ " + $("cabinet").value.trim() + ": " + cardToken,
+    );
+  }
+
+  async function setupCards() {
+    appendLog("🔐 กำลังลงทะเบียนบัตร...");
+    try {
+      const res = await fetch("/api/setup-cards", { method: "POST" });
+      const data = await res.json();
+      (data.log || []).forEach(l => appendLog(l));
+      if (data.error) appendLog("❌ " + data.error);
+    } catch (e) { appendLog("❌ " + e); }
+  }
+
+  async function fullFlow() {
+    // Step 1: create sticker via backend (NATS JetStream)
+    appendLog("── Kiosk UI Full Flow ──");
+    const createRes = await apiRun("create");
+    if (!createRes || !createRes.ok) return;
+
+    // Wait for core to process the NATS event
+    appendLog("⏳ รอ 2s ให้ core ประมวลผล NATS event...");
+    await sleep(2000);
+
+    // Step 2: send the sticker only to the selected kiosk code.
+    const stickerDelivered = await sendKioskCommand(
+      { type: "scan_sticker", code: createRes.id },
+      "ส่ง scan_sticker ไปตู้ " + $("cabinet").value.trim() + ": " + createRes.id,
+    );
+    if (!stickerDelivered) return;
+    appendLog("   → Kiosk UI ควรแสดง popup ยา + ตำแหน่งในตู้");
+
+    // Wait for user to see the popup
+    await sleep(3000);
+
+    // Step 3: inject card scan
+    const role = $("role").value;
+    const cardToken = "card-" + role;
+    await sendKioskCommand(
+      { type: "scan_card", cardToken },
+      "ส่ง scan_card ไปตู้ " + $("cabinet").value.trim() + ": " + cardToken,
+    );
+    appendLog("   → Kiosk UI ควรยืนยันตัวตน + ส่ง Dispense + แสดงคิว");
+    appendLog("✅ ดูสถานะที่ Kiosk UI — ยาจะเข้าคิวและกำลังจ่าย");
+  }
+
+  async function apiRun(mode) {
+    setBadge("busy", "กำลังทำงาน…");
+    $("log").textContent = "…";
+    $("idout").innerHTML = "";
+    if (mode !== "poll") resetPipeline();
+    if (mode === "create" || mode === "flow") setStep("st-create", "active");
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ...body() }),
+      });
+      const data = await res.json();
+      const logs = data.log || [];
+      $("log").textContent = logs.join("\n") || data.error || "(no output)";
+      updatePipelineFromLog(logs);
+      if (data.id) {
+        $("pid").value = data.id;
+        $("idout").innerHTML = `<span class="idpill" onclick="copyId('${data.id}')">🏷️ ${data.id}</span>`;
+      }
+      if (data.state === "DISPENSED") setBadge("ok", "✅ DISPENSED");
+      else if (!data.ok) setBadge("err", "❌ " + (data.state || "ERROR"));
+      else setBadge("ok", data.state || "OK");
+      return data;
+    } catch (e) {
+      $("log").textContent = "เชื่อมต่อ tester ไม่ได้: " + e;
+      setBadge("err", "ERROR");
+      return null;
+    } finally {
+      document.querySelectorAll("button").forEach(b => b.disabled = false);
+    }
+  }
+
+  function appendLog(msg) {
+    const cur = $("log").textContent;
+    $("log").textContent = (cur === "พร้อมทำงาน กดปุ่มด้านซ้ายเพื่อเริ่ม…" ? "" : cur + "\n") + msg;
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
