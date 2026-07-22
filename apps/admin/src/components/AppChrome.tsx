@@ -20,7 +20,6 @@ const SECTIONS: Section[] = [
   
   //ปิดไว้ก่อน
   // { path: "/inventory", title: "คลังยา · ดูอย่างเดียว", icon: Icon.inventory },
-  { path: "/inventory", title: "คลังยา · ดูอย่างเดียว", icon: Icon.inventory },
   { path: "/dispense-transactions", title: "รายงาน · Dispense Transactions", icon: Icon.clock },
 ];
 

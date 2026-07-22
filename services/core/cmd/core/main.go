@@ -238,34 +238,11 @@ func run() (runErr error) {
 			status["database"], status["nats"])
 	})
 
-<<<<<<< HEAD
-	// ── Audit ────────────────────────────────────────────────────────
+	// ── Audit (Connect-RPC) ─────────────────────────────────────────
+	// Connect-RPC handler used by the admin frontend (AuditLogPage).
 	auditServer := audit.NewAuditServer(pool)
 	auditPath, auditHandler := auditv1connect.NewAuditServiceHandler(auditServer, rpcOptions...)
 	mux.Handle(auditPath, auditHandler)
-=======
-	// Audit log endpoint — paginated read access to audit trail.
-	mux.HandleFunc("/audit", func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query()
-		projectID := q.Get("project_id")
-		pageSize := int32(50)
-		if ps := q.Get("page_size"); ps != "" {
-			fmt.Sscanf(ps, "%d", &pageSize)
-		}
-		pageToken := q.Get("page_token")
-
-		entries, total, nextToken, err := audit.List(r.Context(), pool, projectID, pageSize, pageToken)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
-			"entries": entries, "total_count": total, "next_page_token": nextToken,
-		})
-	})
->>>>>>> main
 
 	// Outbox publisher: polls dispensing.outbox and publishes to NATS.
 	// Runs in its own goroutine; stopped before NATS drain on shutdown.

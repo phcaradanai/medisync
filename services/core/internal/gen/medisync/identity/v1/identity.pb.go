@@ -1590,20 +1590,12 @@ const file_medisync_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x12\n" +
 	"\x04code\x18\a \x01(\tR\x04code\x12!\n" +
-<<<<<<< HEAD
-	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"u\n" +
-	"\x14CreateProjectRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x12\n" +
-	"\x04code\x18\x03 \x01(\tR\x04code\x12!\n" +
-	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\"P\n" +
-=======
-	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"V\n" +
+	"\fdisplay_name\x18\b \x01(\tR\vdisplayName\"y\n" +
 	"\x14CreateProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x16\n" +
-	"\x04code\x18\x03 \x01(\tB\x02\x18\x01R\x04code\"P\n" +
->>>>>>> main
+	"\x04code\x18\x03 \x01(\tB\x02\x18\x01R\x04code\x12!\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\"P\n" +
 	"\x15CreateProjectResponse\x127\n" +
 	"\aproject\x18\x01 \x01(\v2\x1d.medisync.identity.v1.ProjectR\aproject\"\xa9\x01\n" +
 	"\x14UpdateProjectRequest\x12\x0e\n" +
