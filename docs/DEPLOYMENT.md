@@ -238,7 +238,7 @@ stream.
 Configure the cabinet stack with the same code used by the kiosk database row:
 
 ```bash
-KIOSK_CODE=00010001 \
+MEDISYNC_KIOSK_CODE=00010001 \
 MEDISYNC_NATS_URL=nats://<server-vpn-ip>:4222 \
 VENDING_API_BEARER_TOKEN=<shared-agent-token> \
 docker compose -f docker-compose.vending.yml up -d --force-recreate
