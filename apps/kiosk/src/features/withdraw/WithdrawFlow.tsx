@@ -20,6 +20,7 @@ import { InventoryService, ListSlotsRequestSchema, type Slot } from "@medisync/p
 import { transport } from "../../transport.ts";
 import { useAuth } from "../../auth.tsx";
 import { parseKioskTesterCommand, subscribeToKioskTester, type KioskTesterCommand } from "../../kiosktesterBridge.ts";
+import { normalizeStickerScan, subscribeToCabinetScanner } from "../../cabinetScanner.ts";
 import ShelfGrid, { getSlotPosition } from "../catalog/ShelfGrid.tsx";
 import DispensingStatusModal from "../dispensing/DispensingStatusModal.tsx";
 import DispenseProcessingOverlay from "../dispensing/DispenseProcessingOverlay.tsx";
@@ -88,6 +89,8 @@ export default function WithdrawFlow() {
   const identityLock = useRef(false);
   const submitLock = useRef(false);
   const requestGeneration = useRef(0);
+  const workflowRef = useRef<ScannerState>(workflow);
+  workflowRef.current = workflow;
   const persistedQueue = useRef(new Map(loadQueueSummaries(kiosk.code).map((item) => [item.id, item])));
 
   useEffect(() => {
@@ -158,7 +161,7 @@ export default function WithdrawFlow() {
   }, [preparedTransaction, resetScanner]);
 
   const validateSticker = useCallback(async (raw: string) => {
-    const code = raw.trim(); if (!code || scanLock.current) return;
+    const code = normalizeStickerScan(raw); if (!code || scanLock.current) return;
     scanLock.current = true; setWorkflow("validating_sticker"); setMessage("");
     const duplicate = queue.find((item) => item.requestId === code || item.id === code);
     if (duplicate) { setWorkflow("scan_failed"); setMessage(`รายการนี้ถูกส่งเข้าคิวแล้ว · สถานะ ${duplicate.state}`); scanLock.current = false; return; }
@@ -262,12 +265,18 @@ export default function WithdrawFlow() {
       if (command) handleCommand(command);
     };
     const disconnectTester = subscribeToKioskTester(kiosk.code, handleCommand);
+    const disconnectCabinetScanner = subscribeToCabinetScanner(kiosk.code, kioskToken, (code) => {
+      if (!emergencyOpen && ["awaiting_scan", "scan_failed"].includes(workflowRef.current)) {
+        void validateSticker(code);
+      }
+    });
     window.addEventListener("message", onMessage);
     return () => {
       disconnectTester();
+      disconnectCabinetScanner();
       window.removeEventListener("message", onMessage);
     };
-  }, [emergencyOpen, kiosk.code, validateSticker, verifyIdentity]);
+  }, [emergencyOpen, kiosk.code, kioskToken, validateSticker, verifyIdentity]);
 
   const requestedSlotIds = useMemo(() => { if (!prescription) return []; const codes = new Set(prescription.items.map((item) => item.drugCode)); return slots.filter((slot) => codes.has(slot.drugCode)).map((slot) => slot.id); }, [prescription, slots]);
   // Keep terminal transactions in memory long enough for the completion

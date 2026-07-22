@@ -7,6 +7,8 @@ package vending
 
 import "context"
 
+import "net/http"
+
 // DispenseItem describes a single slot to dispense from.
 // layer, channelStart, channelEnd match the vending agent's internal addressing.
 type DispenseItem struct {
@@ -57,4 +59,10 @@ type Client interface {
 	// Returns the raw agent response. Callers interpret the Status field
 	// to determine success or failure.
 	Dispense(ctx context.Context, req DispenseRequest) (*DispenseResponse, error)
+}
+
+// ScannerEventSource is implemented by the real HTTP client. It is kept
+// separate from Client so fake dispensing tests do not need a serial stream.
+type ScannerEventSource interface {
+	OpenScannerEvents(context.Context) (*http.Response, error)
 }

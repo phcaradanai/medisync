@@ -25,7 +25,30 @@ Wire format: **protojson** of the messages in `proto/medisync/events/v1/events.p
 | `medisync.fulfillment.completed` | `FulfillmentCompleted` | core/vending | core/dispensing (future) | M3 |
 | `medisync.stock.changed` | `StockChanged` | core/inventory | admin app, audit | M2 |
 | `medisync.stock.low` | `StockLow` | core/inventory | admin app | M2 |
+| `medisync.scanner.read` | JSON scanner envelope | vending-3d-ctl-agent (one cabinet) | core/scanner → matching kiosk SSE | **live** |
 | `medisync.dlq.<original>` | raw bytes of the rejected message | any consumer | operators (manual) | **live (M1)** |
+
+## Physical scanner contract
+
+`medisync.scanner.read` is the single ingress for QR, barcode and NFC reads.
+The vending agent must send JSON with:
+
+- `eventId`: unique UUID used as the JetStream message id
+- `kioskCode`: immutable cabinet code (for example `00010001`), never a
+  database row id and never taken from browser input
+- `kind`/`scanType`: `QR`, `BARCODE` or `NFC`; `format` identifies the
+  concrete reader format (for example `qrcode_wny` or `mifare`)
+- `scanPurpose`: `STICKER`, `DRUG_BARCODE` or `USER_NFC`, so consumers can
+  distinguish a prescription sticker from a medicine barcode or staff/patient
+  NFC identity read
+- `value` and `parsed`: readable/converted values Core can continue with
+- `raw`: original `text`, byte array and uppercase `hex` representation
+- `scannedAt` and `source` (`channel`, serial port, baud rate, agent)
+
+Core validates the envelope, acknowledges it, and publishes it only to the
+SSE subscribers whose authenticated route contains the same `kioskCode`.
+Events are retained by the seven-day `MEDISYNC` stream for operational audit;
+they are not replayed into a later kiosk session.
 
 ## Contract for the external feeder team
 

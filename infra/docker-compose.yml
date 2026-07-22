@@ -48,7 +48,9 @@ services:
       PRINT_OPS_URL: http://print-ops:3000
       PRINT_OPS_API_KEY: ${PRINT_OPS_API_KEY:-printops-dev-apikey-2026}
       PRINT_OPS_FAKE: "false"
-      VENDING_ENDPOINTS_JSON: '{"00010001":"http://vending-00010001:3303"}'
+      # Route by immutable kiosk code. Override VENDING_00010001_URL when the
+      # agent is deployed on the cabinet PC instead of this Docker host.
+      VENDING_ENDPOINTS_JSON: '{"00010001":"${VENDING_00010001_URL:-http://vending-00010001:3303}"}'
       VENDING_API_BEARER_TOKEN: ${VENDING_API_BEARER_TOKEN:-dev-bearer-token}
       # Local development has no serial cabinet attached. Override to false
       # when the routed vending agent is connected to real hardware.
@@ -129,6 +131,13 @@ services:
       PORT: "3303"
       API_BEARER_TOKEN: ${VENDING_API_BEARER_TOKEN:-dev-bearer-token}
       API_BEARER_REQUIRED: "true"
+      VENDING_CODE: "00010001"
+      KIOSK_CODE: "00010001"
+      NATS_ENABLED: "true"
+      NATS_URL: nats://nats:4222
+      NATS_CLIENT_NAME: vending-00010001
+      NATS_SCANNER_SUBJECT: medisync.scanner.read
+      NATS_SCANNER_STREAM: MEDISYNC
     ports:
       - "3303:3303"
     volumes:

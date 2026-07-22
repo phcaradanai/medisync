@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	defaultTimeout    = 30 * time.Second
-	defaultDoorNo     = 1
+	defaultTimeout = 30 * time.Second
+	defaultDoorNo  = 1
 )
 
 // httpClient is the real vending-3d-ctl-agent HTTP client.
@@ -32,6 +32,30 @@ func NewClient(baseURL, apiKey string) *httpClient {
 			Timeout: defaultTimeout,
 		},
 	}
+}
+
+// OpenScannerEvents connects to the vending agent's physical QR/NFC reader
+// stream. It intentionally uses a separate HTTP client with no deadline: an
+// SSE connection remains open until the kiosk/browser disconnects.
+func (c *httpClient) OpenScannerEvents(ctx context.Context) (*http.Response, error) {
+	url := c.baseURL + "/api/v1/qr-nfc/events"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("vending scanner: build request: %w", err)
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("vending scanner: %w", err)
+	}
+	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		resp.Body.Close()
+		return nil, fmt.Errorf("vending scanner: status %d: %s", resp.StatusCode, string(body))
+	}
+	return resp, nil
 }
 
 // Health calls GET /api/v1/health and returns an error when the agent

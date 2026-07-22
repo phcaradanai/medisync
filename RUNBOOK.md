@@ -22,6 +22,74 @@
 - **Vending Agent** — external Node.js service controlling cabinet hardware
 - **PrintOps** — external sticker printing gateway
 
+### Physical sticker camera
+
+The cabinet's camera/QR reader is consumed by the Vending Agent's QR/NFC
+serial channel. On the deployed cabinet in this project it is `/dev/ttyS1` at
+`9600` baud. The browser never connects to that device directly. The agent
+publishes one canonical QR/barcode/NFC event to the Core JetStream subject
+`medisync.scanner.read`; the event contains the immutable `kioskCode`,
+`scanType` (`QR`, `BARCODE`, `NFC`), `scanPurpose` (`STICKER`,
+`DRUG_BARCODE`, `USER_NFC`), parsed value, and complete raw text/bytes/hex.
+Core's
+`GET /api/v1/kiosks/{kiosk_code}/scanner/events` endpoint then streams only the
+matching kiosk's events to its authenticated browser.
+
+```bash
+# Run on the cabinet PC (verify the device first)
+ls -l /dev/ttyS1
+docker compose -f docker-compose.cabinet.yml up -d --build vending
+docker compose -f docker-compose.cabinet.yml logs -f vending
+```
+
+Required routing/configuration:
+
+- `SERIAL_QR_NFC=/dev/ttyS1`
+- `SERIAL_QR_NFC_BAUD_RATE=9600`
+- `KIOSK_CODE=00010001` must be stable and unique for that cabinet.
+- `NATS_ENABLED=true` and `NATS_URL=nats://<core-host>:4222` must point to the
+  Core NATS listener. Use `NATS_SCANNER_SUBJECT=medisync.scanner.read` and
+  `NATS_SCANNER_STREAM=MEDISYNC`.
+- `VENDING_ENDPOINTS_JSON` still maps the immutable kiosk code (for example
+  `00010001`) to that agent endpoint for dispense commands; it is not the
+  scanner event transport.
+- Do not configure `/dev/ttyS1` as `SERIAL_COMPRESSOR` at the same time; one
+  serial device cannot be opened by both channels.
+
+When the agent is deployed on a separate hardware PC, Core only needs network
+access to that PC. Set, for example:
+
+```env
+VENDING_ENDPOINTS_JSON={"00010001":"http://10.0.0.25:3303"}
+VENDING_API_BEARER_TOKEN=<same-token-as-agent>
+FULFILLMENT_FAKE=false
+```
+
+On the cabinet PC, configure the agent with the real Core NATS address:
+
+```env
+KIOSK_CODE=00010001
+VENDING_CODE=00010001
+NATS_ENABLED=true
+NATS_URL=nats://<core-host>:4222
+NATS_SCANNER_SUBJECT=medisync.scanner.read
+NATS_SCANNER_STREAM=MEDISYNC
+SERIAL_QR_NFC=/dev/ttyS1
+SERIAL_QR_NFC_BAUD_RATE=9600
+```
+
+Verify the route from the Core host/container before opening the Kiosk:
+
+```bash
+curl -H "Authorization: Bearer <same-token-as-agent>" \
+  http://10.0.0.25:3303/api/v1/health
+curl -N -H "Authorization: Bearer <same-token-as-agent>" \
+  http://10.0.0.25:3303/api/v1/qr-nfc/events
+```
+
+The agent still publishes its existing MQTT reader event. The SSE stream is an
+additional Core-to-Kiosk path and does not broadcast a scan to other cabinets.
+
 ---
 
 ## Deployment

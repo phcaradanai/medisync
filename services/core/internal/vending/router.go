@@ -1,8 +1,10 @@
 package vending
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -64,6 +66,27 @@ func (r *StaticRouter) ClientFor(kioskCode string) (Client, error) {
 	client := NewClient(endpoint, r.apiKey)
 	r.clients[kioskCode] = client
 	return client, nil
+}
+
+// OpenScannerEvents opens the QR/NFC SSE stream for exactly one kiosk code.
+// The caller owns and must close the returned response body.
+func (r *StaticRouter) OpenScannerEvents(ctx context.Context, kioskCode string) (*http.Response, error) {
+	if !validKioskCode(kioskCode) {
+		return nil, fmt.Errorf("invalid kiosk code %q", kioskCode)
+	}
+	r.mu.Lock()
+	endpoint := strings.TrimSpace(r.endpoints[kioskCode])
+	apiKey := r.apiKey
+	r.mu.Unlock()
+	if endpoint == "" {
+		return nil, fmt.Errorf("no vending agent configured for kiosk %s", kioskCode)
+	}
+	return openScannerEvents(ctx, endpoint, apiKey)
+}
+
+func openScannerEvents(ctx context.Context, endpoint, apiKey string) (*http.Response, error) {
+	client := NewClient(endpoint, apiKey)
+	return client.OpenScannerEvents(ctx)
 }
 
 func validKioskCode(code string) bool {

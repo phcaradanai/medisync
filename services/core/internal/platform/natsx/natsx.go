@@ -32,6 +32,10 @@ const (
 	SubjectPrintCompleted        = "medisync.print.completed"
 	SubjectStockChanged          = "medisync.stock.changed"
 	SubjectStockLow              = "medisync.stock.low"
+	// SubjectScannerRead is the single ingress for QR, barcode and NFC reads
+	// emitted by each vending agent. The payload is JSON and retains raw bytes
+	// alongside its parsed/readable value.
+	SubjectScannerRead           = "medisync.scanner.read"
 	SubjectDLQPrefix             = "medisync.dlq."
 )
 

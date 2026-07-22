@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -36,6 +37,7 @@ import (
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/ratelimit"
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/tracing"
 	"github.com/adm-chura3inter/medisync/services/core/internal/printing"
+	"github.com/adm-chura3inter/medisync/services/core/internal/scanner"
 	"github.com/adm-chura3inter/medisync/services/core/internal/vending"
 	"github.com/adm-chura3inter/medisync/services/core/migrations"
 )
@@ -110,6 +112,14 @@ func run() (runErr error) {
 	log.Info("nats streams ready")
 
 	auditw := audit.NewWriter(pool)
+	scannerBroker := scanner.NewBroker()
+	scannerConsumer := scanner.NewConsumer(js, scannerBroker, log)
+	stopScannerConsumer, err := scannerConsumer.Start(startupCtx)
+	if err != nil {
+		return err
+	}
+	defer stopScannerConsumer()
+
 	consumer := dispensing.NewConsumer(js, dispensing.NewStore(pool), auditw, log)
 	stopConsumer, err := consumer.Start(startupCtx)
 	if err != nil {
@@ -311,6 +321,75 @@ func run() (runErr error) {
 		return err
 	}
 	defer stopVendingConsumer()
+
+	// Physical scanner stream. Vending agents publish QR/barcode/NFC frames to
+	// Core's JetStream subject; this endpoint only fans out events for the
+	// authenticated kiosk code in the URL.
+	mux.HandleFunc("/api/v1/kiosks/", func(w http.ResponseWriter, r *http.Request) {
+		const prefix = "/api/v1/kiosks/"
+		tail := strings.TrimPrefix(r.URL.Path, prefix)
+		parts := strings.Split(strings.Trim(tail, "/"), "/")
+		if r.Method != http.MethodGet || len(parts) != 3 || parts[1] != "scanner" || parts[2] != "events" {
+			http.NotFound(w, r)
+			return
+		}
+		kioskCode := parts[0]
+		auth := strings.TrimSpace(r.Header.Get("Authorization"))
+		if !strings.HasPrefix(auth, "Bearer ") {
+			http.Error(w, "missing kiosk authorization", http.StatusUnauthorized)
+			return
+		}
+		claims, parseErr := jwtMgr.ParseKiosk(strings.TrimSpace(strings.TrimPrefix(auth, "Bearer ")))
+		if parseErr != nil || claims.Code != kioskCode {
+			http.Error(w, "kiosk authorization does not match route", http.StatusForbidden)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache, no-transform")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("X-Accel-Buffering", "no")
+		flusher, _ := w.(http.Flusher)
+		ready, _ := json.Marshal(map[string]string{"kiosk_code": kioskCode})
+		if _, err := fmt.Fprintf(w, "event: ready\ndata: %s\n\n", ready); err != nil {
+			return
+		}
+		if flusher != nil {
+			flusher.Flush()
+		}
+		events, unsubscribe := scannerBroker.Subscribe(r.Context(), kioskCode)
+		defer unsubscribe()
+		keepAlive := time.NewTicker(25 * time.Second)
+		defer keepAlive.Stop()
+		for {
+			select {
+			case event, ok := <-events:
+				if !ok {
+					return
+				}
+				data, marshalErr := json.Marshal(event)
+				if marshalErr != nil {
+					log.Warn("marshal kiosk scanner event failed", "kiosk_code", kioskCode, "error", marshalErr.Error())
+					continue
+				}
+				if _, writeErr := fmt.Fprintf(w, "event: scan\ndata: %s\n\n", data); writeErr != nil {
+					return
+				}
+				if flusher != nil {
+					flusher.Flush()
+				}
+			case <-keepAlive.C:
+				if _, writeErr := fmt.Fprint(w, ": keepalive\n\n"); writeErr != nil {
+					return
+				}
+				if flusher != nil {
+					flusher.Flush()
+				}
+			case <-r.Context().Done():
+				return
+			}
+		}
+	})
 
 	// ── HTTP server ──────────────────────────────────────────────────
 	srv := &http.Server{
