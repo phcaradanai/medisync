@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -16,7 +17,10 @@ import (
 	"github.com/adm-chura3inter/medisync/services/core/internal/platform/natsx"
 )
 
-const consumeTimeout = 30 * time.Second
+// The hardware call remains open while the pickup compartment waits for the
+// user. Keep the consumer context longer than the default vending HTTP client
+// timeout so a confirmed pickup can complete normally.
+const consumeTimeout = 4 * time.Minute
 const consumerDurable = "core-fulfillment"
 
 // Consumer subscribes to medisync.fulfillment.requested, calls the vending
@@ -27,6 +31,7 @@ type Consumer struct {
 	tracker TransactionTracker
 	audit   *audit.Writer
 	log     *slog.Logger
+	locker  *kioskLocker
 }
 
 type TransactionTracker interface {
@@ -37,16 +42,85 @@ type TransactionTracker interface {
 	RecordHardwareResult(ctx context.Context, dispenseID, kioskCode string, result *eventsv1.DispenseAllocationResult, responseJSON string) error
 }
 
+// orderAllocationsForDispense protects the physical sequence from database
+// insertion order. The lift must pick higher shelves first, then move down;
+// the vending agent performs the single delivery/pickup pass after this list.
+func orderAllocationsForDispense(allocations []*eventsv1.DispenseAllocation) []*eventsv1.DispenseAllocation {
+	ordered := append([]*eventsv1.DispenseAllocation(nil), allocations...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return ordered[i].GetHardwareLayer() > ordered[j].GetHardwareLayer()
+	})
+	return ordered
+}
+
+// allocationResults maps one aggregate vending response back to the
+// allocations in the request. The agent echoes allocationId on item steps, so
+// a failure in the middle can still report completed lower-level work and
+// leave later allocations as not attempted.
+func allocationResults(allocations []*eventsv1.DispenseAllocation, response *DispenseResponse) (map[string]*eventsv1.DispenseAllocationResult, bool, string, string) {
+	results := make(map[string]*eventsv1.DispenseAllocationResult, len(allocations))
+	if response == nil {
+		for _, allocation := range allocations {
+			results[allocation.AllocationId] = &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: false, Detail: "empty hardware response"}
+		}
+		return results, true, "empty_hardware_response", "vending agent returned an empty response"
+	}
+
+	overallSuccess := response.OK == 1 && response.Data.Status == "success"
+	if overallSuccess {
+		for _, allocation := range allocations {
+			results[allocation.AllocationId] = &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: true, Detail: "success"}
+		}
+		return results, false, "", ""
+	}
+
+	firstFailedPhase := ""
+	firstFailedIndex := -1
+	taggedDispenseSteps := make(map[string]DispenseStep)
+	for index, step := range response.Data.Steps {
+		if step.Phase == "dispense" && step.AllocationID != "" {
+			taggedDispenseSteps[step.AllocationID] = step
+		}
+		if !step.Success && firstFailedIndex < 0 {
+			firstFailedIndex = index
+			firstFailedPhase = step.Phase
+		}
+	}
+
+	// A delivery/pickup failure happens after the tray has been assembled and
+	// therefore fails the aggregate transaction safely for every allocation.
+	deliveryFailed := firstFailedIndex >= 0 && firstFailedPhase != "lift" && firstFailedPhase != "dispense"
+	failureDetail := fmt.Sprintf("hardware status=%q", response.Data.Status)
+	if firstFailedPhase != "" {
+		failureDetail = "step " + firstFailedPhase + " failed"
+	}
+	for _, allocation := range allocations {
+		step, attempted := taggedDispenseSteps[allocation.AllocationId]
+		success := attempted && step.Success && !deliveryFailed
+		detail := failureDetail
+		if success {
+			detail = "success"
+		} else if deliveryFailed {
+			detail = failureDetail
+		} else if !attempted && firstFailedIndex >= 0 {
+			detail = "not attempted after prior hardware failure"
+		}
+		results[allocation.AllocationId] = &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: success, Detail: detail}
+	}
+	return results, true, "hardware_failed", failureDetail
+}
+
 // NewConsumer creates a fulfillment consumer.
 func NewConsumer(js jetstream.JetStream, client Client, aw *audit.Writer, log *slog.Logger) *Consumer {
 	return &Consumer{
 		js: js, router: singleClientRouter{client: client}, audit: aw,
-		log: log.With("component", "fulfillment.consumer"),
+		locker: newKioskLocker(),
+		log:    log.With("component", "fulfillment.consumer"),
 	}
 }
 
 func NewRoutedConsumer(js jetstream.JetStream, router Router, tracker TransactionTracker, aw *audit.Writer, log *slog.Logger) *Consumer {
-	return &Consumer{js: js, router: router, tracker: tracker, audit: aw, log: log.With("component", "fulfillment.consumer")}
+	return &Consumer{js: js, router: router, tracker: tracker, audit: aw, locker: newKioskLocker(), log: log.With("component", "fulfillment.consumer")}
 }
 
 // Start creates a durable JetStream consumer and begins processing.
@@ -55,8 +129,12 @@ func (c *Consumer) Start(ctx context.Context) (func(), error) {
 		Durable:       consumerDurable,
 		FilterSubject: natsx.SubjectFulfillmentRequested,
 		AckPolicy:     jetstream.AckExplicitPolicy,
-		MaxDeliver:    5,
-		BackOff:       []time.Duration{2 * time.Second, 5 * time.Second, 15 * time.Second, 30 * time.Second},
+		// A message stays in-flight while the cabinet waits for the user to
+		// remove the item. Keep JetStream from redelivering the same Sticker
+		// before the physical pickup confirmation has completed.
+		AckWait:    consumeTimeout + time.Minute,
+		MaxDeliver: 5,
+		BackOff:    []time.Duration{2 * time.Second, 5 * time.Second, 15 * time.Second, 30 * time.Second},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create consumer %s: %w", consumerDurable, err)
@@ -75,12 +153,9 @@ func (c *Consumer) Start(ctx context.Context) (func(), error) {
 }
 
 func (c *Consumer) handle(msg jetstream.Msg) {
-	ctx, cancel := context.WithTimeout(context.Background(), consumeTimeout)
-	defer cancel()
-
 	var ev eventsv1.FulfillmentRequested
 	if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(msg.Data(), &ev); err != nil {
-		c.reject(ctx, msg, fmt.Sprintf("malformed payload: %v", err))
+		c.reject(context.Background(), msg, fmt.Sprintf("malformed payload: %v", err))
 		return
 	}
 
@@ -90,7 +165,7 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 	kioskCode := ev.GetKioskCode()
 
 	if fulfillmentID == "" || prescriptionID == "" || kioskCode == "" || len(ev.Allocations) == 0 {
-		c.reject(ctx, msg, "fulfillment_id, prescription_id, kiosk_code, and allocations are required")
+		c.reject(context.Background(), msg, "fulfillment_id, prescription_id, kiosk_code, and allocations are required")
 		return
 	}
 
@@ -100,6 +175,15 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		"kiosk_code", kioskCode,
 		"trace_id", traceID,
 	)
+	if c.locker != nil {
+		unlock := c.locker.lock(kioskCode)
+		defer unlock()
+	}
+	// Start the per-request deadline after the kiosk lock is acquired. A
+	// Sticker waiting behind a previous pickup confirmation must still receive
+	// the full hardware timeout once its cabinet is available.
+	ctx, cancel := context.WithTimeout(context.Background(), consumeTimeout)
+	defer cancel()
 	recorded := make(map[string]*eventsv1.DispenseAllocationResult)
 	if c.tracker != nil {
 		status, err := c.tracker.TransactionExecutionStatus(ctx, fulfillmentID, kioskCode)
@@ -126,15 +210,15 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		recorded = loaded
 	}
 
-	needsHardware := false
-	for _, allocation := range ev.Allocations {
+	orderedAllocations := orderAllocationsForDispense(ev.Allocations)
+	pending := make([]*eventsv1.DispenseAllocation, 0, len(orderedAllocations))
+	for _, allocation := range orderedAllocations {
 		if recorded[allocation.AllocationId] == nil {
-			needsHardware = true
-			break
+			pending = append(pending, allocation)
 		}
 	}
 	var client Client
-	if needsHardware {
+	if len(pending) > 0 {
 		var err error
 		client, err = c.router.ClientFor(kioskCode)
 		if err != nil {
@@ -149,64 +233,97 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		}
 	}
 
-	results := make([]*eventsv1.DispenseAllocationResult, 0, len(ev.Allocations))
-	hardwareResponses := make([]any, 0, len(ev.Allocations))
+	resultsByAllocation := make(map[string]*eventsv1.DispenseAllocationResult, len(orderedAllocations))
+	hardwareResponses := make([]any, 0, 1)
 	failed := false
 	failureReason, failureDetail := "", ""
-	for _, allocation := range ev.Allocations {
-		if prior := recorded[allocation.AllocationId]; prior != nil {
-			results = append(results, prior)
-			if !prior.Success {
-				failed, failureReason, failureDetail = true, "hardware_failed", prior.Detail
-			}
-			continue
-		}
-		if failed {
-			results = append(results, &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: false, Detail: "not attempted after prior hardware failure"})
-			continue
-		}
-		request := DispenseRequest{
-			Prescription: fmt.Sprintf("%s:%s", prescriptionID, allocation.AllocationId),
-			DoorNo:       int(allocation.DoorNo),
-			Items:        []DispenseItem{{Layer: int(allocation.HardwareLayer), ChannelStart: int(allocation.ChannelStart), ChannelEnd: int(allocation.ChannelEnd), Quantity: int(allocation.Quantity)}},
-		}
+	if len(pending) > 0 {
+		// Mark every allocation before the single physical command. If the
+		// process dies after the command, redelivery fails closed rather than
+		// dispensing an unrecorded item a second time.
 		if c.tracker != nil {
-			if err := c.tracker.MarkHardwareAttempt(ctx, fulfillmentID, kioskCode, allocation.AllocationId); err != nil {
-				c.log.Error("persist hardware attempt failed before command", "dispense_id", fulfillmentID, "allocation_id", allocation.AllocationId, "error", err.Error())
-				msg.Nak()
-				return
-			}
-		}
-		response, dispenseErr := client.Dispense(ctx, request)
-		if dispenseErr != nil {
-			failed, failureReason, failureDetail = true, "agent_error", dispenseErr.Error()
-			result := &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: false, Detail: dispenseErr.Error()}
-			results = append(results, result)
-			if err := c.recordHardwareResult(ctx, fulfillmentID, kioskCode, result, `{}`); err != nil {
-				msg.Nak()
-				return
-			}
-			continue
-		}
-		hardwareResponses = append(hardwareResponses, response)
-		allocationResponse, _ := json.Marshal(response)
-		success := response.OK == 1 && response.Data.Status == "success"
-		detail := response.Data.Status
-		if !success {
-			failed, failureReason, failureDetail = true, "hardware_failed", fmt.Sprintf("allocation %s status=%q", allocation.AllocationId, response.Data.Status)
-			for _, step := range response.Data.Steps {
-				if !step.Success {
-					failureReason = "hardware_step_" + step.Phase
-					detail = "step " + step.Phase + " failed"
-					break
+			for _, allocation := range pending {
+				if err := c.tracker.MarkHardwareAttempt(ctx, fulfillmentID, kioskCode, allocation.AllocationId); err != nil {
+					c.log.Error("persist hardware attempt failed before command", "dispense_id", fulfillmentID, "allocation_id", allocation.AllocationId, "error", err.Error())
+					msg.Nak()
+					return
 				}
 			}
 		}
-		result := &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: success, Detail: detail}
+
+		doorNo := int(pending[0].DoorNo)
+		for _, allocation := range pending[1:] {
+			if int(allocation.DoorNo) != doorNo {
+				c.publishFailureAndAck(ctx, msg, ev, "mixed_pickup_doors", "all allocations in one sticker must use the same pickup door", nil)
+				return
+			}
+		}
+		request := DispenseRequest{
+			Prescription: prescriptionID,
+			DoorNo:       doorNo,
+			Items:        make([]DispenseItem, 0, len(pending)),
+		}
+		for _, allocation := range pending {
+			request.Items = append(request.Items, DispenseItem{
+				AllocationID: allocation.AllocationId,
+				Layer:        int(allocation.HardwareLayer), ChannelStart: int(allocation.ChannelStart),
+				ChannelEnd: int(allocation.ChannelEnd), Quantity: int(allocation.Quantity),
+			})
+		}
+
+		response, dispenseErr := client.Dispense(ctx, request)
+		responseJSON := `{}`
+		if response != nil {
+			hardwareResponses = append(hardwareResponses, response)
+			payload, _ := json.Marshal(response)
+			responseJSON = string(payload)
+		}
+		if dispenseErr != nil && response != nil {
+			// A 502/504 response can still carry the failed step trail. Keep
+			// that detail and map any shelves completed before the failure.
+			resultsByAllocation, failed, failureReason, failureDetail = allocationResults(pending, response)
+			if failureDetail == "" {
+				failureDetail = dispenseErr.Error()
+			}
+		} else if dispenseErr != nil {
+			failed, failureReason, failureDetail = true, "agent_error", dispenseErr.Error()
+			for _, allocation := range pending {
+				resultsByAllocation[allocation.AllocationId] = &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: false, Detail: dispenseErr.Error()}
+			}
+		} else {
+			resultsByAllocation, failed, failureReason, failureDetail = allocationResults(pending, response)
+			if failed && failureReason == "" {
+				failureReason = "hardware_failed"
+			}
+		}
+		if c.tracker != nil {
+			for _, allocation := range pending {
+				if err := c.recordHardwareResult(ctx, fulfillmentID, kioskCode, resultsByAllocation[allocation.AllocationId], responseJSON); err != nil {
+					msg.Nak()
+					return
+				}
+			}
+		}
+	}
+
+	results := make([]*eventsv1.DispenseAllocationResult, 0, len(orderedAllocations))
+	for _, allocation := range orderedAllocations {
+		result := recorded[allocation.AllocationId]
+		if result == nil {
+			result = resultsByAllocation[allocation.AllocationId]
+		}
+		if result == nil {
+			result = &eventsv1.DispenseAllocationResult{AllocationId: allocation.AllocationId, Success: false, Detail: "allocation outcome unavailable"}
+		}
 		results = append(results, result)
-		if err := c.recordHardwareResult(ctx, fulfillmentID, kioskCode, result, string(allocationResponse)); err != nil {
-			msg.Nak()
-			return
+		if !result.Success {
+			failed = true
+			if failureReason == "" {
+				failureReason = "hardware_failed"
+			}
+			if failureDetail == "" {
+				failureDetail = result.Detail
+			}
 		}
 	}
 	responseJSON, _ := json.Marshal(hardwareResponses)

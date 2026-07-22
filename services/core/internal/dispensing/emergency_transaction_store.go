@@ -245,6 +245,7 @@ func emergencyRequestedEvent(record *EmergencyTransactionRecord) *eventsv1.Dispe
 			ChannelEnd: allocation.ChannelEnd,
 		})
 	}
+	event.Allocations = orderHardwareAllocations(event.Allocations)
 	return event
 }
 

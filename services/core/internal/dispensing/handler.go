@@ -847,6 +847,7 @@ func transactionRequestedEvent(record *TransactionRecord) *eventsv1.DispenseRequ
 		}
 	}
 	if len(event.Allocations) > 0 {
+		event.Allocations = orderHardwareAllocations(event.Allocations)
 		event.SlotCode = event.Allocations[0].SlotCode
 		for _, allocation := range event.Allocations {
 			event.Quantity += allocation.Quantity

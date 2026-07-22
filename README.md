@@ -4,13 +4,13 @@ Hospital medication dispensing platform: automated vending cabinet + kiosk UI + 
 
 ## What it does
 
-A prescription flows from the hospital → `rx.prescription.created` on JetStream. At one code-scoped kiosk, staff scan its Sticker, review reserved stock, authenticate, and queue that cabinet's `vending-3d-ctl-agent`. Hardware truth updates stock and audit, and `rx.prescription.dispense_result` returns the terminal result to the originating producer. Emergency withdrawals without a Prescription use a separate transaction flow.
+A prescription flows from the hospital → `rx.prescription.created` on JetStream. At one code-scoped kiosk, staff scan its Sticker, review reserved stock, authenticate, and queue that cabinet's `vending-3d-ctl-agent`. Each Sticker is one physical dispense: the cabinet waits for pickup-door sensor confirmation before the next kiosk queue item starts. Hardware truth updates stock and audit, and `rx.prescription.dispense_result` returns the terminal result to the originating producer. Emergency withdrawals without a Prescription use a separate transaction flow.
 
 ## Event Chain
 
 ```
 rx.prescription.created → READY → Dispense RPC → DISPENSING
-  → vending consumer → vending agent → dispense.completed
+  → vending consumer → vending agent → pickup-confirmed → dispense.completed
     → completion consumer → DISPENSED + stock.changed + print.requested
       → transactional outbox → rx.prescription.dispense_result
 ```

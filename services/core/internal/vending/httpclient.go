@@ -12,7 +12,10 @@ import (
 )
 
 const (
-	defaultTimeout = 30 * time.Second
+	// A dispense request includes the user's pickup confirmation and may
+	// remain open while the item is visible in the pickup compartment. Keep
+	// enough headroom for serial commands before the confirmation wait.
+	defaultTimeout = 5 * time.Minute
 	defaultDoorNo  = 1
 )
 
@@ -123,8 +126,13 @@ func (c *httpClient) Dispense(ctx context.Context, req DispenseRequest) (*Dispen
 	}
 
 	if resp.StatusCode >= 300 {
-		// 504 = hardware timeout, 502 = hardware/parse error.
-		// Both signal a failed dispense, not a transient client error.
+		// The agent returns the same structured envelope for 502/504 hardware
+		// failures. Preserve it so Core can map partial shelf execution back to
+		// individual allocations instead of losing the step trail.
+		var failedResponse DispenseResponse
+		if decodeErr := json.Unmarshal(respBody, &failedResponse); decodeErr == nil && failedResponse.Data.Status != "" {
+			return &failedResponse, fmt.Errorf("vending dispense: status %d: %s", resp.StatusCode, string(respBody))
+		}
 		return nil, fmt.Errorf("vending dispense: status %d: %s", resp.StatusCode, string(respBody))
 	}
 

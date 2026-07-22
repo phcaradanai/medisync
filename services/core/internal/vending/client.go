@@ -9,16 +9,19 @@ import "context"
 
 import "net/http"
 
-// DispenseItem describes a single slot to dispense from.
-// layer, channelStart, channelEnd match the vending agent's internal addressing.
+// DispenseItem describes a single slot to dispense from. Items in one request
+// are picked in order and delivered together; layer, channelStart, channelEnd
+// match the vending agent's internal addressing.
 type DispenseItem struct {
-	Layer        int `json:"layer"`
-	ChannelStart int `json:"channelStart"`
-	ChannelEnd   int `json:"channelEnd"`
-	Quantity     int `json:"qty"`
+	AllocationID string `json:"allocationId,omitempty"`
+	Layer        int    `json:"layer"`
+	ChannelStart int    `json:"channelStart"`
+	ChannelEnd   int    `json:"channelEnd"`
+	Quantity     int    `json:"qty"`
 }
 
-// DispenseRequest is the payload sent to POST /api/v1/vending/drugDispenser.
+// DispenseRequest is the aggregate payload sent to POST
+// /api/v1/vending/drugDispenser. All items must use the same pickup door.
 type DispenseRequest struct {
 	Prescription string         `json:"prescription"`
 	DoorNo       int            `json:"doorNo"`
@@ -27,9 +30,10 @@ type DispenseRequest struct {
 
 // DispenseStep records one phase of the hardware dispense sequence.
 type DispenseStep struct {
-	Phase   string `json:"phase"`
-	Layer   int    `json:"layer"`
-	Success bool   `json:"success"`
+	Phase        string `json:"phase"`
+	AllocationID string `json:"allocationId,omitempty"`
+	Layer        int    `json:"layer"`
+	Success      bool   `json:"success"`
 }
 
 // DispenseResponse is the high-level dispense result from the vending agent.

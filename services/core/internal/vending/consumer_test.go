@@ -109,6 +109,75 @@ func TestConsumer_Handle_Success(t *testing.T) {
 	}
 }
 
+func TestConsumer_Handle_BatchesAndOrdersShelvesDescending(t *testing.T) {
+	fakeClient := NewFakeClient()
+	c := &Consumer{
+		router: singleClientRouter{client: fakeClient},
+		log:    slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
+	}
+
+	event := &eventsv1.FulfillmentRequested{
+		FulfillmentId:  "ful-batch",
+		PrescriptionId: "RX-batch",
+		KioskCode:      "00010001",
+		Allocations: []*eventsv1.DispenseAllocation{
+			{AllocationId: "alloc-layer-1", DoorNo: 1, HardwareLayer: 1, ChannelStart: 1, ChannelEnd: 1, Quantity: 1},
+			{AllocationId: "alloc-layer-5", DoorNo: 1, HardwareLayer: 5, ChannelStart: 2, ChannelEnd: 2, Quantity: 1},
+			{AllocationId: "alloc-layer-3", DoorNo: 1, HardwareLayer: 3, ChannelStart: 3, ChannelEnd: 3, Quantity: 1},
+		},
+	}
+	payload, _ := protojson.Marshal(event)
+	c.handle(&fakeJetStreamMsg{subject: "medisync.fulfillment.requested", data: payload})
+
+	if fakeClient.DispenseCount() != 1 {
+		t.Fatalf("expected one aggregate dispense call, got %d", fakeClient.DispenseCount())
+	}
+	request := fakeClient.LastDispense()
+	if request.Prescription != "RX-batch" {
+		t.Fatalf("prescription = %q, want RX-batch", request.Prescription)
+	}
+	if len(request.Items) != 3 {
+		t.Fatalf("items = %d, want 3", len(request.Items))
+	}
+	wantLayers := []int{5, 3, 1}
+	for index, want := range wantLayers {
+		if request.Items[index].Layer != want {
+			t.Errorf("items[%d].layer = %d, want %d", index, request.Items[index].Layer, want)
+		}
+	}
+	if request.Items[0].AllocationID != "alloc-layer-5" {
+		t.Errorf("items[0].allocationId = %q, want alloc-layer-5", request.Items[0].AllocationID)
+	}
+}
+
+func TestAllocationResultsMapsPartialHardwareFailure(t *testing.T) {
+	allocations := []*eventsv1.DispenseAllocation{
+		{AllocationId: "a5", HardwareLayer: 5},
+		{AllocationId: "a3", HardwareLayer: 3},
+		{AllocationId: "a1", HardwareLayer: 1},
+	}
+	results, failed, reason, detail := allocationResults(allocations, &DispenseResponse{
+		OK: 0,
+		Data: DispenseData{
+			Status: "failed",
+			Steps: []DispenseStep{
+				{Phase: "dispense", AllocationID: "a5", Layer: 5, Success: true},
+				{Phase: "dispense", AllocationID: "a3", Layer: 3, Success: false},
+			},
+		},
+	})
+
+	if !failed || reason != "hardware_failed" || detail != "step dispense failed" {
+		t.Fatalf("failure = %v/%q/%q", failed, reason, detail)
+	}
+	if !results["a5"].Success || results["a3"].Success || results["a1"].Success {
+		t.Fatalf("unexpected allocation results: %+v", results)
+	}
+	if results["a1"].Detail != "not attempted after prior hardware failure" {
+		t.Errorf("a1 detail = %q", results["a1"].Detail)
+	}
+}
+
 func TestConsumer_Handle_MalformedMessage(t *testing.T) {
 	c := &Consumer{
 		router: singleClientRouter{client: NewFakeClient()},
