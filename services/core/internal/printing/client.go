@@ -7,16 +7,30 @@ package printing
 
 import "context"
 
-// PrintJobRequest is the payload sent to POST /api/v1/print-jobs.
+// PrintJobRequest is the payload sent to print_ops.
+//
+// The legacy transport posts the whole struct to /api/v1/print-jobs. The
+// dynamic transport carries CodeTemplate/CodeProfile in the URL path (HTTP) or
+// the envelope (NATS) and resolves the printer from the template+profile
+// binding, so PrinterCode becomes an optional override there.
 type PrintJobRequest struct {
-	RequestID       string            `json:"request_id"`
-	SourceSystem    string            `json:"source_system"`
-	SourceReference string            `json:"source_reference"`
-	PrinterCode     string            `json:"printer_code"`
-	TemplateCode    string            `json:"template_code"`
-	Payload         map[string]any    `json:"payload"`
-	Copies          int               `json:"copies"`
-	Metadata        map[string]any    `json:"metadata"`
+	RequestID       string         `json:"request_id"`
+	SourceSystem    string         `json:"source_system"`
+	SourceReference string         `json:"source_reference"`
+	PrinterCode     string         `json:"printer_code"`
+	TemplateCode    string         `json:"template_code"`
+	Payload         map[string]any `json:"payload"`
+	Copies          int            `json:"copies"`
+	Metadata        map[string]any `json:"metadata"`
+
+	// CodeTemplate and CodeProfile drive the dynamic endpoint
+	// /api/v1/printer/{{code_template}}/{{code_profile}}. When empty, CodeTemplate
+	// falls back to TemplateCode.
+	CodeTemplate string `json:"-"`
+	CodeProfile  string `json:"-"`
+	// Transport overrides the configured default per request: "http" or "nats".
+	// Empty uses the configured default.
+	Transport string `json:"-"`
 }
 
 // PrintJobResponse is the response from print_ops after job acceptance.

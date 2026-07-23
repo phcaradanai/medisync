@@ -60,6 +60,23 @@ type Config struct {
 	PrintOpsAPIKey string
 	// PrintOpsFake, when true, uses a no-op fake print_ops client (for dev/testing).
 	PrintOpsFake bool
+	// PrintOpsTransport selects the default transport used to reach print_ops:
+	// "http" (REST) or "nats" (JetStream publish). A per-request override on the
+	// PrintJobRequest.Transport field takes precedence. Default "http".
+	PrintOpsTransport string
+	// PrintOpsPathTemplate is the HTTP path template posted to print_ops. It may
+	// contain the placeholders {{code_template}} and {{code_profile}}, which are
+	// substituted per request (e.g. "/api/v1/printer/{{code_template}}/{{code_profile}}").
+	// When it contains no placeholder the legacy "/api/v1/print-jobs" body is sent.
+	// Default "/api/v1/print-jobs".
+	PrintOpsPathTemplate string
+	// PrintOpsNATSSubject is the JetStream subject the print-intake envelope is
+	// published to when the NATS transport is used. It must land in a stream the
+	// print_ops consumer reads. Default "medisync.print.intake".
+	PrintOpsNATSSubject string
+	// PrintOpsPaperProfile is the default paper-profile code (code_profile) used
+	// when a print request does not specify one. Default "sticker-profile".
+	PrintOpsPaperProfile string
 	// VendingURL is the base URL of the vending-3d-ctl-agent API.
 	VendingURL string
 	// VendingEndpointsJSON maps immutable kiosk codes to their dedicated agent
@@ -150,6 +167,14 @@ func Load() (Config, error) {
 
 	fakeStr := strings.ToLower(getenv("PRINT_OPS_FAKE", "false"))
 	cfg.PrintOpsFake = fakeStr == "true" || fakeStr == "1"
+
+	cfg.PrintOpsTransport = strings.ToLower(getenv("PRINT_OPS_TRANSPORT", "http"))
+	if cfg.PrintOpsTransport != "http" && cfg.PrintOpsTransport != "nats" {
+		return Config{}, fmt.Errorf("PRINT_OPS_TRANSPORT must be http or nats, got %q", cfg.PrintOpsTransport)
+	}
+	cfg.PrintOpsPathTemplate = getenv("PRINT_OPS_PATH_TEMPLATE", "/api/v1/print-jobs")
+	cfg.PrintOpsNATSSubject = getenv("PRINT_OPS_NATS_SUBJECT", "medisync.print.intake")
+	cfg.PrintOpsPaperProfile = getenv("PRINT_OPS_PAPER_PROFILE", "sticker-profile")
 
 	// ── Vending ──────────────────────────────────────────────────────
 	cfg.VendingURL = getenv("VENDING_URL", "http://localhost:3000")

@@ -213,19 +213,27 @@ func TestFactoryReturnsFakeWhenFake(t *testing.T) {
 	cfg := configForTests()
 	cfg.PrintOpsFake = true
 
-	client := NewClientFromConfig(cfg)
+	client := NewClientFromConfig(cfg, nil)
 	if _, ok := client.(*FakeClient); !ok {
 		t.Errorf("expected FakeClient when PRINT_OPS_FAKE=true, got %T", client)
 	}
 }
 
-func TestFactoryReturnsHTTPWhenNotFake(t *testing.T) {
+func TestFactoryReturnsDispatcherWhenNotFake(t *testing.T) {
 	cfg := configForTests()
 	cfg.PrintOpsFake = false
 	cfg.PrintOpsAPIKey = "fake-key"
+	cfg.PrintOpsTransport = "http"
 
-	client := NewClientFromConfig(cfg)
-	if _, ok := client.(*httpClient); !ok {
-		t.Errorf("expected httpClient when PRINT_OPS_FAKE=false, got %T", client)
+	client := NewClientFromConfig(cfg, nil)
+	dispatcher, ok := client.(*dispatcherClient)
+	if !ok {
+		t.Fatalf("expected dispatcherClient when PRINT_OPS_FAKE=false, got %T", client)
+	}
+	if _, ok := dispatcher.http.(*httpClient); !ok {
+		t.Errorf("expected http transport to be *httpClient, got %T", dispatcher.http)
+	}
+	if dispatcher.defaultTransport != "http" {
+		t.Errorf("defaultTransport = %q, want http", dispatcher.defaultTransport)
 	}
 }

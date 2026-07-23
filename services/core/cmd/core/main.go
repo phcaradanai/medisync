@@ -287,8 +287,8 @@ func run() (runErr error) {
 	defer stopCompletion()
 
 	// ── Printing ──────────────────────────────────────────────────────
-	printClient := printing.NewClientFromConfig(cfg)
-	printConsumer := printing.NewConsumer(js, printClient, auditw, log)
+	printClient := printing.NewClientFromConfig(cfg, js)
+	printConsumer := printing.NewConsumer(js, printClient, auditw, log, cfg.PrintOpsPaperProfile)
 	stopPrintConsumer, err := printConsumer.Start(startupCtx)
 	if err != nil {
 		return err

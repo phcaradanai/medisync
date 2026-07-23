@@ -26,14 +26,19 @@ type Consumer struct {
 	client Client
 	audit  *audit.Writer
 	log    *slog.Logger
+	// paperProfile is the default code_profile sent with each job so the dynamic
+	// (HTTP path / NATS) transports can resolve the printer from template+profile.
+	// Empty is fine for the legacy /api/v1/print-jobs transport.
+	paperProfile string
 }
 
-func NewConsumer(js jetstream.JetStream, client Client, auditw *audit.Writer, log *slog.Logger) *Consumer {
+func NewConsumer(js jetstream.JetStream, client Client, auditw *audit.Writer, log *slog.Logger, paperProfile string) *Consumer {
 	return &Consumer{
-		js:     js,
-		client: client,
-		audit:  auditw,
-		log:    log.With("component", "printing.consumer"),
+		js:           js,
+		client:       client,
+		audit:        auditw,
+		log:          log.With("component", "printing.consumer"),
+		paperProfile: paperProfile,
 	}
 }
 
@@ -95,6 +100,9 @@ func (c *Consumer) handle(msg jetstream.Msg) {
 		SourceReference: prescriptionID,
 		PrinterCode: "sticker-printer",
 		TemplateCode: "prescription-sticker",
+		// code_profile drives the dynamic endpoint /api/v1/printer/{{code_template}}/{{code_profile}};
+		// CodeTemplate falls back to TemplateCode when empty. Ignored by the legacy transport.
+		CodeProfile: c.paperProfile,
 		Payload: map[string]any{
 			"prescription_id": sticker.PrescriptionID,
 			"patient_name":    sticker.PatientName,
